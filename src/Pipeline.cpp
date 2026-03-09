@@ -5,6 +5,7 @@
 #include <cassert>
 
 #include "Pipeline.h"
+#include "Model.h"
 
 namespace FractalEngine
 {
@@ -149,12 +150,15 @@ namespace FractalEngine
         ShaderStages[1].pNext = nullptr;
         ShaderStages[1].pSpecializationInfo = nullptr;
 
+        auto BindingDescription = FractalModel::Vertex::GetBindingDescriptions();
+        auto AttributeDescription = FractalModel::Vertex::GetAttributeDescriptions();
+
         VkPipelineVertexInputStateCreateInfo VertexInputInfo{};
         VertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-        VertexInputInfo.vertexAttributeDescriptionCount = 0;
-        VertexInputInfo.vertexBindingDescriptionCount = 0;
-        VertexInputInfo.pVertexAttributeDescriptions = nullptr;
-        VertexInputInfo.pVertexBindingDescriptions = nullptr;
+        VertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(AttributeDescription.size());
+        VertexInputInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(BindingDescription.size());
+        VertexInputInfo.pVertexAttributeDescriptions = AttributeDescription.data();
+        VertexInputInfo.pVertexBindingDescriptions = BindingDescription.data();
         VertexInputInfo.pNext = nullptr;
 
         VkGraphicsPipelineCreateInfo PipelineInfo{};

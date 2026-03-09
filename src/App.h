@@ -8,6 +8,7 @@
 #include "Device.h"
 #include "Swapchain.h"
 #include "Window.h"
+#include "Model.h"
 
 namespace FractalEngine
 {
@@ -27,6 +28,7 @@ namespace FractalEngine
         void Run();
 
     private:
+        void LoadModels();
         void CreatePipelineLayout();
         void CreatePipeline();
         void CreateCommandBuffers();
@@ -40,5 +42,6 @@ namespace FractalEngine
         std::unique_ptr<FractalPipeline> FractalAppPipeline;
         VkPipelineLayout PipelineLayout;
         std::vector<VkCommandBuffer> CommandBuffers;
+        std::unique_ptr<FractalModel> FractalAppModel;
     };
 }

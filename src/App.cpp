@@ -9,6 +9,7 @@ namespace FractalEngine
 
     App::App()
     {
+        LoadModels();
         CreatePipelineLayout();
         CreatePipeline();
         CreateCommandBuffers();
@@ -30,6 +31,16 @@ namespace FractalEngine
         }
 
         vkDeviceWaitIdle(FractalAppDevice.device());
+    }
+
+    void App::LoadModels()
+    {
+        std::vector<FractalModel::Vertex> Vertices{
+            {{0, -0.5f}, {1, 0, 0, 1}},
+            {{0.5f, 0.5f}, {0, 1, 0, 1}},
+            {{-0.5f, 0.5f}, {0, 0, 1, 1}}};
+
+        FractalAppModel = std::make_unique<FractalModel>(FractalAppDevice, Vertices);
     }
 
     void App::CreatePipelineLayout()
@@ -96,7 +107,7 @@ namespace FractalEngine
             RenderPassInfo.renderArea.extent = FractalAppSwapChain.getSwapChainExtent();
 
             std::array<VkClearValue, 2> ClearValues{};
-            ClearValues[0].color = {0.1, 0.1, 0.1, 1};
+            ClearValues[0].color = {0.1f, 0.1f, 0.1f, 1};
             ClearValues[1].depthStencil = {1, 0};
             RenderPassInfo.clearValueCount = static_cast<uint32_t>(ClearValues.size());
             RenderPassInfo.pClearValues = ClearValues.data();
@@ -104,7 +115,8 @@ namespace FractalEngine
             vkCmdBeginRenderPass(CommandBuffers[i], &RenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
             FractalAppPipeline->Bind(CommandBuffers[i]);
-            vkCmdDraw(CommandBuffers[i], 3, 1, 0, 0);
+            FractalAppModel->Bind(CommandBuffers[i]);
+            FractalAppModel->Draw(CommandBuffers[i]);
 
             vkCmdEndRenderPass(CommandBuffers[i]);
             if (vkEndCommandBuffer(CommandBuffers[i]) != VK_SUCCESS)
