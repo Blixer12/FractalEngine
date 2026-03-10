@@ -21,7 +21,7 @@ namespace FractalEngine
     ~FractalSwapChain();
 
     FractalSwapChain(const FractalSwapChain &) = delete;
-    void operator=(const FractalSwapChain &) = delete;
+    FractalSwapChain &operator=(const FractalSwapChain &) = delete;
 
     VkFramebuffer getFrameBuffer(int index) { return SwapChainFrameBuffers[index]; }
     VkRenderPass getRenderPass() { return renderPass; }

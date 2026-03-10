@@ -10,7 +10,7 @@ namespace FractalEngine
 {
     struct PipelineConfigInfo
     {
-
+        PipelineConfigInfo() = default;
         PipelineConfigInfo(const PipelineConfigInfo &) = delete;
         PipelineConfigInfo &operator=(const PipelineConfigInfo &) = delete;
 
@@ -40,7 +40,7 @@ namespace FractalEngine
         ~FractalPipeline();
 
         FractalPipeline(const std::string &FilePath) = delete;
-        FractalPipeline operator=(const std::string &FilePath) = delete;
+        FractalPipeline &operator=(const std::string &FilePath) = delete;
 
         void Bind(VkCommandBuffer CommandBuffer);
 

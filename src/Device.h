@@ -39,7 +39,7 @@ namespace FractalEngine
 
     // Not copyable or movable
     FractalDevice(const FractalDevice &) = delete;
-    void operator=(const FractalDevice &) = delete;
+    FractalDevice &operator=(const FractalDevice &) = delete;
     FractalDevice(FractalDevice &&) = delete;
     FractalDevice &operator=(FractalDevice &&) = delete;
 
