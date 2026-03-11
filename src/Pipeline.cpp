@@ -44,23 +44,12 @@ namespace FractalEngine
         return buffer;
     }
 
-    void FractalPipeline::DefaultPipelineConfigInfo(PipelineConfigInfo &ConfigInfo, uint32_t Width, uint32_t Height)
+    void FractalPipeline::DefaultPipelineConfigInfo(PipelineConfigInfo &ConfigInfo)
     {
-        ConfigInfo.Subpass = 0;
 
         ConfigInfo.InputAssemblyInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
         ConfigInfo.InputAssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
         ConfigInfo.InputAssemblyInfo.primitiveRestartEnable = VK_FALSE;
-
-        ConfigInfo.Viewport.x = 0.0f;
-        ConfigInfo.Viewport.y = 0.0f;
-        ConfigInfo.Viewport.width = static_cast<float>(Width);
-        ConfigInfo.Viewport.height = static_cast<float>(Height);
-        ConfigInfo.Viewport.minDepth = 0.0f;
-        ConfigInfo.Viewport.maxDepth = 1.0f;
-
-        ConfigInfo.Scissor.offset = {0, 0};
-        ConfigInfo.Scissor.extent = {Width, Height};
 
         ConfigInfo.RasterizationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
         ConfigInfo.RasterizationInfo.depthClampEnable = VK_FALSE;
@@ -103,9 +92,9 @@ namespace FractalEngine
 
         ConfigInfo.ViewportInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
         ConfigInfo.ViewportInfo.viewportCount = 1;
-        ConfigInfo.ViewportInfo.pViewports = &ConfigInfo.Viewport;
+        ConfigInfo.ViewportInfo.pViewports = nullptr;
         ConfigInfo.ViewportInfo.scissorCount = 1;
-        ConfigInfo.ViewportInfo.pScissors = &ConfigInfo.Scissor;
+        ConfigInfo.ViewportInfo.pScissors = nullptr;
 
         ConfigInfo.DepthStencilInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
         ConfigInfo.DepthStencilInfo.depthTestEnable = VK_TRUE;
@@ -117,6 +106,12 @@ namespace FractalEngine
         ConfigInfo.DepthStencilInfo.stencilTestEnable = VK_FALSE;
         ConfigInfo.DepthStencilInfo.front = {}; // Optional
         ConfigInfo.DepthStencilInfo.back = {};  // Optional
+
+        ConfigInfo.DynamicStateEnables = {VK_DYNAMIC_STATE_SCISSOR, VK_DYNAMIC_STATE_VIEWPORT};
+        ConfigInfo.DynamicStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+        ConfigInfo.DynamicStateInfo.pDynamicStates = ConfigInfo.DynamicStateEnables.data();
+        ConfigInfo.DynamicStateInfo.dynamicStateCount = static_cast<uint32_t>(ConfigInfo.DynamicStateEnables.size());
+        ConfigInfo.DynamicStateInfo.flags = 0;
     }
 
     void FractalPipeline::CreateGraphicsPipeline(
@@ -172,8 +167,7 @@ namespace FractalEngine
         PipelineInfo.pMultisampleState = &ConfigInfo.MultisampleInfo;
         PipelineInfo.pColorBlendState = &ConfigInfo.ColorBlendInfo;
         PipelineInfo.pDepthStencilState = &ConfigInfo.DepthStencilInfo;
-        PipelineInfo.pDynamicState = nullptr;
-        PipelineInfo.pNext = nullptr;
+        PipelineInfo.pDynamicState = &ConfigInfo.DynamicStateInfo;
 
         PipelineInfo.layout = ConfigInfo.PipelineLayout;
         PipelineInfo.renderPass = ConfigInfo.RenderPass;

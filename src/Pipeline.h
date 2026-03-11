@@ -14,8 +14,6 @@ namespace FractalEngine
         PipelineConfigInfo(const PipelineConfigInfo &) = delete;
         PipelineConfigInfo &operator=(const PipelineConfigInfo &) = delete;
 
-        VkViewport Viewport;
-        VkRect2D Scissor;
         VkPipelineInputAssemblyStateCreateInfo InputAssemblyInfo;
         VkPipelineRasterizationStateCreateInfo RasterizationInfo;
         VkPipelineMultisampleStateCreateInfo MultisampleInfo;
@@ -23,6 +21,10 @@ namespace FractalEngine
         VkPipelineColorBlendStateCreateInfo ColorBlendInfo;
         VkPipelineDepthStencilStateCreateInfo DepthStencilInfo;
         VkPipelineViewportStateCreateInfo ViewportInfo;
+
+        std::vector<VkDynamicState> DynamicStateEnables;
+        VkPipelineDynamicStateCreateInfo DynamicStateInfo;
+
         VkPipelineLayout PipelineLayout = nullptr;
         VkRenderPass RenderPass = nullptr;
         uint32_t Subpass = 0;
@@ -44,7 +46,7 @@ namespace FractalEngine
 
         void Bind(VkCommandBuffer CommandBuffer);
 
-        static void DefaultPipelineConfigInfo(PipelineConfigInfo &ConfigInfo, uint32_t Width, uint32_t Height);
+        static void DefaultPipelineConfigInfo(PipelineConfigInfo &ConfigInfo);
 
     private:
         static std::vector<char> ReadFile(const std::string &FilePath);

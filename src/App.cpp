@@ -62,7 +62,7 @@ namespace FractalEngine
     {
         PipelineConfigInfo PipelineConfig{};
 
-        FractalPipeline::DefaultPipelineConfigInfo(PipelineConfig, FractalAppSwapChain->width(), FractalAppSwapChain->height());
+        FractalPipeline::DefaultPipelineConfigInfo(PipelineConfig);
 
         PipelineConfig.RenderPass = FractalAppSwapChain->getRenderPass();
         PipelineConfig.PipelineLayout = PipelineLayout;
@@ -129,6 +129,17 @@ namespace FractalEngine
         RenderPassInfo.pClearValues = ClearValues.data();
 
         vkCmdBeginRenderPass(CommandBuffers[ImageIndex], &RenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+        VkViewport Viewport{};
+        Viewport.x = 0.0f;
+        Viewport.y = 0.0f;
+        Viewport.width = static_cast<float>(FractalAppSwapChain->getSwapChainExtent().width);
+        Viewport.height = static_cast<float>(FractalAppSwapChain->getSwapChainExtent().height);
+        Viewport.minDepth = 0.0f;
+        Viewport.maxDepth = 1.0f;
+        VkRect2D Scissor{{0, 0}, FractalAppSwapChain->getSwapChainExtent()};
+        vkCmdSetViewport(CommandBuffers[ImageIndex], 0, 1, &Viewport);
+        vkCmdSetScissor(CommandBuffers[ImageIndex], 0, 1, &Scissor);
 
         FractalAppPipeline->Bind(CommandBuffers[ImageIndex]);
         FractalAppModel->Bind(CommandBuffers[ImageIndex]);
