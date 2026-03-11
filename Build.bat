@@ -17,7 +17,7 @@ if "%1"=="Release" (
 ) else (
     echo Building DEBUG...
     SET config=Debug
-    SET defines=/D DEBUG
+    SET defines=/D "DEBUG"
     SET runtime=/MDd
     SET opt=/Od
     SET GLFWdll=Debug\glfw3d.dll

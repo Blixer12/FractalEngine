@@ -34,11 +34,13 @@ namespace FractalEngine
         void CreateCommandBuffers();
         void Render();
         void DrawFrame();
+        void RecreateSwapChain();
+        void RecordCommandBuffer(int ImageIndex);
 
         FractalWindow FractalAppWindow{Width, Height, "Fractal Engine"};
         FractalDevice FractalAppDevice{FractalAppWindow};
-        FractalSwapChain FractalAppSwapChain{FractalAppDevice, FractalAppWindow.GetExtent()};
 
+        std::unique_ptr<FractalSwapChain> FractalAppSwapChain;
         std::unique_ptr<FractalPipeline> FractalAppPipeline;
         VkPipelineLayout PipelineLayout;
         std::vector<VkCommandBuffer> CommandBuffers;

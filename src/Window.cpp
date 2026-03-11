@@ -21,9 +21,11 @@ namespace FractalEngine
     {
         glfwInit();
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+        glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
         Window = glfwCreateWindow(Width, Height, WindowName.c_str(), nullptr, nullptr);
+        glfwSetWindowUserPointer(Window, this);
+        glfwSetFramebufferSizeCallback(Window, FrameBufferResizeCallback);
     }
 
     void FractalWindow::CreateWindowSurface(VkInstance instance, VkSurfaceKHR *surface)
@@ -32,6 +34,14 @@ namespace FractalEngine
         {
             throw std::runtime_error("Failed To Create Window Surface");
         }
+    }
+
+    void FractalWindow::FrameBufferResizeCallback(GLFWwindow *Window, int Width, int Height)
+    {
+        auto FractalAppWindow = reinterpret_cast<FractalWindow *>(glfwGetWindowUserPointer(Window));
+        FractalAppWindow->FrameBufferResized = true;
+        FractalAppWindow->Width = Width;
+        FractalAppWindow->Height = Height;
     }
 
 }

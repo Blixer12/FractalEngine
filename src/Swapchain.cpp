@@ -409,7 +409,7 @@ namespace FractalEngine
   {
     for (const auto &AvailableFormat : AvailableFormats)
     {
-      if (AvailableFormat.format == VK_FORMAT_B8G8R8A8_UNORM &&
+      if (AvailableFormat.format == VK_FORMAT_B8G8R8A8_SRGB &&
           AvailableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
       {
         return AvailableFormat;

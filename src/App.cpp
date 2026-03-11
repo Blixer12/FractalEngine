@@ -11,7 +11,7 @@ namespace FractalEngine
     {
         LoadModels();
         CreatePipelineLayout();
-        CreatePipeline();
+        RecreateSwapChain();
         CreateCommandBuffers();
     }
 
@@ -62,9 +62,9 @@ namespace FractalEngine
     {
         PipelineConfigInfo PipelineConfig{};
 
-        FractalPipeline::DefaultPipelineConfigInfo(PipelineConfig, FractalAppSwapChain.width(), FractalAppSwapChain.height());
+        FractalPipeline::DefaultPipelineConfigInfo(PipelineConfig, FractalAppSwapChain->width(), FractalAppSwapChain->height());
 
-        PipelineConfig.RenderPass = FractalAppSwapChain.getRenderPass();
+        PipelineConfig.RenderPass = FractalAppSwapChain->getRenderPass();
         PipelineConfig.PipelineLayout = PipelineLayout;
         FractalAppPipeline = std::make_unique<FractalPipeline>(
             FractalAppDevice,
@@ -75,7 +75,7 @@ namespace FractalEngine
 
     void App::CreateCommandBuffers()
     {
-        CommandBuffers.resize(FractalAppSwapChain.imageCount());
+        CommandBuffers.resize(FractalAppSwapChain->imageCount());
 
         VkCommandBufferAllocateInfo AllocateInfo{};
         AllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -87,42 +87,57 @@ namespace FractalEngine
         {
             throw std::runtime_error("Failed Allocating Command Buffers");
         }
+    }
 
-        for (int i = 0; i < CommandBuffers.size(); i++)
+    void App::RecreateSwapChain()
+    {
+        auto Extent = FractalAppWindow.GetExtent();
+        while (Extent.width == 0 || Extent.height == 0)
         {
-            VkCommandBufferBeginInfo BeginInfo{};
-            BeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+            Extent = FractalAppWindow.GetExtent();
+            glfwWaitEvents();
+        }
 
-            if (vkBeginCommandBuffer(CommandBuffers[i], &BeginInfo) != VK_SUCCESS)
-            {
-                throw std::runtime_error("Failed to Begin Recording Command Buffer");
-            }
+        vkDeviceWaitIdle(FractalAppDevice.device());
+        FractalAppSwapChain = nullptr;
+        FractalAppSwapChain = std::make_unique<FractalSwapChain>(FractalAppDevice, Extent);
+        CreatePipeline();
+    }
 
-            VkRenderPassBeginInfo RenderPassInfo{};
-            RenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-            RenderPassInfo.renderPass = FractalAppSwapChain.getRenderPass();
-            RenderPassInfo.framebuffer = FractalAppSwapChain.getFrameBuffer(i);
+    void App::RecordCommandBuffer(int ImageIndex)
+    {
+        VkCommandBufferBeginInfo BeginInfo{};
+        BeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
-            RenderPassInfo.renderArea.offset = {0, 0};
-            RenderPassInfo.renderArea.extent = FractalAppSwapChain.getSwapChainExtent();
+        if (vkBeginCommandBuffer(CommandBuffers[ImageIndex], &BeginInfo) != VK_SUCCESS)
+        {
+            throw std::runtime_error("Failed to Begin Recording Command Buffer");
+        }
 
-            std::array<VkClearValue, 2> ClearValues{};
-            ClearValues[0].color = {0.1f, 0.1f, 0.1f, 1};
-            ClearValues[1].depthStencil = {1, 0};
-            RenderPassInfo.clearValueCount = static_cast<uint32_t>(ClearValues.size());
-            RenderPassInfo.pClearValues = ClearValues.data();
+        VkRenderPassBeginInfo RenderPassInfo{};
+        RenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        RenderPassInfo.renderPass = FractalAppSwapChain->getRenderPass();
+        RenderPassInfo.framebuffer = FractalAppSwapChain->getFrameBuffer(ImageIndex);
 
-            vkCmdBeginRenderPass(CommandBuffers[i], &RenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+        RenderPassInfo.renderArea.offset = {0, 0};
+        RenderPassInfo.renderArea.extent = FractalAppSwapChain->getSwapChainExtent();
 
-            FractalAppPipeline->Bind(CommandBuffers[i]);
-            FractalAppModel->Bind(CommandBuffers[i]);
-            FractalAppModel->Draw(CommandBuffers[i]);
+        std::array<VkClearValue, 2> ClearValues{};
+        ClearValues[0].color = {0.01f, 0.01f, 0.01f, 1};
+        ClearValues[1].depthStencil = {1, 0};
+        RenderPassInfo.clearValueCount = static_cast<uint32_t>(ClearValues.size());
+        RenderPassInfo.pClearValues = ClearValues.data();
 
-            vkCmdEndRenderPass(CommandBuffers[i]);
-            if (vkEndCommandBuffer(CommandBuffers[i]) != VK_SUCCESS)
-            {
-                throw std::runtime_error("Failed to Record Command Buffer");
-            }
+        vkCmdBeginRenderPass(CommandBuffers[ImageIndex], &RenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+        FractalAppPipeline->Bind(CommandBuffers[ImageIndex]);
+        FractalAppModel->Bind(CommandBuffers[ImageIndex]);
+        FractalAppModel->Draw(CommandBuffers[ImageIndex]);
+
+        vkCmdEndRenderPass(CommandBuffers[ImageIndex]);
+        if (vkEndCommandBuffer(CommandBuffers[ImageIndex]) != VK_SUCCESS)
+        {
+            throw std::runtime_error("Failed to Record Command Buffer");
         }
     }
 
@@ -131,14 +146,29 @@ namespace FractalEngine
     void App::DrawFrame()
     {
         uint32_t ImageIndex;
-        auto Result = FractalAppSwapChain.acquireNextImage(&ImageIndex);
+        auto Result = FractalAppSwapChain->acquireNextImage(&ImageIndex);
+
+        if (Result == VK_ERROR_OUT_OF_DATE_KHR)
+        {
+            RecreateSwapChain();
+            return;
+        }
 
         if (Result != VK_SUCCESS && Result != VK_SUBOPTIMAL_KHR)
         {
             throw std::runtime_error("Failed Aquiring Swapchain Image");
         }
 
-        Result = FractalAppSwapChain.submitCommandBuffers(&CommandBuffers[ImageIndex], &ImageIndex);
+        RecordCommandBuffer(ImageIndex);
+
+        Result = FractalAppSwapChain->submitCommandBuffers(&CommandBuffers[ImageIndex], &ImageIndex);
+
+        if (Result == VK_ERROR_OUT_OF_DATE_KHR || Result == VK_SUBOPTIMAL_KHR || FractalAppWindow.WasWindowResized())
+        {
+            FractalAppWindow.ResetWindowResizedFlag();
+            RecreateSwapChain();
+            return;
+        }
         if (Result != VK_SUCCESS)
         {
             throw std::runtime_error("Failed Presenting Swapchain Image");
