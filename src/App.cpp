@@ -1,15 +1,29 @@
 // Standard Library
 #include <stdexcept>
+#include <iostream>
 #include <array>
+
+// Librarys
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#include <glm/glm.hpp>
+#include <glm/gtc/constants.hpp>
 
 #include "App.h"
 
 namespace FractalEngine
 {
 
+    struct PushConstantData
+    {
+        glm::mat2 Transform{1.f};
+        glm::vec4 Color;
+        alignas(16) glm::vec2 Offset;
+    };
+
     App::App()
     {
-        LoadModels();
+        LoadGameObjects();
         CreatePipelineLayout();
         RecreateSwapChain();
         CreateCommandBuffers();
@@ -24,6 +38,8 @@ namespace FractalEngine
 
     void App::Run()
     {
+        std::cout << "Max push constant size = " << FractalAppDevice.properties.limits.maxPushConstantsSize << std::endl;
+
         while (!FractalAppWindow.ShouldClose())
         {
             glfwPollEvents();
@@ -33,24 +49,39 @@ namespace FractalEngine
         vkDeviceWaitIdle(FractalAppDevice.device());
     }
 
-    void App::LoadModels()
+    void App::LoadGameObjects()
     {
         std::vector<FractalModel::Vertex> Vertices{
             {{0, -0.5f}, {1, 0, 0, 1}},
             {{0.5f, 0.5f}, {0, 1, 0, 1}},
             {{-0.5f, 0.5f}, {0, 0, 1, 1}}};
 
-        FractalAppModel = std::make_unique<FractalModel>(FractalAppDevice, Vertices);
+        auto FractalAppModel = std::make_shared<FractalModel>(FractalAppDevice, Vertices);
+
+        auto Triangle = FractalGameObject::CreateGameObject();
+        Triangle.Model = FractalAppModel;
+        Triangle.Color = {.1f, .8f, .1f, 1};
+        Triangle.Transform2D.Translation.x = .2f;
+        Triangle.Transform2D.Scale = {2, 0.5f};
+        Triangle.Transform2D.Rotation = 0.25f * glm::two_pi<float>();
+
+        GameObjects.push_back(std::move(Triangle));
     }
 
     void App::CreatePipelineLayout()
     {
+
+        VkPushConstantRange PushConstantRange{};
+        PushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+        PushConstantRange.offset = 0;
+        PushConstantRange.size = sizeof(PushConstantData);
+
         VkPipelineLayoutCreateInfo PipelineLayoutInfo{};
         PipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         PipelineLayoutInfo.setLayoutCount = 0;
         PipelineLayoutInfo.pSetLayouts = nullptr;
-        PipelineLayoutInfo.pushConstantRangeCount = 0;
-        PipelineLayoutInfo.pPushConstantRanges = nullptr;
+        PipelineLayoutInfo.pushConstantRangeCount = 1;
+        PipelineLayoutInfo.pPushConstantRanges = &PushConstantRange;
 
         if (vkCreatePipelineLayout(FractalAppDevice.device(), &PipelineLayoutInfo, nullptr, &PipelineLayout) != VK_SUCCESS)
         {
@@ -60,6 +91,9 @@ namespace FractalEngine
 
     void App::CreatePipeline()
     {
+        assert(FractalAppSwapChain != nullptr && "Cannot create pipeline before swap chain");
+        assert(PipelineLayout != nullptr && "Cannot create pipeline before pipeline layout");
+
         PipelineConfigInfo PipelineConfig{};
 
         FractalPipeline::DefaultPipelineConfigInfo(PipelineConfig);
@@ -94,14 +128,33 @@ namespace FractalEngine
         auto Extent = FractalAppWindow.GetExtent();
         while (Extent.width == 0 || Extent.height == 0)
         {
-            Extent = FractalAppWindow.GetExtent();
             glfwWaitEvents();
+            Extent = FractalAppWindow.GetExtent();
         }
 
         vkDeviceWaitIdle(FractalAppDevice.device());
-        FractalAppSwapChain = nullptr;
-        FractalAppSwapChain = std::make_unique<FractalSwapChain>(FractalAppDevice, Extent);
+
+        if (FractalAppSwapChain == nullptr)
+        {
+            FractalAppSwapChain = std::make_unique<FractalSwapChain>(FractalAppDevice, Extent);
+        }
+        else
+        {
+            FractalAppSwapChain = std::make_unique<FractalSwapChain>(FractalAppDevice, Extent, std::move(FractalAppSwapChain));
+            if (FractalAppSwapChain->imageCount() != CommandBuffers.size())
+            {
+                FreeCommandBuffers();
+                CreateCommandBuffers();
+            }
+        }
+
         CreatePipeline();
+    }
+
+    void App::FreeCommandBuffers()
+    {
+        vkFreeCommandBuffers(FractalAppDevice.device(), FractalAppDevice.getCommandPool(), static_cast<uint32_t>(CommandBuffers.size()), CommandBuffers.data());
+        CommandBuffers.clear();
     }
 
     void App::RecordCommandBuffer(int ImageIndex)
@@ -141,14 +194,38 @@ namespace FractalEngine
         vkCmdSetViewport(CommandBuffers[ImageIndex], 0, 1, &Viewport);
         vkCmdSetScissor(CommandBuffers[ImageIndex], 0, 1, &Scissor);
 
-        FractalAppPipeline->Bind(CommandBuffers[ImageIndex]);
-        FractalAppModel->Bind(CommandBuffers[ImageIndex]);
-        FractalAppModel->Draw(CommandBuffers[ImageIndex]);
+        RenderGameObjects(CommandBuffers[ImageIndex]);
 
         vkCmdEndRenderPass(CommandBuffers[ImageIndex]);
         if (vkEndCommandBuffer(CommandBuffers[ImageIndex]) != VK_SUCCESS)
         {
             throw std::runtime_error("Failed to Record Command Buffer");
+        }
+    }
+
+    void App::RenderGameObjects(VkCommandBuffer CommandBuffer)
+    {
+        int i = 0;
+
+        for (auto &Object : GameObjects)
+        {
+            i += 1;
+            Object.Transform2D.Rotation = glm::mod(Object.Transform2D.Rotation + 0.2f * i, 2.f * glm::two_pi<float>());
+        }
+
+        FractalAppPipeline->Bind(CommandBuffer);
+
+        for (auto &Object : GameObjects)
+        {
+            PushConstantData Push{};
+            Push.Offset = Object.Transform2D.Translation;
+            Push.Color = Object.Color;
+            Push.Transform = Object.Transform2D.TransformMatrix();
+
+            vkCmdPushConstants(CommandBuffer, PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstantData), &Push);
+
+            Object.Model->Bind(CommandBuffer);
+            Object.Model->Draw(CommandBuffer);
         }
     }
 

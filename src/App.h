@@ -4,11 +4,11 @@
 #include <memory>
 #include <vector>
 
-#include "Pipeline.h"
 #include "Device.h"
+#include "GameObject.h"
+#include "Pipeline.h"
 #include "Swapchain.h"
 #include "Window.h"
-#include "Model.h"
 
 namespace FractalEngine
 {
@@ -28,14 +28,16 @@ namespace FractalEngine
         void Run();
 
     private:
-        void LoadModels();
+        void LoadGameObjects();
         void CreatePipelineLayout();
         void CreatePipeline();
         void CreateCommandBuffers();
+        void FreeCommandBuffers();
         void Render();
         void DrawFrame();
         void RecreateSwapChain();
         void RecordCommandBuffer(int ImageIndex);
+        void RenderGameObjects(VkCommandBuffer CommandBuffer);
 
         FractalWindow FractalAppWindow{Width, Height, "Fractal Engine"};
         FractalDevice FractalAppDevice{FractalAppWindow};
@@ -44,6 +46,6 @@ namespace FractalEngine
         std::unique_ptr<FractalPipeline> FractalAppPipeline;
         VkPipelineLayout PipelineLayout;
         std::vector<VkCommandBuffer> CommandBuffers;
-        std::unique_ptr<FractalModel> FractalAppModel;
+        std::vector<FractalGameObject> GameObjects;
     };
 }

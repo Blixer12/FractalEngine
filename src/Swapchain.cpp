@@ -15,6 +15,19 @@ namespace FractalEngine
   FractalSwapChain::FractalSwapChain(FractalDevice &DeviceRef, VkExtent2D extent)
       : Device{DeviceRef}, windowExtent{extent}
   {
+    Initialize();
+  }
+
+  FractalSwapChain::FractalSwapChain(FractalDevice &DeviceRef, VkExtent2D extent, std::shared_ptr<FractalSwapChain> Previous)
+      : Device{DeviceRef}, windowExtent{extent}, OldSwapChain{Previous}
+  {
+    Initialize();
+
+    OldSwapChain = nullptr;
+  }
+
+  void FractalSwapChain::Initialize()
+  {
     createSwapChain();
     createImageViews();
     createRenderPass();
@@ -186,7 +199,7 @@ namespace FractalEngine
     createInfo.presentMode = presentMode;
     createInfo.clipped = VK_TRUE;
 
-    createInfo.oldSwapchain = VK_NULL_HANDLE;
+    createInfo.oldSwapchain = OldSwapChain == nullptr ? VK_NULL_HANDLE : OldSwapChain->SwapChain;
 
     if (vkCreateSwapchainKHR(Device.device(), &createInfo, nullptr, &SwapChain) != VK_SUCCESS)
     {

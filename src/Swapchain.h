@@ -6,6 +6,7 @@
 #include <vulkan/vulkan.h>
 
 // std lib headers
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -18,6 +19,7 @@ namespace FractalEngine
     static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
 
     FractalSwapChain(FractalDevice &DeviceRef, VkExtent2D windowExtent);
+    FractalSwapChain(FractalDevice &DeviceRef, VkExtent2D windowExtent, std::shared_ptr<FractalSwapChain> Previous);
     ~FractalSwapChain();
 
     FractalSwapChain(const FractalSwapChain &) = delete;
@@ -42,6 +44,7 @@ namespace FractalEngine
     VkResult submitCommandBuffers(const VkCommandBuffer *Buffers, uint32_t *ImageIndex);
 
   private:
+    void Initialize();
     void createSwapChain();
     void createImageViews();
     void createDepthResources();
@@ -72,6 +75,7 @@ namespace FractalEngine
     VkExtent2D windowExtent;
 
     VkSwapchainKHR SwapChain;
+    std::shared_ptr<FractalSwapChain> OldSwapChain;
 
     std::vector<VkSemaphore> ImageAvailableSemaphores;
     std::vector<VkSemaphore> RenderFinishedSemaphores;
