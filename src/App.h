@@ -6,8 +6,7 @@
 
 #include "Device.h"
 #include "GameObject.h"
-#include "Pipeline.h"
-#include "Swapchain.h"
+#include "Renderer.h"
 #include "Window.h"
 
 namespace FractalEngine
@@ -29,23 +28,12 @@ namespace FractalEngine
 
     private:
         void LoadGameObjects();
-        void CreatePipelineLayout();
-        void CreatePipeline();
-        void CreateCommandBuffers();
-        void FreeCommandBuffers();
         void Render();
-        void DrawFrame();
-        void RecreateSwapChain();
-        void RecordCommandBuffer(int ImageIndex);
-        void RenderGameObjects(VkCommandBuffer CommandBuffer);
 
         FractalWindow FractalAppWindow{Width, Height, "Fractal Engine"};
         FractalDevice FractalAppDevice{FractalAppWindow};
+        FractalRenderer FractalAppRenderer{FractalAppWindow, FractalAppDevice};
 
-        std::unique_ptr<FractalSwapChain> FractalAppSwapChain;
-        std::unique_ptr<FractalPipeline> FractalAppPipeline;
-        VkPipelineLayout PipelineLayout;
-        std::vector<VkCommandBuffer> CommandBuffers;
         std::vector<FractalGameObject> GameObjects;
     };
 }
