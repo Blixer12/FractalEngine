@@ -4,6 +4,9 @@ call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build
 
 if not exist Build mkdir Build
 if not exist Build\Assets\Shaders mkdir Build\Assets\Shaders
+if not exist Build\Assets\Models mkdir Build\Assets\Models
+if not exist Build\Assets\Textures mkdir Build\Assets\Textures
+if not exist Build\Obj mkdir Build\Obj
 
 if "%1"=="Release" (
     echo Building RELEASE...
@@ -25,20 +28,28 @@ if "%1"=="Release" (
     SET GLFWlib=glfw3d.lib
 )
 
-SET includes=/Isrc /I%VULKAN_SDK%\Include /I%GLFW%\Include /I%GLM%
+set std flag
+SET cppstd=/std:c++17
+
+SET includes=/Isrc /I%VULKAN_SDK%\Include /I%GLFW%\Include /I%GLM% /IExternal /Isrc/Systems
 SET links=/link /LIBPATH:%VULKAN_SDK%\Lib /LIBPATH:%GLFWpath% vulkan-1.lib %GLFWlib% user32.lib gdi32.lib shell32.lib opengl32.lib advapi32.lib /ignore:4099
 
-echo "Compiling main.cpp"
+echo "Compiling Source Files"
 
-cl /EHsc /Z7 /W4 %runtime% %opt% /FeBuild\Engine_%config% %includes% %defines% src\*.cpp %links%
+cl /c /EHsc /Z7 /W4 %runtime% %opt% %cppstd% /FeBuild\Engine_%config% %includes% %defines% /FoBuild\Obj\ /FdBuild\obj\ src\*.cpp
+cl /c /EHsc /Z7 /W4 %runtime% %opt% %cppstd% /FeBuild\Engine_%config% %includes% %defines% /FoBuild\Obj\ /FdBuild\obj\ src\Systems\*.cpp
 
 IF %ERRORLEVEL% NEQ 0 (
     echo Build failed.
     exit /b %ERRORLEVEL%
 )
 
+cl Build\Obj\*.obj %cppstd% /FeBuild\Engine_%config% %links%
+
 echo Copying glfw3.dll...
 copy /Y %GLFW%\Lib\GLFW\lib-vc2022\%GLFWdll% Build\
+
+robocopy Assets\Models Build\Assets\Models
 
 echo Compiling shaders...
 

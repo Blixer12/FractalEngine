@@ -25,6 +25,7 @@ namespace FractalEngine
         VkExtent2D GetExtent() { return {static_cast<uint32_t>(Width), static_cast<uint32_t>(Height)}; }
         bool WasWindowResized() { return FrameBufferResized; }
         void ResetWindowResizedFlag() { FrameBufferResized = false; }
+        GLFWwindow *GetGLFWwindow() const { return Window; }
 
         void CreateWindowSurface(VkInstance instance, VkSurfaceKHR *surface);
 

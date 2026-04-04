@@ -4,11 +4,13 @@
 #include <memory>
 #include <vector>
 
+#include "Descriptors.h"
 #include "Device.h"
 #include "GameObject.h"
-#include "Pipeline.h"
-#include "Swapchain.h"
+#include "KeyboardController.h"
+#include "Renderer.h"
 #include "Window.h"
+#include "SimpleRenderSystem.h"
 
 namespace FractalEngine
 {
@@ -29,23 +31,26 @@ namespace FractalEngine
 
     private:
         void LoadGameObjects();
-        void CreatePipelineLayout();
-        void CreatePipeline();
-        void CreateCommandBuffers();
-        void FreeCommandBuffers();
-        void Render();
-        void DrawFrame();
-        void RecreateSwapChain();
-        void RecordCommandBuffer(int ImageIndex);
-        void RenderGameObjects(VkCommandBuffer CommandBuffer);
+        void Render(FrameInfo &FrameInfo);
+        void Update(float FrameTime, int FrameIndex);
 
         FractalWindow FractalAppWindow{Width, Height, "Fractal Engine"};
         FractalDevice FractalAppDevice{FractalAppWindow};
+        FractalRenderer FractalAppRenderer{FractalAppWindow, FractalAppDevice};
 
-        std::unique_ptr<FractalSwapChain> FractalAppSwapChain;
-        std::unique_ptr<FractalPipeline> FractalAppPipeline;
-        VkPipelineLayout PipelineLayout;
-        std::vector<VkCommandBuffer> CommandBuffers;
-        std::vector<FractalGameObject> GameObjects;
+        std::unique_ptr<FractalRenderSystem> RenderSystem{};
+        std::unique_ptr<BillboardRenderSystem> BillboardRenderer{};
+
+        FractalCamera Camera{};
+        std::vector<std::unique_ptr<FractalBuffer>> GlobalBuffers;
+
+        KeyboardController CameraController{};
+        FractalGameObject ViewObject;
+
+        // Note: Order of declaration matters, as GlobalDescriptorPool must be destrtoyed before Device
+        std::unique_ptr<FractalDescriptorPool> GlobalDescriptorPool;
+        std::unique_ptr<FractalDescriptorSetLayout> GlobalDescriptorSetLayout;
+
+        FractalGameObject::Map GameObjects;
     };
 }

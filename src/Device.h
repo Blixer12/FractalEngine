@@ -28,7 +28,7 @@ namespace FractalEngine
   class FractalDevice
   {
   public:
-#ifdef NDEBUG
+#ifdef DEBUG
     const bool enableValidationLayers = false;
 #else
     const bool enableValidationLayers = true;
@@ -109,4 +109,4 @@ namespace FractalEngine
     const std::vector<const char *> deviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
   };
 
-} // namespace lve
+} // namespace Fractal

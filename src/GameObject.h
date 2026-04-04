@@ -2,33 +2,31 @@
 
 #include "Model.h"
 
+// Libraries
+#include <glm/gtc/matrix_transform.hpp>
+
 // Standard Library
 #include <memory>
+#include <unordered_map>
 
 namespace FractalEngine
 {
 
-    struct Transform2DComponet
+    struct TransformComponent
     {
-        glm::vec2 Translation{}; // Position
-        glm::vec2 Scale{1, 1};
-        float Rotation;
+        glm::vec3 Translation{}; // Position
+        glm::vec3 Scale{1, 1, 1};
+        glm::vec3 Rotation;
 
-        glm::mat2 TransformMatrix()
-        {
-            const float Sine = glm::sin(Rotation);
-            const float Cosine = glm::cos(Rotation);
-            glm::mat2 RotationMat{{Cosine, Sine}, {-Sine, Cosine}};
-
-            glm::mat2 ScaleMat{{Scale.x, 0}, {0, Scale.y}};
-            return RotationMat * ScaleMat;
-        }
+        glm::mat4 TransformMatrix();
+        glm::mat4 NormalMatrix();
     };
 
     class FractalGameObject
     {
     public:
         using id_t = unsigned int;
+        using Map = std::unordered_map<id_t, FractalGameObject>;
 
         static FractalGameObject CreateGameObject()
         {
@@ -45,7 +43,7 @@ namespace FractalEngine
 
         std::shared_ptr<FractalModel> Model{};
         glm::vec4 Color{};
-        Transform2DComponet Transform2D{};
+        TransformComponent Transform{};
 
     private:
         FractalGameObject(id_t ObjectID) : id{ObjectID} {}

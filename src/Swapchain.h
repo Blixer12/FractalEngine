@@ -43,6 +43,11 @@ namespace FractalEngine
     VkResult acquireNextImage(uint32_t *ImageIndex);
     VkResult submitCommandBuffers(const VkCommandBuffer *Buffers, uint32_t *ImageIndex);
 
+    bool CompareSwapFormats(const FractalSwapChain &Swapchain)
+    {
+      return Swapchain.SwapChainDepthFormat == SwapChainDepthFormat && Swapchain.SwapChainImageFormat == SwapChainImageFormat;
+    }
+
   private:
     void Initialize();
     void createSwapChain();
@@ -60,6 +65,7 @@ namespace FractalEngine
     VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR &Capabilities);
 
     VkFormat SwapChainImageFormat;
+    VkFormat SwapChainDepthFormat;
     VkExtent2D SwapChainExtent;
 
     std::vector<VkFramebuffer> SwapChainFrameBuffers;
@@ -84,4 +90,4 @@ namespace FractalEngine
     size_t CurrentFrame = 0;
   };
 
-} // namespace lve
+} // namespace FractalEngine
