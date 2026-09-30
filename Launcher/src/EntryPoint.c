@@ -8,8 +8,8 @@
 // Function to Create the Game
 Bool8 CreateGame(Game* TargetGame)
 {
-    TargetGame->Config.StartX = 100;
-    TargetGame->Config.StartY = 100;
+    TargetGame->Config.StartX = 400;
+    TargetGame->Config.StartY = 400;
     TargetGame->Config.StartWidth = 1280;
     TargetGame->Config.StartHeight = 720;
     TargetGame->Config.Name = "Fractal Engine Launcher";

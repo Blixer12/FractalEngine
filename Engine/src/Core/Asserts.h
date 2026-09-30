@@ -2,7 +2,7 @@
 
 #include "Defines.h"
 
-// Do disable, Comment it out
+// To disable, Comment it out
 #define FASSERTIONS_ENABLED
 
 #ifdef FASSERTIONS_ENABLED
@@ -19,7 +19,7 @@ FAPI void AssertFail(const char* Expression, const char* Message, const char* Fi
     {                                                                \
         if (Expr) {                                                  \
         } else {                                                     \
-            AssertFail(#Expr, "", __FILE__, __LINE__); \
+            AssertFail(#Expr, "", __FILE__, __LINE__);               \
             DebugBreak();                                            \
         }                                                            \
     }
@@ -28,7 +28,7 @@ FAPI void AssertFail(const char* Expression, const char* Message, const char* Fi
     {                                                                     \
         if (Expr) {                                                       \
         } else {                                                          \
-            AssertFail(#Expr, Message, __FILE__, __LINE__); \
+            AssertFail(#Expr, Message, __FILE__, __LINE__);               \
             DebugBreak();                                                 \
         }                                                                 \
     }
@@ -38,7 +38,7 @@ FAPI void AssertFail(const char* Expression, const char* Message, const char* Fi
     {                                                                \
         if (Expr) {                                                  \
         } else {                                                     \
-            AssertFail(#Expr, "", __FILE__, __LINE__); \
+            AssertFail(#Expr, "", __FILE__, __LINE__);               \
             DebugBreak();                                            \
         }                                                            \
     }
@@ -47,7 +47,7 @@ FAPI void AssertFail(const char* Expression, const char* Message, const char* Fi
     {                                                            \
         if (Expr) {                                              \
         } else {                                                 \
-            AssertFail(#Expr, Message, __FILE__, __LINE__);     \
+            AssertFail(#Expr, Message, __FILE__, __LINE__);      \
             DebugBreak();                                        \
         }                                                        \
     }

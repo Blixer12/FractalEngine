@@ -5,21 +5,21 @@
 typedef struct EventContext {
     // 256 bits
     union {
-        Int64  Int64[4];
-        UInt64 UInt64[4];
+        Int64   Int64[4];
+        UInt64  UInt64[4];
         Float64 Float64[4];
 
-        Int32  Int32[8];
-        UInt32 UInt32[8];
+        Int32   Int32[8];
+        UInt32  UInt32[8];
         Float32 Float32[8];
 
-        Int16  Int16[16];
-        UInt16 UInt16[16];
+        Int16   Int16[16];
+        UInt16  UInt16[16];
 
-        Int8   Int8[32];
-        UInt8  UInt8[32];
+        Int8    Int8[32];
+        UInt8   UInt8[32];
 
-        char     Char[32];
+        char    Char[32];
     } Data;
 } EventContext;
 

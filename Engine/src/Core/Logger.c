@@ -23,7 +23,7 @@ void LogOutput(LogLevel Level, const char* Message, ...)
     Bool8 IsError = Level < LOG_WARN;
 
     enum { MessageLength = 32768 };
-    static char TempBuffer[MessageLength];
+    char TempBuffer[MessageLength];
     // temp_buffer[0] = '\0';
 
     va_list arg_ptr;

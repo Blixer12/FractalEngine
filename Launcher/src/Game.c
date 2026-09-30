@@ -6,21 +6,21 @@ Bool8 GameInitialize(Game* Instance)
 {
     (void)Instance;
     FLDEBUG("GameInitialized() called!");
-    return TRUE;
+    return true;
 }
 
 Bool8 GameUpdate(Game* Instance, Float32 DeltaTime) 
 {
     (void)Instance;
     (void)DeltaTime;
-    return TRUE;
+    return true;
 }
 
 Bool8 GameRender(Game* Instance, Float32 DeltaTime) 
 {
     (void)Instance;
     (void)DeltaTime;
-    return TRUE;
+    return true;
 }
 
 void GameOnResize(Game* Instance, UInt32 Width, UInt32 Height) 

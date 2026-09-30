@@ -8,19 +8,38 @@ void* _VectorCreate(UInt64 Length, UInt64 Stride)
 {
     UInt64 HeaderSize = FIELD_LENGTH * sizeof(UInt64);
     UInt64 ArraySize = Length * Stride;
+    // UInt64 TotalBytes = HeaderSize + ArraySize;
+
     UInt64* NewArray = FMAllocate(HeaderSize + ArraySize, MEMORY_TAG_VECTOR);
     FMSetMemory(NewArray, 0, HeaderSize + ArraySize);
+
     NewArray[VECTOR_CAPACITY] = Length;
     NewArray[VECTOR_SIZE] = 0;
     NewArray[VECTOR_STRIDE] = Stride;
-    return (void*)(NewArray + FIELD_LENGTH);
+
+    void* UserPointer = (void*)(NewArray + FIELD_LENGTH);
+
+    // Track allocation
+    // FLTRACE("[VECTOR] Created at %p | Capacity: %llu, Stride: %llu bytes (%llu total bytes allocated)", 
+    //         UserPointer, Length, Stride, TotalBytes);
+
+    return UserPointer;
 }
 
 void _VectorDestroy(void* Array)
 {
+    if (!Array) {
+        FLWARN("[VECTOR] Attempted to destroy a NULL vector pointer.");
+        return;
+    }
+
     UInt64* Header = (UInt64*)Array - FIELD_LENGTH;
     UInt64 HeaderSize = FIELD_LENGTH * sizeof(UInt64);
     UInt64 TotalSize = HeaderSize + Header[VECTOR_CAPACITY] * Header[VECTOR_STRIDE];
+
+    // Track deallocation
+    // FLTRACE("[VECTOR] Destroyed at %p | Freed %llu bytes", Array, TotalSize);
+
     FMFree(Header, TotalSize, MEMORY_TAG_VECTOR);
 }
 
@@ -33,6 +52,11 @@ UInt64 _VectorFieldGet(void* Array, UInt64 Field)
 
 void _VectorFieldSet(void* Array, UInt64 Field, UInt64 Value)
 {
+    if (!Array) {
+        FLERROR("_VectorFieldSet called on a NULL array pointer!");
+        return;
+    }
+
     UInt64* Header = (UInt64*)Array - FIELD_LENGTH;
     Header[Field] = Value;
 }
@@ -40,14 +64,19 @@ void _VectorFieldSet(void* Array, UInt64 Field, UInt64 Value)
 
 void* _VectorResize(void* Array)
 {
+    UInt64 OldCapacity = VectorCapacity(Array);
+    UInt64 NewCapacity = VECTOR_RESIZE_FACTOR * OldCapacity;
     UInt64 Size = VectorSize(Array);
     UInt64 Stride = VectorStride(Array);
-    void* Temp = _VectorCreate(
-        (VECTOR_RESIZE_FACTOR * VectorCapacity(Array)),
-        Stride);
+
+    void* Temp = _VectorCreate(NewCapacity, Stride);
     FMCopyMemory(Temp, Array, Size * Stride);
 
     _VectorFieldSet(Temp, VECTOR_SIZE, Size);
+
+    // FLTRACE("[VECTOR] Resized %p -> %p | Capacity expanded: %llu -> %llu elements", 
+    //     Array, Temp, OldCapacity, NewCapacity);
+
     _VectorDestroy(Array);
     return Temp;
 }
@@ -92,7 +121,7 @@ void* _VectorRemoveAt(void* Array, UInt64 Index, void* Dest)
     FMCopyMemory(Dest, (void*)(Address + (Index * Stride)), Stride);
 
     // If not on the last element, snip out the entry and copy the rest inward.
-    if (Index != Size - 1) {
+    if (Index < Size - 1) {
         FMCopyMemory(
             (void*)(Address + (Index * Stride)),
             (void*)(Address + ((Index + 1) * Stride)),
@@ -118,7 +147,7 @@ void* _VectorInsertAt(void* Array, UInt64 Index, void* ValuePtr)
     UInt64 Address = (UInt64)Array;
 
     // If not on the last element, copy the rest outward.
-    if (Index != Size - 1) {
+    if (Index < Size - 1) {
         FMCopyMemory(
             (void*)(Address + ((Index + 1) * Stride)),
             (void*)(Address + (Index * Stride)),

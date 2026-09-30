@@ -3,17 +3,35 @@
 //Windows Platform
 #if FPLATFORM_WINDOWS
 
-#include "Core/Logger.h"
-#include "Core/Input.h"
+    #include "Core/Logger.h"
+    #include "Core/Input.h"
+    #include "Core/Event.h"
+    #include "Containers/Vector.h"
 
-#include <Windows.h>
-#include <Windowsx.h> //Input Detection with Xinput
-#include <stdlib.h>
-#include <stdio.h>
+    #define WIN32_LEAN_AND_MEAN
+    
+    #define NOMINMAX
+    #define NOIME
+    #define NOSERVICE
+
+    #define NOGDI
+    #define NOMENUS
+    #define NOHELP
+    #define NOPROFILER
+    #define NODRAWTEXT
+
+    #include <Windows.h>
+    #include <Windowsx.h> 
+    #include <stdlib.h>
+    #include <stdio.h>
+
+    #define VK_USE_PLATFORM_WIN32_KHR
+    #include "Renderer/Vulkan/VulkanDef.inl"
 
 typedef struct InternalState{
-    HINSTANCE appInstance;
-    HWND mainWindow;
+    HINSTANCE AppInstance;
+    HWND MainWindow;
+    VkSurfaceKHR Surface;
 } InternalState;
 
 //Clock
@@ -27,16 +45,16 @@ Bool8 PlatformStartup( PlatformState* Platform, const char* WindowName, Int32 X,
     Platform->InternalState = malloc(sizeof(InternalState));
     InternalState* State = (InternalState* )Platform->InternalState;
 
-    State->appInstance = GetModuleHandleA(0);
+    State->AppInstance = GetModuleHandleA(0);
 
-HICON WindowIcon = LoadIcon(State->appInstance, IDI_APPLICATION);
+HICON WindowIcon = LoadIcon(State->AppInstance, IDI_APPLICATION);
 WNDCLASSA WindowClass = {0};
 
 WindowClass.style = CS_DBLCLKS;  
 WindowClass.lpfnWndProc = Win32ProcessMessage;
 WindowClass.cbClsExtra = 0;
 WindowClass.cbWndExtra = 0;
-WindowClass.hInstance = State->appInstance;
+WindowClass.hInstance = State->AppInstance;
 WindowClass.hIcon = WindowIcon;
 WindowClass.hCursor = LoadCursor(NULL, IDC_ARROW);  
 WindowClass.hbrBackground = NULL;                  
@@ -45,7 +63,7 @@ WindowClass.lpszClassName = "FractalWindowClass";
 if (!RegisterClassA(&WindowClass))
 {
     MessageBoxA(0, "Window Failed to Register", "Error!", MB_ICONEXCLAMATION | MB_OK);
-    return FALSE;
+    return false;
 }
 
 UInt32 ClientX = X;
@@ -66,7 +84,7 @@ WindowStyle |= WS_MINIMIZEBOX;
 WindowStyle |= WS_THICKFRAME;
 
 RECT Border = {0, 0, 0, 0};
-AdjustWindowRectEx(&Border, WindowStyle, FALSE, WindowExStyle);
+AdjustWindowRectEx(&Border, WindowStyle, false, WindowExStyle);
 
 WindowWidth += (Border.right - Border.left);
 WindowHeight += (Border.bottom - Border.top);
@@ -74,27 +92,27 @@ WindowHeight += (Border.bottom - Border.top);
     HWND Handle = CreateWindowExA(
         WindowExStyle, "FractalWindowClass", WindowName,
         WindowStyle, WindowX, WindowY, WindowWidth, WindowHeight,
-        0, 0, State->appInstance, 0);
+        0, 0, State->AppInstance, 0);
 
 if (Handle == 0) {
 
     MessageBoxA(NULL, "Wndow Failed to Create", "Error!", MB_ICONEXCLAMATION | MB_OK);
 
     FLFATAL("Window creation failed!");
-    return FALSE;
+    return false;
 
 } else {
 
-    State->mainWindow = Handle;
+    State->MainWindow = Handle;
 
 }
 
-Bool8 ShouldActivate = TRUE; // TODO: if the window should not accept input, this should be false.
+Bool8 ShouldActivate = true; // TODO: if the window should not accept input, this should be false.
 Int32 ShowWindowCommandFlags = ShouldActivate ? SW_SHOW : SW_SHOWNOACTIVATE;
 
 // If initially minimized, use SW_MINIMIZE : SW_SHOWMINNOACTIVE;
 // If initially maximized, use SW_SHOWMAXIMIZED : SW_MAXIMIZE
-ShowWindow(State->mainWindow, ShowWindowCommandFlags);
+ShowWindow(State->MainWindow, ShowWindowCommandFlags);
 
 LARGE_INTEGER Frequency;
 QueryPerformanceFrequency(&Frequency);
@@ -104,7 +122,7 @@ LARGE_INTEGER Counter;
 QueryPerformanceCounter(&Counter);
 StartTime = (UInt64)Counter.QuadPart;
 
-return TRUE;
+return true;
 
 }
 
@@ -112,10 +130,10 @@ void PlatformShutdown(PlatformState* Platform)
 {
     InternalState* State = (InternalState* )Platform->InternalState;
 
-    if (State->mainWindow)
+    if (State->MainWindow)
     {
-        DestroyWindow(State->mainWindow);
-        State->mainWindow = 0;
+        DestroyWindow(State->MainWindow);
+        State->MainWindow = 0;
     }
 }
 
@@ -129,7 +147,7 @@ Bool8 PlatformPollEvents(PlatformState* Platform)
         DispatchMessageA(&Message);
     }
 
-    return TRUE;
+    return true;
 }
 
 void* PlatformAllocate(UInt64 Size, Bool8 Aligned)
@@ -166,7 +184,7 @@ void PlatformConsoleWrite(const char* Message, UInt8 Color)
     SetConsoleTextAttribute(ConsoleHandle, Levels[Color]);
 
     static const char* AnsiColors[6] = {
-        "\033[91m", // 12 -> Bright Red (Fatal)
+        "\033[91m",      // 12 -> Bright Red (Fatal)
         "\033[31m",      // ERROR: Direct Bright Red
         "\033[93m",      // WARN:  Direct Bright Yellow
         "\033[37m",      // INFO:  Standard White
@@ -177,8 +195,24 @@ void PlatformConsoleWrite(const char* Message, UInt8 Color)
     enum { MessageLength = 32768 };
     static char DebuggerMessage[MessageLength];
 
-    snprintf(DebuggerMessage, sizeof(DebuggerMessage), "%s%s\033[0m", AnsiColors[Color], Message);
-    OutputDebugStringA(DebuggerMessage);
+    const char* LineStart = Message;
+    const char* LineEnd = 0;
+
+    while (*LineStart != '\0') {
+        LineEnd = strchr(LineStart, '\n');
+        if (LineEnd) {
+            // Found a newline, print up to the newline with the coloring sequence attached
+            int ComponentLength = (int)(LineEnd - LineStart);
+            snprintf(DebuggerMessage, sizeof(DebuggerMessage), "%s%.*s\033[0m\n", AnsiColors[Color], ComponentLength, LineStart);
+            OutputDebugStringA(DebuggerMessage);
+            LineStart = LineEnd + 1; // Slide forward past the newline character
+        } else {
+            // No more newlines left, print the tail end residue of the string
+            snprintf(DebuggerMessage, sizeof(DebuggerMessage), "%s%s\033[0m", AnsiColors[Color], LineStart);
+            OutputDebugStringA(DebuggerMessage);
+            break;
+        }
+    }
 
     UInt64 Length = strlen(Message);
     LPDWORD BytesWritten = 0;
@@ -204,8 +238,22 @@ void PlatformConsoleWriteError(const char* Message, UInt8 Color)
     enum { MessageLength = 32768 };
     static char DebuggerMessage[MessageLength];
 
-    snprintf(DebuggerMessage, sizeof(DebuggerMessage), "%s%s\033[0m", AnsiColors[Color], Message);
-    OutputDebugStringA(DebuggerMessage);
+    const char* LineStart = Message;
+    const char* LineEnd = 0;
+
+    while (*LineStart != '\0') {
+        LineEnd = strchr(LineStart, '\n');
+        if (LineEnd) {
+            int ComponentLength = (int)(LineEnd - LineStart);
+            snprintf(DebuggerMessage, sizeof(DebuggerMessage), "%s%.*s\033[0m\n", AnsiColors[Color], ComponentLength, LineStart);
+            OutputDebugStringA(DebuggerMessage);
+            LineStart = LineEnd + 1;
+        } else {
+            snprintf(DebuggerMessage, sizeof(DebuggerMessage), "%s%s\033[0m", AnsiColors[Color], LineStart);
+            OutputDebugStringA(DebuggerMessage);
+            break;
+        }
+    }
 
     UInt64 Length = strlen(Message);
     LPDWORD BytesWritten = 0;
@@ -224,17 +272,46 @@ void PlatformSleep(UInt64 Miliseconds)
     Sleep((DWORD)Miliseconds);
 }
 
+
+
+void PlatformGetRequiredExtensions(const char*** ExtensionsVector)
+{
+    VectorAppend(*ExtensionsVector, &"VK_KHR_win32_surface");
+}
+
+// Surface creation for Vulkan
+Bool8 PlatformCreateVulkanSurface(PlatformState* Platform, VulkanContext *Context) {
+    /// Simply cold-cast to the known type.
+    InternalState* State = (InternalState*)Platform->InternalState;
+
+    VkWin32SurfaceCreateInfoKHR CreateInfo = {0};
+    CreateInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+    CreateInfo.pNext = 0;
+    CreateInfo.hinstance = State->AppInstance;
+    CreateInfo.hwnd = State->MainWindow;
+
+    VkResult result = vkCreateWin32SurfaceKHR(Context->Instance, &CreateInfo, Context->Allocator, &State->Surface);
+    if (result != VK_SUCCESS) {
+        FLFATAL("Vulkan surface creation failed.");
+        return false;
+    }
+
+    Context->Surface = State->Surface;
+    return true;
+}
+
 LRESULT CALLBACK Win32ProcessMessage(HWND HWindow, UInt32 Message, WPARAM WordParam, LPARAM LongParam)
 {
     switch(Message)
     {
             case WM_ERASEBKGND:
             // Notify the OS that erasing will be handled by the application to prevent flicker.
-            return 1;
+            return 1; 
 
             case WM_CLOSE:
-            //TODO: Fire an Event for the app to quit
-            return 0;
+                EventContext Data = {0};
+                EventFire(EVENT_APP_QUIT, 0, Data);
+                return true;
 
             case WM_DESTROY:
             PostQuitMessage(0);

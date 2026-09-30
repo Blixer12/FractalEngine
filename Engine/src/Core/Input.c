@@ -26,14 +26,14 @@ static InputState State;
 void InputSystemInitialize()
 {
     FMZeroMemory(&State, sizeof(InputState));
-    Initialized = TRUE;
+    Initialized = true;
     FLINFO("Input Subsystem Intialized");
 }
 
 void InputSystemShutdown()
 {
     //TODO: Shutdown Routines when needed
-    Initialized = FALSE;
+    Initialized = false;
 }
 
 void InputUpdate(Float64 DeltaTime)
@@ -107,33 +107,33 @@ Bool8 InputIsKeyDown(Keys Key)
 {
     if (!Initialized)
     {
-        return FALSE;
+        return false;
     }
-    return State.KeyboardCurrent.Keys[Key] == TRUE;
+    return State.KeyboardCurrent.Keys[Key] == true;
 }
 Bool8 InputIsKeyUp(Keys Key)
 {
     if (!Initialized)
     {
-        return TRUE;
+        return true;
     }
-    return State.KeyboardCurrent.Keys[Key] == FALSE;
+    return State.KeyboardCurrent.Keys[Key] == false;
 }
 Bool8 InputWasKeyDown(Keys Key)
 {
     if (!Initialized)
     {
-        return FALSE;
+        return false;
     }
-    return State.KeyboardPrevious.Keys[Key] == TRUE;
+    return State.KeyboardPrevious.Keys[Key] == true;
 }
 Bool8 InputWasKeyUp(Keys Key)
 {
     if (!Initialized)
     {
-        return TRUE;
+        return true;
     }
-    return State.KeyboardPrevious.Keys[Key] == FALSE;
+    return State.KeyboardPrevious.Keys[Key] == false;
 }
 
 // --- MOUSE INPUT ---
@@ -141,33 +141,33 @@ Bool8 InputIsMouseButtonDown(MouseButtons Button)
 {
     if (!Initialized)
     {
-        return FALSE;
+        return false;
     }
-    return State.MouseCurrent.MouseButtons[Button] == TRUE;
+    return State.MouseCurrent.MouseButtons[Button] == true;
 }
 Bool8 InputIsMouseButtonUp(MouseButtons Button)
 {
     if (!Initialized)
     {
-        return TRUE;
+        return true;
     }
-    return State.MouseCurrent.MouseButtons[Button] == FALSE;
+    return State.MouseCurrent.MouseButtons[Button] == false;
 }
 Bool8 InputWasMouseButtonDown(MouseButtons Button)
 {
     if (!Initialized)
     {
-        return FALSE;
+        return false;
     }
-    return State.MousePrevious.MouseButtons[Button] == TRUE;
+    return State.MousePrevious.MouseButtons[Button] == true;
 }
 Bool8 InputWasMouseButtonUp(MouseButtons Button)
 {
     if (!Initialized)
     {
-        return TRUE;
+        return true;
     }
-    return State.MousePrevious.MouseButtons[Button] == FALSE;
+    return State.MousePrevious.MouseButtons[Button] == false;
 }
 
 // --- MOUSE MOVEMENT ---

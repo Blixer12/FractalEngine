@@ -29,14 +29,14 @@ if (!CreateGame(&Instance))
 if (!AppCreate(&Instance))
 {
     FLFATAL("Application failed to create!");
-    return 1;
+    return -3;
 }
 
 // Begins the Game Loop
 if (!AppRun())
 {
     FLWARN("The Application did not shutdown properly!");
-    return 2;
+    return -4;
 }
 
 ShutdownMemory();

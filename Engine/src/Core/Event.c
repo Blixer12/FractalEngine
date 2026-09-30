@@ -22,15 +22,15 @@ static Bool8 IsInitialized;
 static EventSystemState State;
 
 Bool8 EventSystemInitialize() {
-    if (IsInitialized == TRUE) {
-        return FALSE;
+    if (IsInitialized == true) {
+        return false;
     }
-    IsInitialized = FALSE;
+    IsInitialized = false;
     FMZeroMemory(&State, sizeof(State));
 
-    IsInitialized = TRUE;
+    IsInitialized = true;
 
-    return TRUE;
+    return true;
 }
 
 void EventSystemShutdown() 
@@ -48,9 +48,9 @@ void EventSystemShutdown()
 
 Bool8 EventRegister(UInt16 Code, void* Receiver, PFN_OnEvent Callback)
 {
-    if (IsInitialized == FALSE)
+    if (IsInitialized == false)
     {
-        return FALSE;
+        return false;
     }
 
     if (State.Registered[Code].Events == 0)
@@ -64,7 +64,7 @@ Bool8 EventRegister(UInt16 Code, void* Receiver, PFN_OnEvent Callback)
         if (State.Registered[Code].Events[i].Receiver == Receiver)
         {
             // TODO: warn
-            return FALSE;
+            return false;
         }
     }
 
@@ -74,19 +74,19 @@ Bool8 EventRegister(UInt16 Code, void* Receiver, PFN_OnEvent Callback)
     Event.Callback = Callback;
     VectorAppend(State.Registered[Code].Events, Event);
 
-    return TRUE;
+    return true;
 }
 
 Bool8 EventUnregister(UInt16 Code, void* Receiver, PFN_OnEvent Callback) {
-    if (IsInitialized == FALSE)
+    if (IsInitialized == false)
     {
-        return FALSE;
+        return false;
     }
 
     // On nothing is registered for the code, boot out.
     if (State.Registered[Code].Events == 0) {
         // TODO: warn
-        return FALSE;
+        return false;
     }
 
     UInt64 RegisteredCount = VectorSize(State.Registered[Code].Events);
@@ -96,25 +96,25 @@ Bool8 EventUnregister(UInt16 Code, void* Receiver, PFN_OnEvent Callback) {
             // Found one, remove it
             RegisteredEvent RemovedEvent;
             VectorRemoveAt(State.Registered[Code].Events, i, &RemovedEvent);
-            return TRUE;
+            return true;
         }
     }
 
     // Not found.
-    return FALSE;
+    return false;
 }
 
 Bool8 EventFire(UInt16 Code, void* Sender, EventContext Context) 
 {
-    if (IsInitialized == FALSE)
+    if (IsInitialized == false)
     {
-        return FALSE;
+        return false;
     }
 
     // If nothing is registered for the code, boot out.
     if (State.Registered[Code].Events == 0)
     {
-        return FALSE;
+        return false;
     }
 
     UInt64 RegisteredCount = VectorSize(State.Registered[Code].Events);
@@ -124,10 +124,10 @@ Bool8 EventFire(UInt16 Code, void* Sender, EventContext Context)
         if (Event.Callback(Code, Sender, Event.Receiver, Context))
         {
             // Message has been handled, does not send other listeners.
-            return TRUE;
+            return true;
         }
     }
 
     // Event finished propagation without being explicitly handled by any listener
-    return FALSE;
+    return false;
 }

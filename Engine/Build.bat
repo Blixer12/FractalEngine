@@ -1,10 +1,10 @@
 @ECHO OFF
 SetLocal EnableDelayedExpansion
 
-REM --- Detect and initialize MSVC Environment if 'cl' is missing ---
-WHERE cl >nul 2>nul
+REM --- Detect and initialize environment for clang-cl ---
+WHERE clang-cl >nul 2>nul
 IF %ERRORLEVEL% NEQ 0 (
-    ECHO MSVC Build Tools not detected in PATH. Initializing environment...
+    ECHO clang-cl not detected in PATH. Initializing Visual Studio build environment...
     CALL "C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
 )
 
@@ -18,14 +18,14 @@ FOR /R ./engine/src %%f in (*.c) do (
 )
 
 SET assembly=Fractal
-SET compilerFlags=/Zi /LD /W4 /WX /TC /std:clatest
+SET compilerFlags=/Zi /LD /W4 /TC /WX /std:clatest
 
-REM Tell the compiler to look in the engine/src directory for internal headers
+REM Include paths and definitions
 SET includeFlags=/IEngine\src /I"%VULKAN_SDK%\Include" /I"../vcpkg_installed/x64-windows/include"
 SET defines=/D_DEBUG /DFEXPORT /D_CRT_SECURE_NO_WARNINGS
 SET linkerFlags=/link /LIBPATH:"%VULKAN_SDK%\Lib" /LIBPATH:"../vcpkg_installed/x64-windows/lib" user32.lib vulkan-1.lib /OUT:"./bin/%assembly%.dll" /IMPLIB:"./bin/%assembly%.lib"
 
-ECHO "Building %assembly% DLL..."
-CALL cl %cFilenames% %compilerFlags% %defines% %includeFlags% %linkerFlags%
+ECHO "Building %assembly% DLL with clang-cl..."
+CALL clang-cl %cFilenames% %compilerFlags% %defines% %includeFlags% %linkerFlags%
 
 IF %ERRORLEVEL% NEQ 0 ( EXIT /B %ERRORLEVEL% )

@@ -26,3 +26,5 @@ typedef struct AppConfig
 FAPI Bool8 AppCreate(struct Game* Instance);
 
 FAPI Bool8 AppRun();
+
+void AppGetWindowSize(UInt32* Width, UInt32* Height);

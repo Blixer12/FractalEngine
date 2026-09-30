@@ -6,6 +6,8 @@
 #include "Core/Event.h"
 #include "Core/Input.h"
 
+#include "Containers/Vector.h"
+
 #include <xcb/xcb.h>
 #include <xkbcommon/xkbcommon.h>
 #include <xkbcommon/xkbcommon-x11.h> // For native XCB key mapping
@@ -27,6 +29,10 @@
 #include <stdio.h>
 #include <string.h>
 
+#define VK_USE_PLATFORM_XCB_KHR
+#include <vulkan/vulkan.h>
+#include "Renderer/Vulkan/VulkanDef.inl"
+
 typedef struct InternalState {
     xcb_connection_t* Connection;
     xcb_window_t Window;
@@ -38,6 +44,8 @@ typedef struct InternalState {
     struct xkb_keymap* XkbKeymap;
     struct xkb_state* XkbState;
     Int32 XkbDeviceId;
+
+    VkSurfaceKHR Surface;
 } InternalState;
 
 Keys TranslateKeyCode(xkb_keysym_t XKeycode);
@@ -52,7 +60,7 @@ Bool8 PlatformStartup( PlatformState* Platform, const char* WindowName, Int32 X,
     State->Connection = xcb_connect(NULL, &ScreenIdx);
     if (xcb_connection_has_error(State->Connection)) {
         FLFATAL("Failed to connect to X11 server via raw XCB.");
-        return FALSE;
+        return false;
     }
 
     // 2. Setup modern XKB Keyboard Context (No Xlib dependency)
@@ -67,7 +75,6 @@ Bool8 PlatformStartup( PlatformState* Platform, const char* WindowName, Int32 X,
     State->XkbKeymap = xkb_x11_keymap_new_from_device(State->XkbContext, State->Connection, State->XkbDeviceId, XKB_KEYMAP_COMPILE_NO_FLAGS);
     State->XkbState = xkb_x11_state_new_from_device(State->XkbKeymap, State->Connection, State->XkbDeviceId);
 
-    // 3. Extract your Screen structures using the iterator
     const struct xcb_setup_t* Setup = xcb_get_setup(State->Connection);
     xcb_screen_iterator_t It = xcb_setup_roots_iterator(Setup);
     for (Int32 s = ScreenIdx; s > 0; s--) {
@@ -167,10 +174,10 @@ xcb_change_property(
     Int32 StreamResult = xcb_flush(State->Connection);
     if (StreamResult <= 0) {
         FLFATAL("An error occurred when flusing the stream: %d", StreamResult);
-        return FALSE;
+        return false;
     }
 
-    return TRUE;
+    return true;
 
 }
 
@@ -195,7 +202,7 @@ Bool8 PlatformPollEvents(PlatformState* Platform)
     xcb_generic_event_t* Event = NULL;
     xcb_client_message_event_t* ClientMessage;
 
-    Bool8 QuitFlagged = FALSE;
+    Bool8 QuitFlagged = false;
 
     // Poll for events until null is returned.
     while ((Event = xcb_poll_for_event(State->Connection)) != NULL) {
@@ -272,7 +279,7 @@ Bool8 PlatformPollEvents(PlatformState* Platform)
 
                 // Window close
                 if (ClientMessage->data.data32[0] == State->WmDeleteWin) {
-                    QuitFlagged = TRUE;
+                    QuitFlagged = true;
                 }
             } break;
             default:
@@ -346,6 +353,35 @@ void PlatformSleep(UInt64 Miliseconds)
     }
     usleep((Miliseconds % 1000) * 1000);
 #endif
+}
+
+void PlatformGetRequiredExtensions(const char*** ExtensionsVector)
+{
+    VectorAppend(*ExtensionsVector, &"VK_KHR_xcb_surface");
+}
+
+Bool8 PlatformCreateVulkanSurface(PlatformState* Platform, VulkanContext* Context) {
+    // Cold Casts to the known type
+    InternalState* State = (InternalState*)Platform->State;
+
+    VkXcbSurfaceCreateInfoKHR CreateInfo = {0};
+    CreateInfo.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
+    CreateInfo.connection = State->Connection;
+    CreateInfo.window = State->Window;
+
+    VkResult Result = vkCreateXcbSurfaceKHR(
+        Context->Instance,
+        &CreateInfo,
+        Context->Allocator,
+        &Context->Surface
+    );
+
+    if (Result != VK_SUCCESS) {
+        FLFATAL("Vulkan surface creation failed.");
+        return false;
+    }
+
+    return true;
 }
 
 Keys TranslateKeyCode(xkb_keysym_t XKeycode)

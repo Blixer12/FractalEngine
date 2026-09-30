@@ -1,11 +1,11 @@
 #pragma once
 
-#include "Renderer/RendererBackend.h"
+#include "Renderer/CrystalBackend.h"
 
-Bool8 VulkanRendererInitialize(RendererBackend* Backend, const char* AppName, struct PlatformState* Platform);
-void VulkanRendererShutdown(RendererBackend* Backend);
+Bool8 VulkanRendererInitialize(CrystalBackend* Backend, const char* AppName, struct PlatformState* PlatformState);
+void VulkanRendererShutdown(CrystalBackend* Backend);
 
-void VulkanRendererOnResized(RendererBackend* Backend, UInt16 Width, UInt16 Height);
+void VulkanRendererOnResized(CrystalBackend* Backend, UInt16 Width, UInt16 Height);
 
-Bool8 VulkanrRendererBeginFrame(RendererBackend* Backend, Float32 DeltaTime);
-Bool8 VulkanrRendererEndFrame(RendererBackend* Backend, Float32 DeltaTime);
+Bool8 VulkanRendererBeginFrame(CrystalBackend* Backend, Float32 DeltaTime);
+Bool8 VulkanRendererEndFrame(CrystalBackend* Backend, Float32 DeltaTime);

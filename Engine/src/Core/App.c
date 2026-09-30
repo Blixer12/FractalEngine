@@ -9,7 +9,7 @@
 #include "Input.h"
 #include "Clock.h"
 
-#include "Renderer/RendererFrontend.h"
+#include "Renderer/CrystalFrontend.h"
 
 // Application configuration.
 typedef struct AppState {
@@ -26,6 +26,14 @@ typedef struct AppState {
 static Bool8 Initialized;
 static AppState State;
 
+void AppGetWindowSize(UInt32* Width, UInt32* Height) 
+{
+    if (Width && Height) {
+        *Width = State.Width;
+        *Height = State.Height;
+    }
+}
+
 Bool8 AppOnEvent(UInt16 Code, void* Sender, void* Reciever, EventContext Context);
 
 Bool8 AppOnKeyEvent(UInt16 Code, void* Sender, void* Reciever, EventContext Context);
@@ -36,7 +44,7 @@ Bool8 AppCreate(Game* Instance)
     if (Initialized)
     {
         FLFATAL("AppCreate() function was called more than once");
-        return FALSE;
+        return false;
     }
 
     State.Instance = Instance;
@@ -53,13 +61,13 @@ Bool8 AppCreate(Game* Instance)
     FLDEBUG("Just some Debugging like over here  ->  Test Var: ->%f", 3.14159);
     FLTRACE("Tracing a line somewhere... Over Here!   ->    Test Var: ->%f", 3.14159);
 
-    State.IsRunning = TRUE;
-    State.IsSuspended = FALSE;
+    State.IsRunning = true;
+    State.IsSuspended = false;
 
     if (!EventSystemInitialize())
     {
         FLERROR("Event System failed to initialize, Application can't run");
-        return FALSE;
+        return false;
     }
 
     EventRegister(EVENT_APP_QUIT, 0, AppOnEvent);
@@ -78,10 +86,10 @@ Bool8 AppCreate(Game* Instance)
         Instance->Config.StartWidth, 
         Instance->Config.StartHeight))
     {
-        return FALSE;
+        return false;
     }
 
-    if (!RendererInitialize(Instance->Config.Name, &State.Platform))
+    if (!CrystalInitialize(Instance->Config.Name, &State.Platform))
     {
         FLFATAL("Failed to Initialize Renderer! Aborting Application");
     }
@@ -89,14 +97,14 @@ Bool8 AppCreate(Game* Instance)
     if (!State.Instance->Initialize(State.Instance))
     {
         FLFATAL("Game Failed to Initalize");
-        return FALSE;
+        return false;
     }
 
     State.Instance->OnResize(State.Instance, State.Width, State.Height);
     
     Initialized = true;
 
-    return TRUE;
+    return true;
 }
 
 Bool8 AppRun()
@@ -115,7 +123,7 @@ Bool8 AppRun()
         {
             if (!PlatformPollEvents(&State.Platform))
             {
-                State.IsRunning = FALSE;
+                State.IsRunning = false;
             }
 
             if (!State.IsSuspended)
@@ -128,7 +136,7 @@ Bool8 AppRun()
                 if (!State.Instance->Update(State.Instance, (Float32)DeltaTime))
                 {
                     FLFATAL("The Game's Update Function failed! shutting down application");
-                    State.IsRunning = FALSE;
+                    State.IsRunning = false;
                     break;
                 }
 
@@ -136,14 +144,14 @@ Bool8 AppRun()
                 if (!State.Instance->Render(State.Instance, (Float32)DeltaTime))
                 {
                     FLFATAL("The Game's Render Function failed! shutting down application");
-                    State.IsRunning = FALSE;
+                    State.IsRunning = false;
                     break;
                 }
 
                 // TODO: Refactor Packet Creation
                 RenderPacket Packet;
                 Packet.DeltaTime = (Float32)DeltaTime;
-                RendererDrawFrame(&Packet);
+                CrystalDrawFrame(&Packet);
 
                 Float64 FrameEndTime = PlatformGetAbsoluteTime();
                 Float64 FrameElapsedTime = FrameEndTime - FrameStartTime;
@@ -154,13 +162,16 @@ Bool8 AppRun()
                 {
                     UInt64 RemainingMiliseconds = (UInt64)(RemainingSeconds * 1000);
 
-                    Bool8 LimitFrames = FALSE;
+                    Bool8 LimitFrames = false;
                     if (RemainingMiliseconds > 0 && LimitFrames)
                     {
                         PlatformSleep(RemainingMiliseconds - 1);
                     }
                 }
                 FrameCount++;
+
+                (void)FrameCount;
+                (void)RunningTime;
 
             // NOTE: Input update/state copying should always be handled
             // after any input should be recorded; I.E. before this line.
@@ -172,7 +183,7 @@ Bool8 AppRun()
             }
         }
 
-    State.IsRunning = FALSE;
+    State.IsRunning = false;
 
     EventUnregister(EVENT_APP_QUIT, 0, AppOnEvent);
 
@@ -185,11 +196,11 @@ Bool8 AppRun()
     EventSystemShutdown();
     InputSystemShutdown();
 
-    RendererShutdown();
+    CrystalShutdown();
 
     PlatformShutdown(&State.Platform);
 
-    return TRUE;
+    return true;
 }
 
 Bool8 AppOnEvent(UInt16 Code, void* Sender, void* Reciever, EventContext Context)
@@ -203,11 +214,11 @@ Bool8 AppOnEvent(UInt16 Code, void* Sender, void* Reciever, EventContext Context
         case EVENT_APP_QUIT:
         {
             FLDEBUG("Event Code APP_QUIT Recieved, Shutting Down.");
-            State.IsRunning = FALSE;
-            return TRUE;
+            State.IsRunning = false;
+            return true;
         }
     }
-    return FALSE;
+    return false;
 }
 
 Bool8 AppOnKeyEvent(UInt16 Code, void* Sender, void* Reciever, EventContext Context)
@@ -222,7 +233,7 @@ Bool8 AppOnKeyEvent(UInt16 Code, void* Sender, void* Reciever, EventContext Cont
             EventFire(EVENT_APP_QUIT, 0, Data);
 
             // Block anything else from processing this.
-            return TRUE;
+            return true;
         } else if (KeyCode == AKey) {
             // Example on checking for a key
             FLDEBUG("Explicit - A key pressed!");
@@ -238,7 +249,7 @@ Bool8 AppOnKeyEvent(UInt16 Code, void* Sender, void* Reciever, EventContext Cont
             FLTRACE("'%c' key released in window.", KeyCode);
         }
     }
-    return FALSE;
+    return false;
 }
 
 Bool8 AppOnMouseButtonEvent(UInt16 Code, void* Sender, void* Reciever, EventContext Context)
@@ -266,5 +277,5 @@ Bool8 AppOnMouseButtonEvent(UInt16 Code, void* Sender, void* Reciever, EventCont
             FLTRACE("Mouse button %d released in window.", ButtonCode);
         }
     }
-    return FALSE;
+    return false;
 }
