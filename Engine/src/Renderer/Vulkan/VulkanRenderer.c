@@ -4,9 +4,11 @@
 #include "VulkanDevice.h"
 #include "VulkanSwapchain.h"
 #include "VulkanRenderpass.h"
+#include "VulkanCommandBuffer.h"
 
 #include "Core/Logger.h"
 #include "Core/FString.h"
+#include "Core/Memory.h"
 
 #include "Containers/Vector.h"
 
@@ -21,6 +23,8 @@ VKAPI_ATTR VkBool32 VKAPI_CALL VkDebugCallback(
     void* UserData);
 
 Int32 FindMemoryIndex(UInt32 TypeFilter, UInt32 PropertyFlags);
+
+void CreateCommandBuffers(CrystalBackend* Backend);
 
 Bool8 VulkanRendererInitialize(CrystalBackend* Backend, const char* AppName, struct PlatformState* PlatformState) {
     
@@ -171,6 +175,8 @@ Bool8 VulkanRendererInitialize(CrystalBackend* Backend, const char* AppName, str
         1.0f,
         0);
 
+    CreateCommandBuffers(Backend);
+
     FLINFO("Vulkan renderer initialized successfully");
     return true;
 }
@@ -179,6 +185,21 @@ Bool8 VulkanRendererInitialize(CrystalBackend* Backend, const char* AppName, str
 void VulkanRendererShutdown(CrystalBackend* Backend)
 {
     (void)Backend;
+    
+    for (UInt32 i = 0; i < Context.Swapchain.ImageCount; i++)
+    {
+        if (Context.GraphicsCommandBuffers[i].Handle)
+        {
+            VulkanCommandBufferFree(
+                &Context,
+                Context.Device.GraphicsCommandPool,
+                &Context.GraphicsCommandBuffers[i]);
+            Context.GraphicsCommandBuffers[i].Handle = 0;
+        }
+    }
+    VectorDestroy(Context.GraphicsCommandBuffers);
+    Context.GraphicsCommandBuffers = 0;
+
     VulkanRenderpassDestroy(&Context, &Context.MainRenderpass);
 
     VulkanSwapchainDestroy(&Context, &Context.Swapchain);
@@ -267,4 +288,34 @@ Int32 FindMemoryIndex(UInt32 TypeFilter, UInt32 PropertyFlags)
 
     FLWARN("Unable to find sutiable memory type!");
     return -1;
+}
+
+void CreateCommandBuffers(CrystalBackend* Backend)
+{
+    (void)Backend;
+
+    if (!Context.GraphicsCommandBuffers) {
+        Context.GraphicsCommandBuffers = VectorReserve(VulkanCommandBuffer, Context.Swapchain.ImageCount);
+        for (UInt32 i = 0; i < Context.Swapchain.ImageCount; i++)
+        {
+            FMZeroMemory(&Context.GraphicsCommandBuffers[i], sizeof(VulkanCommandBuffer));
+        }
+    }
+
+    for (UInt32 i = 0; i < Context.Swapchain.ImageCount; i++) {
+        if (Context.GraphicsCommandBuffers[i].Handle) {
+            VulkanCommandBufferFree(
+                &Context,
+                Context.Device.GraphicsCommandPool,
+                &Context.GraphicsCommandBuffers[i]);
+        }
+        
+        VulkanCommandBufferAllocate(
+            &Context,
+            Context.Device.GraphicsCommandPool,
+            true,
+            &Context.GraphicsCommandBuffers[i]);
+    }
+
+    FLDEBUG("Vulkan command buffers created successfully.");
 }

@@ -189,6 +189,18 @@ Bool8 VulkanDeviceCreate(VulkanContext* Context)
         &Context->Device.TransferQueue);
     FLDEBUG("Queues Obtained");
 
+    VkCommandPoolCreateInfo PoolCreateInfo = {0};
+    PoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    PoolCreateInfo.queueFamilyIndex = Context->Device.GraphicsQueueIndex;
+    PoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    VK_CHECK(vkCreateCommandPool(
+        Context->Device.LogicalDevice,
+        &PoolCreateInfo,
+        Context->Allocator,
+        &Context->Device.GraphicsCommandPool));
+
+    FLDEBUG("Graphics command pool created");
+
     return true;
 }
 
@@ -199,6 +211,12 @@ void VulkanDeviceDestroy(VulkanContext* Context)
     Context->Device.PresentQueue = 0;
     Context->Device.ComputeQueue = 0;
     Context->Device.TransferQueue = 0;
+
+    FLDEBUG("Destroying command pools...");
+    vkDestroyCommandPool(
+        Context->Device.LogicalDevice,
+        Context->Device.GraphicsCommandPool,
+        Context->Allocator);
 
     FLDEBUG("Destroying logical device...");
     if (Context->Device.LogicalDevice)
