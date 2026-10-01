@@ -134,6 +134,8 @@ typedef struct VulkanSwapchain {
     VkImage* Images;
     VkImageView* Views;
 
+    VulkanFramebuffer* Framebuffers;
+
     VulkanImage DepthAttachment;
 } VulkanSwapchain;
 

@@ -5,7 +5,10 @@
 #include "VulkanSwapchain.h"
 #include "VulkanRenderpass.h"
 #include "VulkanCommandBuffer.h"
+#include "VulkanFramebuffer.h"
+#include "VulkanFence.h"
 
+#include "Core/App.h"
 #include "Core/Logger.h"
 #include "Core/FString.h"
 #include "Core/Memory.h"
@@ -26,6 +29,8 @@ Int32 FindMemoryIndex(UInt32 TypeFilter, UInt32 PropertyFlags);
 
 void CreateCommandBuffers(CrystalBackend* Backend);
 
+void RegenerateFramebuffers(CrystalBackend* Backend, VulkanSwapchain* Swapchain, VulkanRenderpass* Renderpass);
+
 Bool8 VulkanRendererInitialize(CrystalBackend* Backend, const char* AppName, struct PlatformState* PlatformState) {
     
     (void)Backend;
@@ -36,6 +41,17 @@ Bool8 VulkanRendererInitialize(CrystalBackend* Backend, const char* AppName, str
 
     // TODO: custom allocator.
     Context.Allocator = 0;
+
+    static UInt32 CachedWindowWidth = 0;
+    static UInt32 CachedWindowHeight = 0;
+
+    AppGetWindowSize(&CachedWindowWidth, &CachedWindowHeight);
+
+    Context.FramebufferWidth = (CachedWindowWidth != 0) ? CachedWindowWidth : 1280;
+    Context.FramebufferHeight = (CachedWindowHeight != 0) ? CachedWindowHeight : 720;
+
+    CachedWindowWidth = 0;
+    CachedWindowHeight = 0;
 
     // Setup Vulkan instance.
     VkApplicationInfo AppInfo = {0};
@@ -175,7 +191,31 @@ Bool8 VulkanRendererInitialize(CrystalBackend* Backend, const char* AppName, str
         1.0f,
         0);
 
+    Context.Swapchain.Framebuffers = VectorReserve(VulkanFramebuffer, Context.Swapchain.ImageCount);
+    RegenerateFramebuffers(Backend, &Context.Swapchain, &Context.MainRenderpass);
+
+    FLDEBUG("Creating Command Buffers...");
     CreateCommandBuffers(Backend);
+
+    // Sync Objects Allocation
+    Context.ImageAvailableSemaphores = VectorReserve(VkSemaphore, Context.Swapchain.MaxFramesInFlight);
+    Context.QueueCompleteSemaphores = VectorReserve(VkSemaphore, Context.Swapchain.MaxFramesInFlight);
+    Context.InFlightFences = VectorReserve(VulkanFence, Context.Swapchain.MaxFramesInFlight);
+    Context.InFlightFenceCount = Context.Swapchain.MaxFramesInFlight;
+
+    VkSemaphoreCreateInfo SemaphoreCreateInfo = {0};
+    SemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+    for (UInt32 i = 0; i < Context.Swapchain.MaxFramesInFlight; ++i) {
+        vkCreateSemaphore(Context.Device.LogicalDevice, &SemaphoreCreateInfo, Context.Allocator, &Context.ImageAvailableSemaphores[i]);
+        vkCreateSemaphore(Context.Device.LogicalDevice, &SemaphoreCreateInfo, Context.Allocator, &Context.QueueCompleteSemaphores[i]);
+        VulkanFenceCreate(&Context, true, &Context.InFlightFences[i]);
+    }
+
+    Context.ImagesInFlight = VectorReserve(VulkanFence, Context.Swapchain.ImageCount);
+    for (UInt32 i = 0; i < 32; ++i) {
+        Context.ImagesInFlight[i] = 0; 
+    }
 
     FLINFO("Vulkan renderer initialized successfully");
     return true;
@@ -185,7 +225,35 @@ Bool8 VulkanRendererInitialize(CrystalBackend* Backend, const char* AppName, str
 void VulkanRendererShutdown(CrystalBackend* Backend)
 {
     (void)Backend;
+    vkDeviceWaitIdle(Context.Device.LogicalDevice);
     
+    for (UInt32 i = 0; i < Context.Swapchain.MaxFramesInFlight; i++) {
+        if (Context.ImageAvailableSemaphores[i]) {
+            vkDestroySemaphore(
+                Context.Device.LogicalDevice,
+                Context.ImageAvailableSemaphores[i],
+                Context.Allocator);
+        }
+        if (Context.QueueCompleteSemaphores[i]) {
+            vkDestroySemaphore(
+                Context.Device.LogicalDevice,
+                Context.QueueCompleteSemaphores[i],
+                Context.Allocator);
+        }
+        VulkanFenceDestroy(&Context, &Context.InFlightFences[i]);
+    }
+
+    VectorDestroy(Context.ImageAvailableSemaphores);
+    Context.ImageAvailableSemaphores = 0;
+
+    VectorDestroy(Context.QueueCompleteSemaphores);
+    Context.QueueCompleteSemaphores = 0;
+
+    VectorDestroy(Context.ImagesInFlight);
+    Context.ImagesInFlight = 0;
+
+
+
     for (UInt32 i = 0; i < Context.Swapchain.ImageCount; i++)
     {
         if (Context.GraphicsCommandBuffers[i].Handle)
@@ -199,6 +267,11 @@ void VulkanRendererShutdown(CrystalBackend* Backend)
     }
     VectorDestroy(Context.GraphicsCommandBuffers);
     Context.GraphicsCommandBuffers = 0;
+
+    for (UInt32 i = 0; i < Context.Swapchain.ImageCount; i++)
+    {
+        VulkanFramebufferDestroy(&Context, &Context.Swapchain.Framebuffers[i]);
+    }
 
     VulkanRenderpassDestroy(&Context, &Context.MainRenderpass);
 
@@ -318,4 +391,23 @@ void CreateCommandBuffers(CrystalBackend* Backend)
     }
 
     FLDEBUG("Vulkan command buffers created successfully.");
+}
+
+void RegenerateFramebuffers(CrystalBackend* Backend, VulkanSwapchain* Swapchain, VulkanRenderpass* Renderpass) {
+    (void)Backend;
+    for (UInt32 i = 0; i < Swapchain->ImageCount; i++) {
+        UInt32 AttachmentCount = 2;
+        VkImageView Attachments[] = {
+            Swapchain->Views[i],
+            Swapchain->DepthAttachment.View};
+
+        VulkanFramebufferCreate(
+            &Context,
+            Renderpass,
+            Context.FramebufferWidth,
+            Context.FramebufferHeight,
+            AttachmentCount,
+            Attachments,
+            &Context.Swapchain.Framebuffers[i]);
+    }
 }

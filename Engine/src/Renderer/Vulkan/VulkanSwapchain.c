@@ -83,12 +83,12 @@ void VulkanSwapchainPresent(
         if (Result == VK_ERROR_OUT_OF_DATE_KHR || Result == VK_SUBOPTIMAL_KHR)
         {
             VulkanSwapchainRecreate(Context, Context->FramebufferWidth, Context->FramebufferHeight, Swapchain);
-            return;
 
         } else if (Result != VK_SUCCESS) {
             FLERROR("Failed to present swapchain image (VkResult: %d)", Result);
-            return;
         }
+
+        Context->CurrentFrame = (Context->CurrentFrame + 1) % Swapchain->MaxFramesInFlight;
 
     }
 
