@@ -3,6 +3,7 @@
 #include "VulkanDef.inl"
 #include "VulkanDevice.h"
 #include "VulkanSwapchain.h"
+#include "VulkanRenderpass.h"
 
 #include "Core/Logger.h"
 #include "Core/FString.h"
@@ -162,6 +163,14 @@ Bool8 VulkanRendererInitialize(CrystalBackend* Backend, const char* AppName, str
 
     VulkanSwapchainCreate(&Context, Context.FramebufferWidth, Context.FramebufferHeight, &Context.Swapchain);
 
+    VulkanRenderpassCreate(
+        &Context,
+        &Context.MainRenderpass, 
+        0, 0, Context.FramebufferWidth, Context.FramebufferHeight,
+        0.5f, 0.0f, 1.0f, 1.0f, 
+        1.0f,
+        0);
+
     FLINFO("Vulkan renderer initialized successfully");
     return true;
 }
@@ -170,6 +179,8 @@ Bool8 VulkanRendererInitialize(CrystalBackend* Backend, const char* AppName, str
 void VulkanRendererShutdown(CrystalBackend* Backend)
 {
     (void)Backend;
+    VulkanRenderpassDestroy(&Context, &Context.MainRenderpass);
+
     VulkanSwapchainDestroy(&Context, &Context.Swapchain);
 
     FLDEBUG("Destroying Vulkan device");

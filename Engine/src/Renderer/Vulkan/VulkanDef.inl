@@ -96,33 +96,34 @@ typedef struct VulkanImage {
     UInt32 Height;
 } VulkanImage;
 
-// typedef enum VulkanRenderPassState {
-//     VULKAN_RENDER_PASS_STATE_READY,
-//     VULKAN_RENDER_PASS_STATE_RECORDING,
-//     VULKAN_RENDER_PASS_STATE_IN_RENDER_PASS,
-//     VULKAN_RENDER_PASS_STATE_RECORDING_ENDED,
-//     VULKAN_RENDER_PASS_STATE_SUBMITTED,
-//     VULKAN_RENDER_PASS_STATE_NOT_ALLOCATED
-// } VulkanRenderPassState;
+typedef enum VulkanRenderPassState {
+    VULKAN_RENDER_PASS_STATE_READY,
+    VULKAN_RENDER_PASS_STATE_RECORDING,
+    VULKAN_RENDER_PASS_STATE_IN_RENDER_PASS,
+    VULKAN_RENDER_PASS_STATE_RECORDING_ENDED,
+    VULKAN_RENDER_PASS_STATE_SUBMITTED,
+    VULKAN_RENDER_PASS_STATE_NOT_ALLOCATED
+} VulkanRenderPassState;
 
-// Unused since this engine is Vulkan 1.3+
-// typedef struct VulkanRenderpass {
-//     VkRenderPass Handle;
-//     Float32 X, Y, W, H;
-//     Float32 R, G, B, A;
-// 
-//     Float32 Depth;
-//     UInt32 Stencil;
-// 
-//     VulkanRenderPassState State;
-// } VulkanRenderpass;
-// 
-// typedef struct VulkanFramebuffer {
-//     VkFramebuffer Handle;
-//     UInt32 AttachmentCount;
-//     VkImageView* Attachments;
-//     VulkanRenderpass* Renderpass;
-// } VulkanFramebuffer;
+// Unused since this engine is Vulkan 1.3+, however i don't feel like going off course
+// from the kohi game engine series, i am trying to get this to work
+typedef struct VulkanRenderpass {
+    VkRenderPass Handle;
+    Float32 X, Y, W, H;
+    Float32 R, G, B, A;
+
+    Float32 Depth;
+    UInt32 Stencil;
+
+    VulkanRenderPassState State;
+} VulkanRenderpass;
+
+typedef struct VulkanFramebuffer {
+    VkFramebuffer Handle;
+    UInt32 AttachmentCount;
+    VkImageView* Attachments;
+    VulkanRenderpass* Renderpass;
+} VulkanFramebuffer;
 
 typedef struct VulkanSwapchain {
     VkSurfaceFormatKHR ImageFormat;
@@ -163,7 +164,7 @@ typedef struct VulkanContext {
     VulkanPhysicalDevicePreferences Preferences;
 
     VulkanSwapchain Swapchain;
-    // VulkanRenderpass MainRenderpass;
+    VulkanRenderpass MainRenderpass;
 
     // This variable is a Vector used to track the amount of Command Buffers in use
     VulkanCommandBuffer* GraphicsCommandBuffers;
