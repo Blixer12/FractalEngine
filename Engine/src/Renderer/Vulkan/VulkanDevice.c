@@ -116,17 +116,23 @@ Bool8 VulkanDeviceCreate(VulkanContext* Context)
     }
 
     // Queries physical device capabilities
-    VkPhysicalDeviceVulkan13Features Supported13 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES };
+    VkPhysicalDevicePresentModeFifoLatestReadyFeaturesKHR FifoLatestReadySupported = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_MODE_FIFO_LATEST_READY_FEATURES_KHR };
+    VkPhysicalDeviceVulkan13Features Supported13 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES, .pNext = &FifoLatestReadySupported };
     VkPhysicalDeviceVulkan12Features Supported12 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES, .pNext = &Supported13 };
     VkPhysicalDeviceFeatures2 QueryFeatures = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, .pNext = &Supported12 };
 
     vkGetPhysicalDeviceFeatures2(Context->Device.PhysicalDevice, &QueryFeatures);
+
+    VkPhysicalDevicePresentModeFifoLatestReadyFeaturesKHR EnableFifoLatest = {0};
+    EnableFifoLatest.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_MODE_FIFO_LATEST_READY_FEATURES_KHR;
+    EnableFifoLatest.presentModeFifoLatestReady = (Context->Preferences.PresentModeFifoLatestReady && FifoLatestReadySupported.presentModeFifoLatestReady) ? VK_TRUE : VK_FALSE;
 
     // 2. Force-enable core 1.3 features
     VkPhysicalDeviceVulkan13Features Enable13 = {0};
     Enable13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
     Enable13.dynamicRendering = VK_TRUE; // Hard requirement
     Enable13.synchronization2 = VK_TRUE; // Hard requirement
+    Enable13.pNext = &EnableFifoLatest;
 
     VkPhysicalDeviceVulkan12Features Enable12 = {0};
     Enable12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
@@ -152,9 +158,17 @@ Bool8 VulkanDeviceCreate(VulkanContext* Context)
     DeviceCreateInfo.pEnabledFeatures = NULL;
     DeviceCreateInfo.pNext = &EnableFeatures2;
 
-    DeviceCreateInfo.enabledExtensionCount = 1;
-    const char* Extensions = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
-    DeviceCreateInfo.ppEnabledExtensionNames = &Extensions;
+    const char* EnabledExtensions[2];
+    UInt32 ExtensionCount = 0;
+
+    EnabledExtensions[ExtensionCount++] = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
+
+    if (EnableFifoLatest.presentModeFifoLatestReady) {
+        EnabledExtensions[ExtensionCount++] = VK_KHR_PRESENT_MODE_FIFO_LATEST_READY_EXTENSION_NAME;
+    }
+
+    DeviceCreateInfo.enabledExtensionCount = ExtensionCount;
+    DeviceCreateInfo.ppEnabledExtensionNames = EnabledExtensions;
 
     // Deprecated and unused
     DeviceCreateInfo.enabledLayerCount = 0;
@@ -401,7 +415,10 @@ Bool8 SelectPhysicalDevice(VulkanContext* Context)
             Preferences.GeometryShader             = true;
             Preferences.WireframeMode              = true; 
             Preferences.TimelineSemaphores         = true; 
-            Preferences.BufferDeviceAddress        = true; 
+            Preferences.BufferDeviceAddress        = true;
+
+            // --- PRESENTATION & SWAPCHAIN ---
+            Preferences.PresentModeFifoLatestReady = true;
 
             // --- LIMITS ---
             Preferences.MinimumPushConstantsSize   = 256; 
@@ -497,12 +514,12 @@ Bool8 SelectPhysicalDevice(VulkanContext* Context)
     // Memory information
         for (UInt32 j = 0; j < BestMemory.memoryHeapCount; ++j) {
          // Optimized: Cast to Float64 first to prevent 32-bit float precision truncation on large heaps
-         Float64 MemorySizeGB = ((Float64)BestMemory.memoryHeaps[j].size) / 1024.0 / 1024.0 / 1024.0;
+         MaybeUnused Float64 MemorySizeGB = ((Float64)BestMemory.memoryHeaps[j].size) / 1024.0 / 1024.0 / 1024.0;
          
          if (BestMemory.memoryHeaps[j].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) {
-             FLDEBUG("Local GPU memory: %.2f GB", MemorySizeGB);
+            FLDEBUG("Local GPU memory: %.2f GB", MemorySizeGB);
          } else {
-             FLDEBUG("Shared System memory: %.2f GB", MemorySizeGB);
+            FLDEBUG("Shared System memory: %.2f GB", MemorySizeGB);
          }
      }
 
@@ -614,10 +631,10 @@ for (UInt32 i = 0; i < QueueFamilyCount; ++i) {
         (!Requirements->Transfer || QueueInfo->TransferFamilyIndex != (UInt32)-1)) 
     {
         FLDEBUG("Device [%s] meets queue requirements.", Properties->deviceName);
-        FLTRACE("Graphics Family Index: %i", QueueInfo->GraphicsFamilyIndex);
-        FLTRACE("Present Family Index:  %i", QueueInfo->PresentFamilyIndex);
-        FLTRACE("Transfer Family Index: %i", QueueInfo->TransferFamilyIndex);
-        FLTRACE("Compute Family Index:  %i", QueueInfo->ComputeFamilyIndex);
+        FLDEBUG("Graphics Family Index: %i", QueueInfo->GraphicsFamilyIndex);
+        FLDEBUG("Present Family Index:  %i", QueueInfo->PresentFamilyIndex);
+        FLDEBUG("Transfer Family Index: %i", QueueInfo->TransferFamilyIndex);
+        FLDEBUG("Compute Family Index:  %i", QueueInfo->ComputeFamilyIndex);
 
         VulkanDeviceQuerySwapchainSupport(Device, Surface, SwapchainSupport);
 
@@ -731,6 +748,8 @@ Int32 ScorePhysicalDevice(
     }
 
     // 2. --- EXTENSION FEATURE POINTER CHAIN QUERIES ---
+    VkPhysicalDevicePresentModeFifoLatestReadyFeaturesKHR FifoLatestReadySupported = {0};
+    FifoLatestReadySupported.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_MODE_FIFO_LATEST_READY_FEATURES_KHR;
     VkPhysicalDeviceVulkan11Features Features11 = {0};
     Features11.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
     VkPhysicalDeviceVulkan12Features Features12 = {0};
@@ -759,18 +778,20 @@ Int32 ScorePhysicalDevice(
     GPLFeatures.pNext = &MeshFeatures;
     MeshFeatures.pNext = &ASFeatures;
     ASFeatures.pNext = &CoopMatrixFeatures;
+    CoopMatrixFeatures.pNext = &FifoLatestReadySupported;
 
     vkGetPhysicalDeviceFeatures2(Device, &ExtendedFeatures);
 
     // 3. --- EVALUATE EXTENSION PREFERENCES ---
-    if (Preferences->DescriptorIndexing && Features12.descriptorIndexing)           Score += 100;
-    if (Preferences->TimelineSemaphores && Features12.timelineSemaphore)            Score += 50;
-    if (Preferences->BufferDeviceAddress && Features12.bufferDeviceAddress)          Score += 50;
-    if (Preferences->ShaderObjects && ShaderObjectFeatures.shaderObject)            Score += 100;
-    if (Preferences->GraphicsPipelineLibrary && GPLFeatures.graphicsPipelineLibrary) Score += 100;
-    if (Preferences->MeshShaders && MeshFeatures.meshShader)                        Score += 200;
-    if (Preferences->RayTracing && ASFeatures.accelerationStructure)                Score += 200;
-    if (Preferences->CooperativeMatrix && CoopMatrixFeatures.cooperativeMatrix)     Score += 150;
+    if (Preferences->DescriptorIndexing && Features12.descriptorIndexing)                               Score += 100;
+    if (Preferences->TimelineSemaphores && Features12.timelineSemaphore)                                Score += 50;
+    if (Preferences->BufferDeviceAddress && Features12.bufferDeviceAddress)                             Score += 50;
+    if (Preferences->ShaderObjects && ShaderObjectFeatures.shaderObject)                                Score += 100;
+    if (Preferences->GraphicsPipelineLibrary && GPLFeatures.graphicsPipelineLibrary)                    Score += 100;
+    if (Preferences->MeshShaders && MeshFeatures.meshShader)                                            Score += 200;
+    if (Preferences->RayTracing && ASFeatures.accelerationStructure)                                    Score += 200;
+    if (Preferences->CooperativeMatrix && CoopMatrixFeatures.cooperativeMatrix)                         Score += 150;
+    if (Preferences->PresentModeFifoLatestReady && FifoLatestReadySupported.presentModeFifoLatestReady) Score += 150;
 
     // 4. --- CORE 1.0 HARDWARE FEATURES ---
     if (Preferences->GeometryShader && Features->geometryShader)                    Score += 10;

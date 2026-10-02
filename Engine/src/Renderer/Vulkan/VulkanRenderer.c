@@ -7,6 +7,7 @@
 #include "VulkanCommandBuffer.h"
 #include "VulkanFramebuffer.h"
 #include "VulkanFence.h"
+#include "VulkanUtils.h"
 
 #include "Core/App.h"
 #include "Core/Logger.h"
@@ -18,6 +19,8 @@
 #include "VulkanPlatform.h"
 
 static VulkanContext Context;
+static UInt32 CachedFramebufferWidth = 0;
+static UInt32 CachedFramebufferHeight = 0;
 
 VKAPI_ATTR VkBool32 VKAPI_CALL VkDebugCallback(
     VkDebugUtilsMessageSeverityFlagBitsEXT MessageSeverity,
@@ -28,8 +31,9 @@ VKAPI_ATTR VkBool32 VKAPI_CALL VkDebugCallback(
 Int32 FindMemoryIndex(UInt32 TypeFilter, UInt32 PropertyFlags);
 
 void CreateCommandBuffers(CrystalBackend* Backend);
-
+Bool8 RecreateSwapchain(CrystalBackend* Backend);
 void RegenerateFramebuffers(CrystalBackend* Backend, VulkanSwapchain* Swapchain, VulkanRenderpass* Renderpass);
+
 
 Bool8 VulkanRendererInitialize(CrystalBackend* Backend, const char* AppName, struct PlatformState* PlatformState) {
     
@@ -42,16 +46,10 @@ Bool8 VulkanRendererInitialize(CrystalBackend* Backend, const char* AppName, str
     // TODO: custom allocator.
     Context.Allocator = 0;
 
-    static UInt32 CachedWindowWidth = 0;
-    static UInt32 CachedWindowHeight = 0;
+    AppGetWindowSize(&CachedFramebufferWidth, &CachedFramebufferHeight);
 
-    AppGetWindowSize(&CachedWindowWidth, &CachedWindowHeight);
-
-    Context.FramebufferWidth = (CachedWindowWidth != 0) ? CachedWindowWidth : 1280;
-    Context.FramebufferHeight = (CachedWindowHeight != 0) ? CachedWindowHeight : 720;
-
-    CachedWindowWidth = 0;
-    CachedWindowHeight = 0;
+    Context.FramebufferWidth = (CachedFramebufferWidth != 0) ? CachedFramebufferWidth : 1280;
+    Context.FramebufferHeight = (CachedFramebufferHeight != 0) ? CachedFramebufferHeight : 720;
 
     // Setup Vulkan instance.
     VkApplicationInfo AppInfo = {0};
@@ -122,8 +120,9 @@ Bool8 VulkanRendererInitialize(CrystalBackend* Backend, const char* AppName, str
         VkDebugUtilsMessengerCreateInfoEXT DebugCreateInfo = {0};
         DebugCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
         DebugCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT   |
-                                          VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-                                          VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT;
+                                          VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT; 
+                                          // |
+                                          // VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT;
         DebugCreateInfo.messageType     = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT    |
                                           VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
                                           VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
@@ -199,21 +198,25 @@ Bool8 VulkanRendererInitialize(CrystalBackend* Backend, const char* AppName, str
 
     // Sync Objects Allocation
     Context.ImageAvailableSemaphores = VectorReserve(VkSemaphore, Context.Swapchain.MaxFramesInFlight);
-    Context.QueueCompleteSemaphores = VectorReserve(VkSemaphore, Context.Swapchain.MaxFramesInFlight);
+    Context.QueueCompleteSemaphores = VectorReserve(VkSemaphore, Context.Swapchain.ImageCount);
     Context.InFlightFences = VectorReserve(VulkanFence, Context.Swapchain.MaxFramesInFlight);
     Context.InFlightFenceCount = Context.Swapchain.MaxFramesInFlight;
 
     VkSemaphoreCreateInfo SemaphoreCreateInfo = {0};
     SemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-    for (UInt32 i = 0; i < Context.Swapchain.MaxFramesInFlight; ++i) {
+    for (UInt32 i = 0; i < Context.Swapchain.MaxFramesInFlight; i++) {
         vkCreateSemaphore(Context.Device.LogicalDevice, &SemaphoreCreateInfo, Context.Allocator, &Context.ImageAvailableSemaphores[i]);
-        vkCreateSemaphore(Context.Device.LogicalDevice, &SemaphoreCreateInfo, Context.Allocator, &Context.QueueCompleteSemaphores[i]);
         VulkanFenceCreate(&Context, true, &Context.InFlightFences[i]);
     }
 
+    for (UInt32 i = 0; i < Context.Swapchain.ImageCount; i++)
+    {
+        vkCreateSemaphore(Context.Device.LogicalDevice, &SemaphoreCreateInfo, Context.Allocator, &Context.QueueCompleteSemaphores[i]);
+    }
+
     Context.ImagesInFlight = VectorReserve(VulkanFence, Context.Swapchain.ImageCount);
-    for (UInt32 i = 0; i < 32; ++i) {
+    for (UInt32 i = 0; i < Context.Swapchain.ImageCount; ++i) {
         Context.ImagesInFlight[i] = 0; 
     }
 
@@ -234,13 +237,13 @@ void VulkanRendererShutdown(CrystalBackend* Backend)
                 Context.ImageAvailableSemaphores[i],
                 Context.Allocator);
         }
-        if (Context.QueueCompleteSemaphores[i]) {
-            vkDestroySemaphore(
-                Context.Device.LogicalDevice,
-                Context.QueueCompleteSemaphores[i],
-                Context.Allocator);
-        }
         VulkanFenceDestroy(&Context, &Context.InFlightFences[i]);
+    }
+
+    for (UInt32 i = 0; i < Context.Swapchain.ImageCount; i++) {
+        if (Context.QueueCompleteSemaphores[i]) {
+            vkDestroySemaphore(Context.Device.LogicalDevice, Context.QueueCompleteSemaphores[i], Context.Allocator);
+        }
     }
 
     VectorDestroy(Context.ImageAvailableSemaphores);
@@ -301,22 +304,156 @@ void VulkanRendererShutdown(CrystalBackend* Backend)
 void VulkanRendererOnResized(CrystalBackend* Backend, UInt16 Width, UInt16 Height)
 {
     (void)Backend;
-    (void)Width;
-    (void)Height;
+
+    CachedFramebufferWidth = Width;
+    CachedFramebufferHeight = Height;
+    
+    Context.WindowResized = true;
+
+    // FLTRACE("Vulkan Renderer Backend->Resized: Width/Height: %i/%i", Width, Height);
 }
 
 Bool8 VulkanRendererBeginFrame(CrystalBackend* Backend, Float32 DeltaTime)
 {
-    (void)Backend;
     (void)DeltaTime;
+    (void)Backend;
+
+    VulkanDevice* Device = &Context.Device;
+
+    if (Context.RecreateSwapchain) {
+        VkResult Result = vkDeviceWaitIdle(Device->LogicalDevice);
+        if (!VulkanResultIsSuccess(Result)) {
+            FLERROR("VulkanRendererBeginFrame vkDeviceWaitIdle (1) failed: '%s'", VulkanResultString(Result, true));
+            return false;
+        }
+        FLDEBUG("Recreating swapchain, booting...");
+        return false;
+    }
+
+    if (Context.WindowResized) {
+        VkResult Result = vkDeviceWaitIdle(Device->LogicalDevice);
+        if (!VulkanResultIsSuccess(Result)) {
+            FLERROR("VulkanRendererBeginFrame vkDeviceWaitIdle (2) failed: '%s'", VulkanResultString(Result, true));
+            return false;
+        }
+
+        if(!RecreateSwapchain(Backend)) {
+            return false;
+        }
+
+        FLDEBUG("Resized, booting...");
+        return false;
+    }
+
+    if (!VulkanFenceWait(
+        &Context,
+        &Context.InFlightFences[Context.CurrentFrame],
+        UINT64_MAX)) {
+        FLWARN("In-Flight Fence Failiure");
+        return false;
+    }
+
+     if (!VulkanSwapchainAcquireNextImageIndex(
+            &Context,
+            &Context.Swapchain,
+            UINT64_MAX,
+            Context.ImageAvailableSemaphores[Context.CurrentFrame],
+            0,
+            &Context.ImageIndex)) {
+        return false;
+    }
+
+    // Begin recording the active command buffer
+    VulkanCommandBuffer* CommandBuffer = &Context.GraphicsCommandBuffers[Context.ImageIndex];
+    VulkanCommandBufferReset(CommandBuffer);
+    VulkanCommandBufferBegin(CommandBuffer, false, false, false);
+
+    // Setup dynamic state viewports
+    VkViewport Viewport;
+    Viewport.x = 0.0f;
+    Viewport.y = (Float32)Context.FramebufferHeight;
+    Viewport.width = (Float32)Context.FramebufferWidth;
+    Viewport.height = -(Float32)Context.FramebufferHeight;
+    Viewport.minDepth = 0.0f;
+    Viewport.maxDepth = 1.0f;
+
+    VkRect2D Scissor;
+    Scissor.offset.x = 0;
+    Scissor.offset.y = 0;
+    Scissor.extent.width = Context.FramebufferWidth;
+    Scissor.extent.height = Context.FramebufferHeight;
+
+    vkCmdSetViewport(CommandBuffer->Handle, 0, 1, &Viewport);
+    vkCmdSetScissor(CommandBuffer->Handle, 0, 1, &Scissor);
+
+    Context.MainRenderpass.W = (Float32)Context.FramebufferWidth;
+    Context.MainRenderpass.H = (Float32)Context.FramebufferHeight;
+
+    VulkanRenderpassBegin(
+        CommandBuffer,
+        &Context.MainRenderpass,
+        Context.Swapchain.Framebuffers[Context.ImageIndex].Handle);
 
     return true;
 }
 
 Bool8 VulkanRendererEndFrame(CrystalBackend* Backend, Float32 DeltaTime)
 {
-    (void)Backend;
     (void)DeltaTime;
+    (void)Backend;
+
+    VulkanCommandBuffer* CommandBuffer = &Context.GraphicsCommandBuffers[Context.ImageIndex];
+
+    VulkanRenderpassEnd(CommandBuffer, &Context.MainRenderpass);
+    VulkanCommandBufferEnd(CommandBuffer);
+
+    if (Context.ImagesInFlight[Context.ImageIndex] != VK_NULL_HANDLE) {  // was frame
+        VulkanFenceWait(
+            &Context,
+            Context.ImagesInFlight[Context.ImageIndex],
+            UINT64_MAX);
+    }
+
+    // Mark the image fence as in-use by this frame.
+    Context.ImagesInFlight[Context.ImageIndex] = &Context.InFlightFences[Context.CurrentFrame];
+
+    // Reset the fence for use on the next frame
+    VulkanFenceReset(&Context, &Context.InFlightFences[Context.CurrentFrame]);
+
+    VkSubmitInfo SubmitInfo = {0};
+    SubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    SubmitInfo.commandBufferCount = 1;
+    SubmitInfo.pCommandBuffers = &CommandBuffer->Handle;
+
+    SubmitInfo.signalSemaphoreCount = 1;
+    SubmitInfo.pSignalSemaphores = &Context.QueueCompleteSemaphores[Context.ImageIndex];
+
+    SubmitInfo.waitSemaphoreCount = 1;
+    SubmitInfo.pWaitSemaphores = &Context.ImageAvailableSemaphores[Context.CurrentFrame];
+
+    VkPipelineStageFlags Flags[1] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+    SubmitInfo.pWaitDstStageMask = Flags;
+
+    VkResult Result = vkQueueSubmit(
+        Context.Device.GraphicsQueue,
+        1,
+        &SubmitInfo,
+        Context.InFlightFences[Context.CurrentFrame].Handle);
+        
+    if (Result != VK_SUCCESS) {
+        FLERROR("vkQueueSubmit failed with result: %s", VulkanResultString(Result, true));
+        return false;
+    }
+
+    VulkanCommandBufferUpdateSubmitted(CommandBuffer);
+
+    VulkanSwapchainPresent(
+        &Context,
+        &Context.Swapchain,
+        Context.Device.GraphicsQueue,
+        Context.Device.PresentQueue,
+        Context.QueueCompleteSemaphores[Context.ImageIndex],
+        Context.ImageIndex);
 
     return true;
 }
@@ -355,7 +492,7 @@ Int32 FindMemoryIndex(UInt32 TypeFilter, UInt32 PropertyFlags)
     {
         if (TypeFilter & (1 << i) && (MemoryProperties.memoryTypes[i].propertyFlags & PropertyFlags) == PropertyFlags)
         {
-            return 1;
+            return i;
         }
     }
 
@@ -391,6 +528,76 @@ void CreateCommandBuffers(CrystalBackend* Backend)
     }
 
     FLDEBUG("Vulkan command buffers created successfully.");
+}
+
+Bool8 RecreateSwapchain(CrystalBackend* Backend)
+{
+    // If already being recreated, do not try again.
+    if (Context.RecreateSwapchain) {
+        FLDEBUG("RecreateSwapchain called when already rebuilding. Booting.");
+        return false;
+    }
+
+    // Detect if the window is too small to be drawn to
+    if (Context.FramebufferWidth == 0 || Context.FramebufferHeight == 0) {
+        FLDEBUG("RecreateSwapchain called with zero dimensions. Booting.");
+        return false;
+    }
+
+    // Mark as recreating if the dimensions are valid.
+    Context.RecreateSwapchain = true;
+
+    vkDeviceWaitIdle(Context.Device.LogicalDevice);
+
+    for (UInt32 i = 0; i < Context.Swapchain.ImageCount; ++i) {
+        Context.ImagesInFlight[i] = 0;
+    }
+
+    VulkanDeviceQuerySwapchainSupport(
+        Context.Device.PhysicalDevice,
+        Context.Surface,
+        &Context.Device.SwapchainSupport);
+
+    VulkanDeviceDetectDepthFormat(&Context.Device);
+
+    // Recreate the swapchain layout properties
+    VulkanSwapchainRecreate(
+        &Context,
+        CachedFramebufferWidth,
+        CachedFramebufferHeight,
+        &Context.Swapchain);
+
+    // Sync the framebuffer size with the cached sizes.
+    Context.FramebufferWidth = CachedFramebufferWidth;
+    Context.FramebufferHeight = CachedFramebufferHeight;
+    Context.MainRenderpass.W = (Float32)Context.FramebufferWidth;
+    Context.MainRenderpass.H = (Float32)Context.FramebufferHeight;
+    CachedFramebufferWidth = 0;
+    CachedFramebufferHeight = 0;
+
+    // Free command buffers using the explicit configuration
+    for (UInt32 i = 0; i < Context.Swapchain.ImageCount; ++i) {
+        VulkanCommandBufferFree(&Context, Context.Device.GraphicsCommandPool, &Context.GraphicsCommandBuffers[i]);
+    }
+
+    // Destroy framebuffers using the explicit configuration
+    for (UInt32 i = 0; i < Context.Swapchain.ImageCount; ++i) {
+        VulkanFramebufferDestroy(&Context, &Context.Swapchain.Framebuffers[i]);
+    }
+
+    Context.MainRenderpass.X = 0;
+    Context.MainRenderpass.Y = 0;
+    Context.MainRenderpass.W = (Float32)Context.FramebufferWidth;
+    Context.MainRenderpass.H = (Float32)Context.FramebufferHeight;
+
+    RegenerateFramebuffers(Backend, &Context.Swapchain, &Context.MainRenderpass);
+    CreateCommandBuffers(Backend);
+
+    // Clear the tracking states
+    Context.WindowResized = false; 
+    Context.RecreateSwapchain = false;
+
+    return true;
 }
 
 void RegenerateFramebuffers(CrystalBackend* Backend, VulkanSwapchain* Swapchain, VulkanRenderpass* Renderpass) {

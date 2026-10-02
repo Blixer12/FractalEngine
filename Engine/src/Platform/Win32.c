@@ -319,12 +319,16 @@ LRESULT CALLBACK Win32ProcessMessage(HWND HWindow, UInt32 Message, WPARAM WordPa
 
             case WM_SIZE:
             {
-                // RECT ClientRect;
-                // GetClientRect(HWindow, &ClientRect);
-                // UInt32 Width = (UInt32)(ClientRect.right - ClientRect.left);
-                // UInt32 Height = (UInt32)(ClientRect.bottom - ClientRect.top);
+                RECT ClientRect;
+                GetClientRect(HWindow, &ClientRect);
+                UInt32 Width = (UInt32)(ClientRect.right - ClientRect.left);
+                UInt32 Height = (UInt32)(ClientRect.bottom - ClientRect.top);
 
-                //TODO: Fire a event to resize the window
+                EventContext Context;
+                Context.Data.UInt16[0] = (UInt16)Width;
+                Context.Data.UInt16[1] = (UInt16)Height;
+                EventFire(EVENT_RESIZED, 0, Context);
+
             } break;
 
             case WM_KEYDOWN:

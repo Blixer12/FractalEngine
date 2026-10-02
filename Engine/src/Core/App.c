@@ -39,6 +39,8 @@ Bool8 AppOnEvent(UInt16 Code, void* Sender, void* Reciever, EventContext Context
 Bool8 AppOnKeyEvent(UInt16 Code, void* Sender, void* Reciever, EventContext Context);
 Bool8 AppOnMouseButtonEvent(UInt16 Code, void* Sender, void* Reciever, EventContext Context);
 
+Bool8 AppOnWindowResize(UInt16 Code, void* Sender, void* Reciever, EventContext Context);
+
 Bool8 AppCreate(Game* Instance)
 {
     if (Initialized)
@@ -52,14 +54,6 @@ Bool8 AppCreate(Game* Instance)
     //Initializes Subsystems
     LogCreate();
     InputSystemInitialize();
-
-    //TODO: Remove This
-    FLFATAL("Crash Code %d: Testing Fatal Logs, not Actually fatal", 67);
-    FLERROR("Error Code %d: This is not an error, just another test", 55);
-    FLWARN("This in not warning of any danger, just if a flaw is found, but does not ruin the ENTIRE program. Test Var: ->%f", 3.14159);
-    FLINFO("Printing messages is fun somewhat Test Var: ->%f", 3.14159);
-    FLDEBUG("Just some Debugging like over here  ->  Test Var: ->%f", 3.14159);
-    FLTRACE("Tracing a line somewhere... Over Here!   ->    Test Var: ->%f", 3.14159);
 
     State.IsRunning = true;
     State.IsSuspended = false;
@@ -77,6 +71,8 @@ Bool8 AppCreate(Game* Instance)
 
     EventRegister(EVENT_MOUSE_DOWN, 0, AppOnMouseButtonEvent);
     EventRegister(EVENT_MOUSE_UP, 0, AppOnMouseButtonEvent);
+
+    EventRegister(EVENT_RESIZED, 0, AppOnWindowResize);
 
     if (!PlatformStartup(
         &State.Platform, 
@@ -193,6 +189,8 @@ Bool8 AppRun()
     EventUnregister(EVENT_MOUSE_DOWN, 0, AppOnMouseButtonEvent);
     EventUnregister(EVENT_MOUSE_UP, 0, AppOnMouseButtonEvent);
 
+    EventUnregister(EVENT_RESIZED, 0, AppOnWindowResize);
+
     EventSystemShutdown();
     InputSystemShutdown();
 
@@ -277,5 +275,39 @@ Bool8 AppOnMouseButtonEvent(UInt16 Code, void* Sender, void* Reciever, EventCont
             FLTRACE("Mouse button %d released in window.", ButtonCode);
         }
     }
+    return false;
+}
+
+Bool8 AppOnWindowResize(UInt16 Code, void* Sender, void* Reciever, EventContext Context)
+{
+    (void)Reciever;
+    (void)Sender;
+    if (Code == EVENT_RESIZED)
+    {
+        UInt16 Width = Context.Data.UInt16[0];
+        UInt16 Height = Context.Data.UInt16[1];
+
+        if (Width != State.Width || Height != State.Height)
+        {
+            State.Width = Width;
+            State.Height = Height;
+
+            // FLTRACE("Window Resize: %i, %i", Width, Height);
+
+             if (Width == 0 || Height == 0) {
+                FLINFO("Window minimized, suspending application.");
+                State.IsSuspended = true;
+                return true;
+            } else {
+                if (State.IsSuspended) {
+                    FLINFO("Window restored, resuming application.");
+                    State.IsSuspended = false;
+                }
+                State.Instance->OnResize(State.Instance, Width, Height);
+                CrystalOnResize(Width, Height);
+            }
+        }
+    }
+
     return false;
 }

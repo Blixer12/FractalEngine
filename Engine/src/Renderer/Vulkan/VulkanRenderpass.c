@@ -9,19 +9,19 @@ void VulkanRenderpassCreate(
     Float32 R, Float32 G, Float32 B, Float32 A,
     Float32 Depth,
     UInt32 Stencil) {
+    
+    Renderpass->X = X;
+    Renderpass->Y = Y;
+    Renderpass->W = W;
+    Renderpass->H = H;
 
-    (void) X; 
-    (void) Y; 
-    (void) W; 
-    (void) H;
-    
-    (void) R; 
-    (void) G; 
-    (void) B; 
-    (void) A;
-    
-    (void) Depth;
-    (void) Stencil;
+    Renderpass->R = R;
+    Renderpass->G = G;
+    Renderpass->B = B;
+    Renderpass->A = A;
+
+    Renderpass->Depth = Depth;
+    Renderpass->Stencil = Stencil;
 
     // Main subpass
     VkSubpassDescription Subpass = {0};

@@ -32,6 +32,19 @@ typedef unsigned int Bool32;
     #define STATIC_ASSERT static_assert
 #endif
 
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
+    // C23 standard attribute
+    #define MaybeUnused [[maybe_unused]]
+#elif defined(__GNUC__) || defined(__clang__)
+    // Fallback for older GCC/Clang compilers
+    #define MaybeUnused __attribute__((unused))
+#elif defined(_MSC_VER)
+    // Fallback for MSVC compiler
+    #define MaybeUnused __pragma(warning(suppress: 4100 4189))
+#else
+    #define MaybeUnused
+#endif
+
 // Ensure all types are of the correct size
 STATIC_ASSERT(sizeof(UInt8)  == 1, "Expected UInt8 to be 1 byte.");
 STATIC_ASSERT(sizeof(UInt16) == 2, "Expected UInt16 to be 2 bytes.");
@@ -84,36 +97,3 @@ STATIC_ASSERT(sizeof(Bool32) == 4, "Expected Bool32 to be 4 bytes");
 #endif
 
 #define FCLAMP(Value, Min, Max) (((Value) <= (Min)) ? (Min) : ((Value) >= (Max)) ? (Max) : (Value))
-
-#undef UINT8_MAX
-#undef UINT16_MAX
-#undef UINT32_MAX
-#undef UINT64_MAX
-
-#undef INT8_MAX
-#undef INT16_MAX
-#undef INT32_MAX
-#undef INT64_MAX
-
-#undef INT8_MIN
-#undef INT16_MIN
-#undef INT32_MIN
-#undef INT64_MIN
-
-// --- Unsigned Integers Maximums ---
-#define UINT8_MAX   255U
-#define UINT16_MAX  65535U
-#define UINT32_MAX  4294967295U
-#define UINT64_MAX  18446744073709551615ULL
-
-// --- Signed Integers Maximums ---
-#define INT8_MAX    127
-#define INT16_MAX   32767
-#define INT32_MAX   2147483647
-#define INT64_MAX   9223372036854775807LL
-
-// --- Signed Integers Minimums ---
-#define INT8_MIN    (-127 - 1)
-#define INT16_MIN   (-32767 - 1)
-#define INT32_MIN   (-2147483647 - 1)
-#define INT64_MIN   (-9223372036854775807LL - 1)

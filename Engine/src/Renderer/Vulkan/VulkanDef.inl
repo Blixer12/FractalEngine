@@ -51,6 +51,9 @@ typedef struct VulkanPhysicalDevicePreferences {
     Bool8 WireframeMode;          // fillModeNonSolid
     Bool8 TimelineSemaphores;     // Modern CPU/GPU synchronization
     Bool8 BufferDeviceAddress;    // Direct memory pointers in shaders;
+
+    // --- PRESENTATION & SWAPCHAIN ---
+    Bool8 PresentModeFifoLatestReady; // (VK_KHR_present_mode_fifo_latest_ready)
     
     // --- LIMITS ---
     UInt32 MinimumPushConstantsSize;
@@ -205,3 +208,36 @@ static inline Bool8 VulkanFormatHasStencil(VkFormat Format)
            Format == VK_FORMAT_D24_UNORM_S8_UINT   ||
            Format == VK_FORMAT_D16_UNORM_S8_UINT;
 }
+
+#undef UINT8_MAX
+#undef UINT16_MAX
+#undef UINT32_MAX
+#undef UINT64_MAX
+
+#undef INT8_MAX
+#undef INT16_MAX
+#undef INT32_MAX
+#undef INT64_MAX
+
+#undef INT8_MIN
+#undef INT16_MIN
+#undef INT32_MIN
+#undef INT64_MIN
+
+// --- Unsigned Integers Maximums ---
+#define UINT8_MAX   255U
+#define UINT16_MAX  65535U
+#define UINT32_MAX  4294967295U
+#define UINT64_MAX  0xffffffffffffffffULL
+
+// --- Signed Integers Maximums ---
+#define INT8_MAX    127
+#define INT16_MAX   32767
+#define INT32_MAX   2147483647
+#define INT64_MAX   9223372036854775807LL
+
+// --- Signed Integers Minimums ---
+#define INT8_MIN    (-127 - 1)
+#define INT16_MIN   (-32767 - 1)
+#define INT32_MIN   (-2147483647 - 1)
+#define INT64_MIN   (-9223372036854775807LL - 1)

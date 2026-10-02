@@ -43,6 +43,15 @@ Bool8 CrystalEndFrame(Float32 DeltaTime)
     return Result;
 }
 
+void CrystalOnResize(UInt16 Width, UInt16 Height)
+{
+    if (Backend) {
+        Backend->Resized(Backend, Width, Height);
+    } else {
+        FLERROR("The Crystal backend does not exist to accept resize: %i, %i", Width, Height);
+    }
+}
+
 Bool8 CrystalDrawFrame(RenderPacket* Packet)
 {
     if (CrystalBeginFrame(Packet->DeltaTime))
@@ -58,5 +67,3 @@ Bool8 CrystalDrawFrame(RenderPacket* Packet)
 
     return true;
 }
-
-void CrystalOnResize(UInt16 Width, UInt16 Height);

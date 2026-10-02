@@ -270,7 +270,13 @@ Bool8 PlatformPollEvents(PlatformState* Platform)
                 }
 
             case XCB_CONFIGURE_NOTIFY: {
-                // TODO: Resizing
+                
+                xcb_configure_notify_event_t *ConfigureEvent = (xcb_configure_notify_event_t*)Event;
+
+                EventContext Context;
+                Context.Data.UInt16[0] = (UInt16)Width;
+                Context.Data.UInt16[1] = (UInt16)Height;
+                EventFire(EVENT_RESIZED, 0, Context);
                 break;
             }
 

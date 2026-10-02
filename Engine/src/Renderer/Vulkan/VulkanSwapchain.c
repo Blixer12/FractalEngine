@@ -187,10 +187,15 @@ void Create(VulkanContext* Context, UInt32 Width, UInt32 Height, VulkanSwapchain
         else if (Mode == VK_PRESENT_MODE_IMMEDIATE_KHR) ImmediateSupported = true;
     }
 
-    if (MailboxSupported) PresentMode = VK_PRESENT_MODE_MAILBOX_KHR;
-    else if (FIFOLatestSupported) PresentMode = VK_PRESENT_MODE_FIFO_LATEST_READY_KHR;
-    else if (FIFORelaxedSupported) PresentMode = VK_PRESENT_MODE_FIFO_RELAXED_KHR;
-    else if (ImmediateSupported) PresentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+    if (MailboxSupported) {
+        PresentMode = VK_PRESENT_MODE_MAILBOX_KHR;
+    } else if (Context->Preferences.PresentModeFifoLatestReady && FIFOLatestSupported) {
+        PresentMode = VK_PRESENT_MODE_FIFO_LATEST_READY_KHR;
+    } else if (FIFORelaxedSupported) {
+        PresentMode = VK_PRESENT_MODE_FIFO_RELAXED_KHR;
+    } else if (ImmediateSupported) {
+        PresentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+    }
 
     VulkanDeviceQuerySwapchainSupport(Context->Device.PhysicalDevice, Context->Surface, &Context->Device.SwapchainSupport);
 
@@ -304,6 +309,8 @@ void Create(VulkanContext* Context, UInt32 Width, UInt32 Height, VulkanSwapchain
 
 void Destroy(VulkanContext* Context, VulkanSwapchain* Swapchain)
 {
+    vkDeviceWaitIdle(Context->Device.LogicalDevice);
+
     VulkanImageDestroy(Context, &Swapchain->DepthAttachment);
     
     for (UInt32 i = 0; i < Swapchain->ImageCount; i++)
