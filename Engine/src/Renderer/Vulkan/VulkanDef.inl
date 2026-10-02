@@ -13,21 +13,21 @@
 // Checks the given expression's return value against VK_SUCCESS.
 #define VK_CHECK(expr)                                                                                          \
 do {                                                                                                            \
-        VkResult _result = (expr);                                                                              \
-        if ((_result) < VK_SUCCESS) {                                                                           \
-            FLERROR("Vulkan Error %i executing: %s (File: %s, Line: %d)", _result, #expr, __FILE__, __LINE__);  \
+        VkResult _Result = (expr);                                                                              \
+        if ((_Result) < VK_SUCCESS) {                                                                           \
+            FLERROR("Vulkan Error %i executing: %s (File: %s, Line: %d)", _Result, #expr, __FILE__, __LINE__);  \
             FASSERT_MSG(false, "Vulkan runtime crash!");               \
         }                                                                                                       \
-        else if (_result == VK_SUBOPTIMAL_KHR) {                                                                \
+        else if (_Result == VK_SUBOPTIMAL_KHR) {                                                                \
             FLWARN("Vulkan Suboptimal Swapchain detected (File: %s, Line: %d)", __FILE__, __LINE__);            \
         }                                                                                                       \
-        else if (_result == VK_INCOMPLETE ||                                                                    \
-                 _result == VK_PIPELINE_BINARY_MISSING_KHR ||                                                   \
-                 _result == VK_INCOMPATIBLE_SHADER_BINARY_EXT) {                                                \
-            FLDEBUG("Vulkan Cache/Query Status %i executing: %s", _result, #expr);                              \
+        else if (_Result == VK_INCOMPLETE ||                                                                    \
+                 _Result == VK_PIPELINE_BINARY_MISSING_KHR ||                                                   \
+                 _Result == VK_INCOMPATIBLE_SHADER_BINARY_EXT) {                                                \
+            FLDEBUG("Vulkan Cache/Query Status %i executing: %s", _Result, #expr);                              \
         }                                                                                                       \
-        else if (_result != VK_SUCCESS && _result != VK_NOT_READY && _result != VK_TIMEOUT) {                   \
-            FLDEBUG("Vulkan Status Flag %i executing: %s", _result, #expr);                                     \
+        else if (_Result != VK_SUCCESS && _Result != VK_NOT_READY && _Result != VK_TIMEOUT) {                   \
+            FLDEBUG("Vulkan Status Flag %i executing: %s", _Result, #expr);                                     \
         }                                                                                                       \
    } while(0)                                                                                                   \
 

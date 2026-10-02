@@ -290,8 +290,8 @@ Bool8 PlatformCreateVulkanSurface(PlatformState* Platform, VulkanContext *Contex
     CreateInfo.hinstance = State->AppInstance;
     CreateInfo.hwnd = State->MainWindow;
 
-    VkResult result = vkCreateWin32SurfaceKHR(Context->Instance, &CreateInfo, Context->Allocator, &State->Surface);
-    if (result != VK_SUCCESS) {
+    VkResult Result = vkCreateWin32SurfaceKHR(Context->Instance, &CreateInfo, Context->Allocator, &State->Surface);
+    if (Result != VK_SUCCESS) {
         FLFATAL("Vulkan surface creation failed.");
         return false;
     }

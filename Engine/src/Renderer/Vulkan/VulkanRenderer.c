@@ -186,7 +186,7 @@ Bool8 VulkanRendererInitialize(CrystalBackend* Backend, const char* AppName, str
         &Context,
         &Context.MainRenderpass, 
         0, 0, Context.FramebufferWidth, Context.FramebufferHeight,
-        0.5f, 0.0f, 1.0f, 1.0f, 
+        0.05f, 0.05f, 0.05f, 1.0f, 
         1.0f,
         0);
 
@@ -441,7 +441,7 @@ Bool8 VulkanRendererEndFrame(CrystalBackend* Backend, Float32 DeltaTime)
         Context.InFlightFences[Context.CurrentFrame].Handle);
         
     if (Result != VK_SUCCESS) {
-        FLERROR("vkQueueSubmit failed with result: %s", VulkanResultString(Result, true));
+        FLERROR("vkQueueSubmit failed with Result: %s", VulkanResultString(Result, true));
         return false;
     }
 

@@ -97,3 +97,11 @@ STATIC_ASSERT(sizeof(Bool32) == 4, "Expected Bool32 to be 4 bytes");
 #endif
 
 #define FCLAMP(Value, Min, Max) (((Value) <= (Min)) ? (Min) : ((Value) >= (Max)) ? (Max) : (Value))
+
+#ifdef _MSC_VER
+#define FINLINE __forceinline
+#define FNOINLINE __declspec(noinline)
+#else
+#define FINLINE static inline
+#define FNOINLINE
+#endif

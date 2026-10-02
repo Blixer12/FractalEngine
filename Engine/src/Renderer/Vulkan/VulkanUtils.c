@@ -16,7 +16,7 @@ const char* VulkanResultString(VkResult Result, Bool8 GetExtended) {
         case VK_EVENT_RESET:
             return !GetExtended ? "VK_EVENT_RESET" : "VK_EVENT_RESET An event is unsignaled";
         case VK_INCOMPLETE:
-            return !GetExtended ? "VK_INCOMPLETE" : "VK_INCOMPLETE A return array was too small for the result";
+            return !GetExtended ? "VK_INCOMPLETE" : "VK_INCOMPLETE A return array was too small for the Result";
         case VK_SUBOPTIMAL_KHR:
             return !GetExtended ? "VK_SUBOPTIMAL_KHR" : "VK_SUBOPTIMAL_KHR A swapchain no longer matches the surface properties exactly, but can still be used to present to the surface successfully.";
         case VK_THREAD_IDLE_KHR:

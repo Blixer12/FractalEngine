@@ -39,10 +39,10 @@
             "type": "shell",
             "label": "Build Everything",
             "windows": {
-                "command": "${workspaceFolder}/Build-all.bat",
+                "command": "${workspaceFolder}/BuildAll.bat"
             },
             "linux": {
-                "command": "${workspaceFolder}/Build-all.sh",
+                "command": "${workspaceFolder}/BuildAll.sh"
             },
             "options": {
                 "cwd": "${workspaceFolder}"
@@ -54,7 +54,21 @@
                 "kind": "build",
                 "isDefault": true
             }
-        }
+         },
+         {
+             "type": "shell",
+             "label": "Clean Everything",
+             "windows": {
+                 "command": "${workspaceFolder}\\CleanAll.bat"
+             },
+             "linux": {
+                 "command": "${workspaceFolder}/CleanAll.sh"
+             },
+             "options": {
+                 "cwd": "${workspaceFolder}"
+             },
+             "group": "build"
+         }
     ],
     "version": "2.0.0"
 }
