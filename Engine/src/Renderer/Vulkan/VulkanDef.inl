@@ -67,6 +67,16 @@ typedef struct VulkanSwapchainSupportInfo {
     VkPresentModeKHR* PresentModes;
 } VulkanSwapchainSupportInfo;
 
+typedef struct VulkanBuffer {
+    UInt64 TotalSize;
+    VkBuffer Handle;
+    VkBufferUsageFlagBits Usage;
+    Bool8 IsLocked;
+    VkDeviceMemory Memory;
+    Int32 MemoryIndex;
+    UInt32 MemoryPropertyFlags;
+} VulkanBuffer;
+
 typedef struct VulkanDevice {
     VkPhysicalDevice PhysicalDevice;
     VkDevice LogicalDevice;
@@ -193,6 +203,9 @@ typedef struct VulkanContext {
     VulkanSwapchain Swapchain;
     VulkanRenderpass MainRenderpass;
 
+    VulkanBuffer ObjectVertexBuffer;
+    VulkanBuffer ObjectIndexBuffer;
+
     // This variable is a Vector used to track the amount of Command Buffers in use
     VulkanCommandBuffer* GraphicsCommandBuffers;
 
@@ -218,6 +231,9 @@ typedef struct VulkanContext {
     Bool8 WindowResized;
 
     VulkanObjectShader ObjectShader;
+
+    UInt64 GeometryVertexOffset;
+    UInt64 GeometryIndexOffset;
 
     Int32 (*FindMemoryIndex)(UInt32 TypeFilter, UInt32 PropertyFlags);
     

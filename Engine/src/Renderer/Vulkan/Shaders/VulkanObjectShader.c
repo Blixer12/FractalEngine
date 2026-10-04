@@ -105,6 +105,6 @@ void VulkanObjectShaderDestroy(VulkanContext* Context, struct VulkanObjectShader
 
 void VulkanObjectShaderUse(VulkanContext* Context, struct VulkanObjectShader* Shader) 
 {
-    (void)Context;
-    (void)Shader;
+    UInt32 ImageIndex = Context->ImageIndex;
+    VulkanPipelineBind(&Context->GraphicsCommandBuffers[ImageIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, Shader->Pipeline);
 }

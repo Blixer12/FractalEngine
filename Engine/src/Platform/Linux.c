@@ -371,10 +371,12 @@ void PlatformGetRequiredExtensions(const char*** ExtensionsVector)
     VectorAppend(*ExtensionsVector, &"VK_KHR_xcb_surface");
 }
 
-Bool8 PlatformCreateVulkanSurface(PlatformState* State, VulkanContext* Context) {
-    // Cold Casts to the known type
-    PlatformState* State = (PlatformState*)StatePtr->State;
-
+Bool8 PlatformCreateVulkanSurface(VulkanContext* Context) 
+{
+    if (!StatePtr) {
+        return false;
+    }
+    
     VkXcbSurfaceCreateInfoKHR CreateInfo = {0};
     CreateInfo.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
     CreateInfo.connection = StatePtr->Connection;

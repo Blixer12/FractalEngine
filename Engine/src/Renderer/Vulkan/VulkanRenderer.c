@@ -7,12 +7,15 @@
 #include "VulkanCommandBuffer.h"
 #include "VulkanFramebuffer.h"
 #include "VulkanFence.h"
+#include "VulkanBuffer.h"
 #include "VulkanUtils.h"
 
 #include "Core/App.h"
 #include "Core/Logger.h"
 #include "Core/FString.h"
 #include "Core/Memory.h"
+
+#include "Math/MathDef.h"
 
 #include "Containers/Vector.h"
 
@@ -32,10 +35,24 @@ VKAPI_ATTR VkBool32 VKAPI_CALL VkDebugCallback(
     void* UserData);
 
 Int32 FindMemoryIndex(UInt32 TypeFilter, UInt32 PropertyFlags);
+Bool8 CreateBuffers(VulkanContext* Context);
 
 void CreateCommandBuffers(CrystalBackend* Backend);
 Bool8 RecreateSwapchain(CrystalBackend* Backend);
 void RegenerateFramebuffers(CrystalBackend* Backend, VulkanSwapchain* Swapchain, VulkanRenderpass* Renderpass);
+
+void UploadDataRange(VulkanContext* Context, VkCommandPool Pool, VkFence Fence, VkQueue Queue, VulkanBuffer* Buffer, UInt64 Offset, UInt64 Size, void* Data)
+{
+    VkBufferUsageFlags Flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    VulkanBuffer Staging;
+    VulkanBufferCreate(Context, Size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Flags, true, &Staging);
+
+    VulkanBufferLoadData(Context, &Staging, 0, Size, 0, Data);
+
+    VulkanBufferCopyTo(Context, Pool, Fence, Queue, Staging.Handle, 0, Buffer->Handle, Offset, Size);
+
+    VulkanBufferDestroy(Context, &Staging);
+}
 
 
 Bool8 VulkanRendererInitialize(CrystalBackend* Backend, const char* AppName) {
@@ -229,6 +246,33 @@ Bool8 VulkanRendererInitialize(CrystalBackend* Backend, const char* AppName) {
         return false;
     }
 
+    CreateBuffers(&Context);
+
+    // TODD: Temporary Test Code
+    constexpr UInt32 VertexCount = 4;
+    Vertex3D Vertices[VertexCount];
+    FMZeroMemory(Vertices, sizeof(Vertex3D) * VertexCount);
+
+    Vertices[0].Position.x = 0.0;
+    Vertices[0].Position.y = -0.5;
+
+    Vertices[1].Position.x = 0.5;
+    Vertices[1].Position.y = 0.5;
+
+    Vertices[2].Position.x = 0.0;
+    Vertices[2].Position.y = 0.5;
+
+    Vertices[3].Position.x = 0.5;
+    Vertices[3].Position.y = -0.5;
+
+    constexpr UInt32 IndexCount = 6;
+    UInt32 Indices[IndexCount] = {0, 1, 2, 0, 3, 1};
+
+    UploadDataRange(&Context, Context.Device.GraphicsCommandPool, 0, Context.Device.GraphicsQueue, &Context.ObjectVertexBuffer, 0, sizeof(Vertex3D) * VertexCount, Vertices);
+    UploadDataRange(&Context, Context.Device.GraphicsCommandPool, 0, Context.Device.GraphicsQueue, &Context.ObjectIndexBuffer, 0, sizeof(UInt32) * IndexCount, Indices);
+
+    // TODO: End Temp Code
+
     FLINFO("Vulkan renderer initialized successfully");
     return true;
 }
@@ -238,6 +282,9 @@ void VulkanRendererShutdown(CrystalBackend* Backend)
 {
     (void)Backend;
     vkDeviceWaitIdle(Context.Device.LogicalDevice);
+
+    VulkanBufferDestroy(&Context, &Context.ObjectVertexBuffer);
+    VulkanBufferDestroy(&Context, &Context.ObjectIndexBuffer);
 
     VulkanObjectShaderDestroy(&Context, &Context.ObjectShader);
    
@@ -404,6 +451,17 @@ Bool8 VulkanRendererBeginFrame(CrystalBackend* Backend, Float32 DeltaTime)
         CommandBuffer,
         &Context.MainRenderpass,
         Context.Swapchain.Framebuffers[Context.ImageIndex].Handle);
+
+    // TODO: Temporary Code
+    VulkanObjectShaderUse(&Context, &Context.ObjectShader);
+
+    VkDeviceSize Offsets[1] = {0};
+    vkCmdBindVertexBuffers(CommandBuffer->Handle, 0, 1, &Context.ObjectVertexBuffer.Handle, (VkDeviceSize*)Offsets);
+
+    vkCmdBindIndexBuffer(CommandBuffer->Handle, Context.ObjectIndexBuffer.Handle, 0, VK_INDEX_TYPE_UINT32);
+
+    vkCmdDrawIndexed(CommandBuffer->Handle, 6, 1, 0, 0, 0);
+    // TODO: Temporary Code
 
     return true;
 }
@@ -628,4 +686,37 @@ void RegenerateFramebuffers(CrystalBackend* Backend, VulkanSwapchain* Swapchain,
             Attachments,
             &Context.Swapchain.Framebuffers[i]);
     }
+}
+
+Bool8 CreateBuffers(VulkanContext* Context)
+{
+    VkMemoryPropertyFlagBits MemoryPropertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+
+    const UInt64 VertexBufferSize = sizeof(Vertex3D) * 1024 * 1024;
+    if (!VulkanBufferCreate(
+            Context,
+            VertexBufferSize,
+            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            MemoryPropertyFlags,
+            true,
+            &Context->ObjectVertexBuffer)) {
+        FLERROR("Error creating vertex buffer.");
+        return false;
+    }
+    Context->GeometryVertexOffset = 0;
+
+    const UInt64 IndexBufferSize = sizeof(UInt32) * 1024 * 1024;
+    if (!VulkanBufferCreate(
+            Context,
+            IndexBufferSize,
+            VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            MemoryPropertyFlags,
+            true,
+            &Context->ObjectIndexBuffer)) {
+        FLERROR("Error creating index buffer.");
+        return false;
+    }
+    Context->GeometryIndexOffset = 0;
+
+    return true;
 }

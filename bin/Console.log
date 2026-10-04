@@ -82,10 +82,6 @@
 [DEBUG]: Swapchain created successfuly.
 [DEBUG]: Vulkan command buffers created successfully.
 [DEBUG]: Resized, booting...
-[DEBUG]: Elected depth attachment format: 126
-[DEBUG]: Swapchain created successfuly.
-[DEBUG]: Vulkan command buffers created successfully.
-[DEBUG]: Resized, booting...
 [DEBUG]: Event Code APP_QUIT Recieved, Shutting Down.
 [DEBUG]: Destroying Vulkan device
 [DEBUG]: Destroying command pools...
