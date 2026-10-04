@@ -3,14 +3,11 @@
 #include "Core/App.h"
 #include "Core/Logger.h"
 #include "GameInstance.h"
-#include "Core/Memory.h"
 
 extern Bool8 CreateGame(Game* TargetGame);
 
 int main()
 {
-
-InitializeMemory();
 
 Game Instance;
 // Initalization
@@ -38,8 +35,6 @@ if (!AppRun())
     FLWARN("The Application did not shutdown properly!");
     return -4;
 }
-
-ShutdownMemory();
 
     return 0;
 }

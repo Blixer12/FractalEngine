@@ -14,54 +14,58 @@ typedef struct EventCodeEntry {
     RegisteredEvent* Events;
 } EventCodeEntry;
 
-typedef struct EventSystemState {
+typedef struct EventState {
     EventCodeEntry Registered[MAX_MESSAGE_CODES];
-} EventSystemState;
+} EventState;
 
-static Bool8 IsInitialized;
-static EventSystemState State;
+static EventState* StatePtr;
 
-Bool8 EventSystemInitialize() {
-    if (IsInitialized == true) {
-        return false;
+void EventSystemInitialize(UInt64* MemoryRequirement, void* State) {
+    *MemoryRequirement = (UInt64)sizeof(EventState);
+    if (State == 0) 
+    {
+        return;
     }
-    IsInitialized = false;
-    FMZeroMemory(&State, sizeof(State));
 
-    IsInitialized = true;
+    FMZeroMemory(State, sizeof(EventState));
+    StatePtr = State;
 
-    return true;
+    (void)MemoryRequirement;;
 }
 
-void EventSystemShutdown() 
+void EventSystemShutdown(void* State) 
 {
-    // Free the events arrays. And objects pointed to should be destroyed on their own.
-    for(UInt16 i = 0; i < MAX_MESSAGE_CODES; ++i)
+    (void)State;
+    if (StatePtr)
     {
-        if (State.Registered[i].Events != 0)
+        // Free the events arrays. And objects pointed to should be destroyed on their own.
+        for(UInt16 i = 0; i < MAX_MESSAGE_CODES; ++i)
         {
-            VectorDestroy(State.Registered[i].Events);
-            State.Registered[i].Events = 0;
+            if (StatePtr->Registered[i].Events != 0)
+            {
+                VectorDestroy(StatePtr->Registered[i].Events);
+                StatePtr->Registered[i].Events = 0;
+            }
         }
     }
 }
 
 Bool8 EventRegister(UInt16 Code, void* Receiver, PFN_OnEvent Callback)
 {
-    if (IsInitialized == false)
+    if (!StatePtr)
     {
         return false;
     }
 
-    if (State.Registered[Code].Events == 0)
+    if (StatePtr->Registered[Code].Events == 0)
     {
-        State.Registered[Code].Events = VectorCreate(RegisteredEvent);
+        StatePtr->Registered[Code].Events = VectorCreate(RegisteredEvent);
     }
 
-    UInt64 RegisteredCount = VectorSize(State.Registered[Code].Events);
+    UInt64 RegisteredCount = VectorSize(StatePtr->Registered[Code].Events);
     for(UInt64 i = 0; i < RegisteredCount; ++i)
     {
-        if (State.Registered[Code].Events[i].Receiver == Receiver)
+        if (StatePtr->Registered[Code].Events[i].Receiver == Receiver)
         {
             // TODO: warn
             return false;
@@ -72,30 +76,30 @@ Bool8 EventRegister(UInt16 Code, void* Receiver, PFN_OnEvent Callback)
     RegisteredEvent Event;
     Event.Receiver = Receiver;
     Event.Callback = Callback;
-    VectorAppend(State.Registered[Code].Events, Event);
+    VectorAppend(StatePtr->Registered[Code].Events, Event);
 
     return true;
 }
 
 Bool8 EventUnregister(UInt16 Code, void* Receiver, PFN_OnEvent Callback) {
-    if (IsInitialized == false)
+    if (!StatePtr)
     {
         return false;
     }
 
     // On nothing is registered for the code, boot out.
-    if (State.Registered[Code].Events == 0) {
+    if (StatePtr->Registered[Code].Events == 0) {
         // TODO: warn
         return false;
     }
 
-    UInt64 RegisteredCount = VectorSize(State.Registered[Code].Events);
+    UInt64 RegisteredCount = VectorSize(StatePtr->Registered[Code].Events);
     for(UInt64 i = 0; i < RegisteredCount; ++i) {
-        RegisteredEvent Event = State.Registered[Code].Events[i];
+        RegisteredEvent Event = StatePtr->Registered[Code].Events[i];
         if (Event.Receiver == Receiver && Event.Callback == Callback) {
             // Found one, remove it
             RegisteredEvent RemovedEvent;
-            VectorRemoveAt(State.Registered[Code].Events, i, &RemovedEvent);
+            VectorRemoveAt(StatePtr->Registered[Code].Events, i, &RemovedEvent);
             return true;
         }
     }
@@ -106,21 +110,21 @@ Bool8 EventUnregister(UInt16 Code, void* Receiver, PFN_OnEvent Callback) {
 
 Bool8 EventFire(UInt16 Code, void* Sender, EventContext Context) 
 {
-    if (IsInitialized == false)
+    if (!StatePtr)
     {
         return false;
     }
 
     // If nothing is registered for the code, boot out.
-    if (State.Registered[Code].Events == 0)
+    if (StatePtr->Registered[Code].Events == 0)
     {
         return false;
     }
 
-    UInt64 RegisteredCount = VectorSize(State.Registered[Code].Events);
+    UInt64 RegisteredCount = VectorSize(StatePtr->Registered[Code].Events);
     for (UInt64 i = 0; i < RegisteredCount; ++i)
     {
-        RegisteredEvent Event = State.Registered[Code].Events[i];
+        RegisteredEvent Event = StatePtr->Registered[Code].Events[i];
         if (Event.Callback(Code, Sender, Event.Receiver, Context))
         {
             // Message has been handled, does not send other listeners.

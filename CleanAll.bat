@@ -11,4 +11,8 @@ REM Launcher
 make -f "Makefile.Launcher.Windows.mak" clean
 IF %ERRORLEVEL% NEQ 0 (echo Error:%ERRORLEVEL% && exit)
 
+REM Tests
+make -f "Makefile.Tests.Windows.mak" clean
+IF %ERRORLEVEL% NEQ 0 (echo Error:%ERRORLEVEL% && exit)
+
 ECHO "All assemblies cleaned successfully."

@@ -1,6 +1,6 @@
 #include "Platform.h"
 
-//Windows Platform
+//Windows State
 #if FPLATFORM_WINDOWS
 
     #include "Core/Logger.h"
@@ -28,119 +28,121 @@
     #define VK_USE_PLATFORM_WIN32_KHR
     #include "Renderer/Vulkan/VulkanDef.inl"
 
-typedef struct InternalState{
+typedef struct PlatformState{
     HINSTANCE AppInstance;
     HWND MainWindow;
     VkSurfaceKHR Surface;
-} InternalState;
+} PlatformState;
 
-//Clock
+// Clock
 static Float64 ClockFrequency;
 static UInt64 StartTime;
 
+static PlatformState* StatePtr;
+
 LRESULT CALLBACK Win32ProcessMessage(HWND HWindow, UInt32 Message, WPARAM WordParam, LPARAM LongParam);
 
-Bool8 PlatformStartup( PlatformState* Platform, const char* WindowName, Int32 X, Int32 Y, Int32 Width, Int32 Height)
+Bool8 PlatformSystemStartup(UInt64* MemoryRequirement, void* State, const char* WindowName, Int32 X, Int32 Y, Int32 Width, Int32 Height)
 {
-    Platform->InternalState = malloc(sizeof(InternalState));
-    InternalState* State = (InternalState* )Platform->InternalState;
+    *MemoryRequirement = sizeof(PlatformState);
+    if (State == 0) {
+        return true;
+    }
 
-    State->AppInstance = GetModuleHandleA(0);
+    StatePtr = State;
+    StatePtr->AppInstance = GetModuleHandleA(0);
 
-HICON WindowIcon = LoadIcon(State->AppInstance, IDI_APPLICATION);
-WNDCLASSA WindowClass = {0};
+    HICON WindowIcon = LoadIcon(StatePtr->AppInstance, IDI_APPLICATION);
+    WNDCLASSA WindowClass = {0};
 
-WindowClass.style = CS_DBLCLKS;  
-WindowClass.lpfnWndProc = Win32ProcessMessage;
-WindowClass.cbClsExtra = 0;
-WindowClass.cbWndExtra = 0;
-WindowClass.hInstance = State->AppInstance;
-WindowClass.hIcon = WindowIcon;
-WindowClass.hCursor = LoadCursor(NULL, IDC_ARROW);  
-WindowClass.hbrBackground = NULL;                  
-WindowClass.lpszClassName = "FractalWindowClass";
+    WindowClass.style = CS_DBLCLKS;  
+    WindowClass.lpfnWndProc = Win32ProcessMessage;
+    WindowClass.cbClsExtra = 0;
+    WindowClass.cbWndExtra = 0;
+    WindowClass.hInstance = StatePtr->AppInstance;
+    WindowClass.hIcon = WindowIcon;
+    WindowClass.hCursor = LoadCursor(NULL, IDC_ARROW);  
+    WindowClass.hbrBackground = NULL;                  
+    WindowClass.lpszClassName = "FractalWindowClass";
 
-if (!RegisterClassA(&WindowClass))
-{
-    MessageBoxA(0, "Window Failed to Register", "Error!", MB_ICONEXCLAMATION | MB_OK);
-    return false;
-}
-
-UInt32 ClientX = X;
-UInt32 ClientY = Y;
-UInt32 ClientWidth = Width;
-UInt32 ClientHeight = Height;
-
-UInt32 WindowX = ClientX;
-UInt32 WindowY = ClientY;
-UInt32 WindowWidth = ClientWidth;
-UInt32 WindowHeight = ClientHeight;
-
-UInt32 WindowStyle = WS_OVERLAPPED | WS_SYSMENU | WS_CAPTION;
-UInt32 WindowExStyle = WS_EX_APPWINDOW;
-
-WindowStyle |= WS_MAXIMIZEBOX;
-WindowStyle |= WS_MINIMIZEBOX;
-WindowStyle |= WS_THICKFRAME;
-
-RECT Border = {0, 0, 0, 0};
-AdjustWindowRectEx(&Border, WindowStyle, false, WindowExStyle);
-
-WindowWidth += (Border.right - Border.left);
-WindowHeight += (Border.bottom - Border.top);
-
-    HWND Handle = CreateWindowExA(
-        WindowExStyle, "FractalWindowClass", WindowName,
-        WindowStyle, WindowX, WindowY, WindowWidth, WindowHeight,
-        0, 0, State->AppInstance, 0);
-
-if (Handle == 0) {
-
-    MessageBoxA(NULL, "Wndow Failed to Create", "Error!", MB_ICONEXCLAMATION | MB_OK);
-
-    FLFATAL("Window creation failed!");
-    return false;
-
-} else {
-
-    State->MainWindow = Handle;
-
-}
-
-Bool8 ShouldActivate = true; // TODO: if the window should not accept input, this should be false.
-Int32 ShowWindowCommandFlags = ShouldActivate ? SW_SHOW : SW_SHOWNOACTIVATE;
-
-// If initially minimized, use SW_MINIMIZE : SW_SHOWMINNOACTIVE;
-// If initially maximized, use SW_SHOWMAXIMIZED : SW_MAXIMIZE
-ShowWindow(State->MainWindow, ShowWindowCommandFlags);
-
-LARGE_INTEGER Frequency;
-QueryPerformanceFrequency(&Frequency);
-ClockFrequency = 1.0 / (Float64)Frequency.QuadPart;
-
-LARGE_INTEGER Counter;
-QueryPerformanceCounter(&Counter);
-StartTime = (UInt64)Counter.QuadPart;
-
-return true;
-
-}
-
-void PlatformShutdown(PlatformState* Platform)
-{
-    InternalState* State = (InternalState* )Platform->InternalState;
-
-    if (State->MainWindow)
+    if (!RegisterClassA(&WindowClass))
     {
-        DestroyWindow(State->MainWindow);
-        State->MainWindow = 0;
+        MessageBoxA(0, "Window Failed to Register", "Error!", MB_ICONEXCLAMATION | MB_OK);
+        return false;
+    }
+
+    UInt32 ClientX = X;
+    UInt32 ClientY = Y;
+    UInt32 ClientWidth = Width;
+    UInt32 ClientHeight = Height;
+
+    UInt32 WindowX = ClientX;
+    UInt32 WindowY = ClientY;
+    UInt32 WindowWidth = ClientWidth;
+    UInt32 WindowHeight = ClientHeight;
+
+    UInt32 WindowStyle = WS_OVERLAPPED | WS_SYSMENU | WS_CAPTION;
+    UInt32 WindowExStyle = WS_EX_APPWINDOW;
+
+    WindowStyle |= WS_MAXIMIZEBOX;
+    WindowStyle |= WS_MINIMIZEBOX;
+    WindowStyle |= WS_THICKFRAME;
+
+    RECT Border = {0, 0, 0, 0};
+    AdjustWindowRectEx(&Border, WindowStyle, false, WindowExStyle);
+
+    WindowWidth += (Border.right - Border.left);
+    WindowHeight += (Border.bottom - Border.top);
+
+        HWND Handle = CreateWindowExA(
+            WindowExStyle, "FractalWindowClass", WindowName,
+            WindowStyle, WindowX, WindowY, WindowWidth, WindowHeight,
+            0, 0, StatePtr->AppInstance, 0);
+
+    if (Handle == 0) {
+
+        MessageBoxA(NULL, "Wndow Failed to Create", "Error!", MB_ICONEXCLAMATION | MB_OK);
+
+        FLFATAL("Window creation failed!");
+        return false;
+
+    } else {
+
+        StatePtr->MainWindow = Handle;
+
+    }
+
+    Bool8 ShouldActivate = true; // TODO: if the window should not accept input, this should be false.
+    Int32 ShowWindowCommandFlags = ShouldActivate ? SW_SHOW : SW_SHOWNOACTIVATE;
+
+    // If initially minimized, use SW_MINIMIZE : SW_SHOWMINNOACTIVE;
+    // If initially maximized, use SW_SHOWMAXIMIZED : SW_MAXIMIZE
+    ShowWindow(StatePtr->MainWindow, ShowWindowCommandFlags);
+
+    LARGE_INTEGER Frequency;
+    QueryPerformanceFrequency(&Frequency);
+    ClockFrequency = 1.0 / (Float64)Frequency.QuadPart;
+
+    LARGE_INTEGER Counter;
+    QueryPerformanceCounter(&Counter);
+    StartTime = (UInt64)Counter.QuadPart;
+
+    return true;
+
+}
+
+void PlatformSystemShutdown(void* State)
+{
+    (void)State;
+    if (StatePtr->MainWindow)
+    {
+        DestroyWindow(StatePtr->MainWindow);
+        StatePtr->MainWindow = 0;
     }
 }
 
-Bool8 PlatformPollEvents(PlatformState* Platform)
+Bool8 PlatformPollEvents()
 {
-    (void)Platform;
-
     MSG Message;
     while (PeekMessageA(&Message, NULL, 0, 0, PM_REMOVE)) {
         TranslateMessage(&Message);
@@ -264,7 +266,7 @@ Float64 PlatformGetAbsoluteTime()
 {
     LARGE_INTEGER CurrentTime;
     QueryPerformanceCounter(&CurrentTime);
-    return (Float64)CurrentTime.QuadPart*  ClockFrequency;
+    return (Float64)CurrentTime.QuadPart* ClockFrequency;
 }
 
 void PlatformSleep(UInt64 Miliseconds)
@@ -280,23 +282,25 @@ void PlatformGetRequiredExtensions(const char*** ExtensionsVector)
 }
 
 // Surface creation for Vulkan
-Bool8 PlatformCreateVulkanSurface(PlatformState* Platform, VulkanContext *Context) {
-    /// Simply cold-cast to the known type.
-    InternalState* State = (InternalState*)Platform->InternalState;
+Bool8 PlatformCreateVulkanSurface(VulkanContext *Context) {
+
+    if (!StatePtr) {
+        return false;
+    }
 
     VkWin32SurfaceCreateInfoKHR CreateInfo = {0};
     CreateInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
     CreateInfo.pNext = 0;
-    CreateInfo.hinstance = State->AppInstance;
-    CreateInfo.hwnd = State->MainWindow;
+    CreateInfo.hinstance = StatePtr->AppInstance;
+    CreateInfo.hwnd = StatePtr->MainWindow;
 
-    VkResult Result = vkCreateWin32SurfaceKHR(Context->Instance, &CreateInfo, Context->Allocator, &State->Surface);
+    VkResult Result = vkCreateWin32SurfaceKHR(Context->Instance, &CreateInfo, Context->Allocator, &StatePtr->Surface);
     if (Result != VK_SUCCESS) {
         FLFATAL("Vulkan surface creation failed.");
         return false;
     }
 
-    Context->Surface = State->Surface;
+    Context->Surface = StatePtr->Surface;
     return true;
 }
 
@@ -336,11 +340,36 @@ LRESULT CALLBACK Win32ProcessMessage(HWND HWindow, UInt32 Message, WPARAM WordPa
             case WM_KEYUP:
             case WM_SYSKEYUP:
             {
-                //Key Pressed/Released
+                // Key Pressed/Released
                 Bool8 Pressed = (Message == WM_KEYDOWN || Message == WM_SYSKEYDOWN);
-                Keys Key = (UInt16)WordParam;
+                Keys Key = (Keys)WordParam;
+
+                Bool8 IsExtended = (HIWORD(LongParam) & KF_EXTENDED) == KF_EXTENDED;
+                UInt32 ScanCode = (HIWORD(LongParam) & 0xFF);
+
+                switch (WordParam)
+                {
+                    case VK_MENU:
+                    {
+                        Key = IsExtended ? RAltKey : LAltKey;
+                        break;
+                    }
                 
-                InputProccessKey(Key, Pressed);
+                    case VK_CONTROL:
+                    {
+                        Key = IsExtended ? RControlKey : LControlKey;
+                        break;
+                    }
+                
+                    case VK_SHIFT:
+                    {
+                        UInt32 MapResult = MapVirtualKey(ScanCode, MAPVK_VSC_TO_VK_EX);
+                        Key = (MapResult == VK_RSHIFT) ? RShiftKey : LShiftKey;
+                        break;
+                    }
+                }
+            
+            InputProcessKey(Key, Pressed);
 
             } break;
 

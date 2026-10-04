@@ -6,11 +6,11 @@ ASSEMBLY := Fractal
 EXTENSION := .dll
 
 # Removed /LD from COMPILER_FLAGS (handled by /DLL in LINKER_FLAGS)
-COMPILER_FLAGS := /Zi /W4 /WX /TC /std:clatest
+COMPILER_FLAGS := /Z7 /W4 /WX /TC -Werror=vla /std:clatest /clang:-MMD /clang:-MF /clang:"$@.d"
 INCLUDE_FLAGS := /IEngine\src /I"$(VULKAN_SDK)\Include" /I"..\vcpkg_installed\x64-windows\include"
 
 # Added /DLL right after /link
-LINKER_FLAGS := /link /DLL /LIBPATH:"$(VULKAN_SDK)\Lib" /LIBPATH:"..\vcpkg_installed\x64-windows\lib" user32.lib vulkan-1.lib /OUT:"$(BUILD_DIR)\$(ASSEMBLY)$(EXTENSION)" /IMPLIB:"$(BUILD_DIR)\$(ASSEMBLY).lib"
+LINKER_FLAGS := /link /DEBUG /PDB:"$(BUILD_DIR)\$(ASSEMBLY).pdb" /DLL /LIBPATH:"$(VULKAN_SDK)\Lib" /LIBPATH:"..\vcpkg_installed\x64-windows\lib" user32.lib vulkan-1.lib /OUT:"$(BUILD_DIR)\$(ASSEMBLY)$(EXTENSION)" /IMPLIB:"$(BUILD_DIR)\$(ASSEMBLY).lib"
 DEFINES := /D_DEBUG /DFEXPORT /D_CRT_SECURE_NO_WARNINGS
 
 Wildcard = $(wildcard $1$2) $(foreach d,$(wildcard $1*),$(call Wildcard,$d/,$2))
@@ -46,3 +46,5 @@ $(OBJ_DIR)/%.c.obj: %.c
 	@echo Compiling $<...
 	@if not exist "$(subst /,\,$(dir $@))" mkdir "$(subst /,\,$(dir $@))"
 	@clang-cl $< $(COMPILER_FLAGS) /c /Fo:"$@" $(DEFINES) $(INCLUDE_FLAGS)
+
+-include $(OBJ_FILES:.c.obj=.d)

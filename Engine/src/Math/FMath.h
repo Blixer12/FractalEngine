@@ -759,7 +759,7 @@ FINLINE Mat4 Mat4Mul(Mat4 matrix_0, Mat4 matrix_1) {
  * @param far_clip The far clipping plane distance.
  * @return A new orthographic projection matrix. 
  */
-FINLINE Mat4 Mat4_orthographic(Float32 left, Float32 right, Float32 bottom, Float32 top, Float32 near_clip, Float32 far_clip) {
+FINLINE Mat4 Mat4Orthographic(Float32 left, Float32 right, Float32 bottom, Float32 top, Float32 near_clip, Float32 far_clip) {
     Mat4 Matrix = Mat4Identity();
 
     Float32 lr = 1.0f / (left - right);
@@ -785,7 +785,7 @@ FINLINE Mat4 Mat4_orthographic(Float32 left, Float32 right, Float32 bottom, Floa
  * @param far_clip The far clipping plane distance.
  * @return A new perspective matrix. 
  */
-FINLINE Mat4 Mat4_perspective(Float32 fov_radians, Float32 aspect_ratio, Float32 near_clip, Float32 far_clip) {
+FINLINE Mat4 Mat4Perspective(Float32 fov_radians, Float32 aspect_ratio, Float32 near_clip, Float32 far_clip) {
     Float32 half_tan_fov = Ftan(fov_radians * 0.5f);
     Mat4 Matrix;
     FMZeroMemory(Matrix.Data, sizeof(Float32) * 16);
@@ -806,7 +806,7 @@ FINLINE Mat4 Mat4_perspective(Float32 fov_radians, Float32 aspect_ratio, Float32
  * @param up The up vector.
  * @return A matrix looking at target from the perspective of position. 
  */
-FINLINE Mat4 Mat4_look_at(Vec3 position, Vec3 target, Vec3 up) {
+FINLINE Mat4 Mat4LookAt(Vec3 position, Vec3 target, Vec3 up) {
     Mat4 Matrix;
     Vec3 z_axis;
     z_axis.x = target.x - position.x;
@@ -843,7 +843,7 @@ FINLINE Mat4 Mat4_look_at(Vec3 position, Vec3 target, Vec3 up) {
  * @param matrix The matrix to be transposed.
  * @return A transposed copy of the provided matrix.
  */
-FINLINE Mat4 Mat4_transposed(Mat4 matrix) {
+FINLINE Mat4 Mat4Transposed(Mat4 matrix) {
     Mat4 Matrix = Mat4Identity();
     Matrix.Data[0] = matrix.Data[0];
     Matrix.Data[1] = matrix.Data[4];
@@ -870,7 +870,7 @@ FINLINE Mat4 Mat4_transposed(Mat4 matrix) {
  * @param matrix The matrix to be inverted.
  * @return An inverted copy of the provided matrix. 
  */
-FINLINE Mat4 Mat4_inverse(Mat4 matrix) {
+FINLINE Mat4 Mat4Inverse(Mat4 matrix) {
     const Float32* m = matrix.Data;
 
     Float32 t0 = m[10] * m[15];
@@ -933,7 +933,7 @@ FINLINE Mat4 Mat4_inverse(Mat4 matrix) {
     return Matrix;
 }
 
-FINLINE Mat4 Mat4_translation(Vec3 position) {
+FINLINE Mat4 Mat4Translation(Vec3 position) {
     Mat4 Matrix = Mat4Identity();
     Matrix.Data[12] = position.x;
     Matrix.Data[13] = position.y;
@@ -947,7 +947,7 @@ FINLINE Mat4 Mat4_translation(Vec3 position) {
  * @param scale The 3-component scale.
  * @return A scale matrix.
  */
-FINLINE Mat4 Mat4_scale(Vec3 scale) {
+FINLINE Mat4 Mat4Scale(Vec3 scale) {
     Mat4 Matrix = Mat4Identity();
     Matrix.Data[0] = scale.x;
     Matrix.Data[5] = scale.y;
@@ -955,7 +955,7 @@ FINLINE Mat4 Mat4_scale(Vec3 scale) {
     return Matrix;
 }
 
-FINLINE Mat4 Mat4_euler_x(Float32 angle_radians) {
+FINLINE Mat4 Mat4EulerX(Float32 angle_radians) {
     Mat4 Matrix = Mat4Identity();
     Float32 c = Fcos(angle_radians);
     Float32 s = Fsin(angle_radians);
@@ -967,7 +967,7 @@ FINLINE Mat4 Mat4_euler_x(Float32 angle_radians) {
     return Matrix;
 }
 
-FINLINE Mat4 Mat4_euler_y(Float32 angle_radians) {
+FINLINE Mat4 Mat4EulerY(Float32 angle_radians) {
     Mat4 Matrix = Mat4Identity();
     Float32 c = Fcos(angle_radians);
     Float32 s = Fsin(angle_radians);
@@ -979,7 +979,7 @@ FINLINE Mat4 Mat4_euler_y(Float32 angle_radians) {
     return Matrix;
 }
 
-FINLINE Mat4 Mat4_euler_z(Float32 angle_radians) {
+FINLINE Mat4 Mat4EulerZ(Float32 angle_radians) {
     Mat4 Matrix = Mat4Identity();
 
     Float32 c = Fcos(angle_radians);
@@ -992,10 +992,10 @@ FINLINE Mat4 Mat4_euler_z(Float32 angle_radians) {
     return Matrix;
 }
 
-FINLINE Mat4 Mat4_euler_xyz(Float32 x_radians, Float32 y_radians, Float32 z_radians) {
-    Mat4 rx = Mat4_euler_x(x_radians);
-    Mat4 ry = Mat4_euler_y(y_radians);
-    Mat4 rz = Mat4_euler_z(z_radians);
+FINLINE Mat4 Mat4EulerXYZ(Float32 x_radians, Float32 y_radians, Float32 z_radians) {
+    Mat4 rx = Mat4EulerX(x_radians);
+    Mat4 ry = Mat4EulerY(y_radians);
+    Mat4 rz = Mat4EulerZ(z_radians);
     Mat4 Matrix = Mat4Mul(rx, ry);
     Matrix = Mat4Mul(Matrix, rz);
     return Matrix;
@@ -1007,7 +1007,7 @@ FINLINE Mat4 Mat4_euler_xyz(Float32 x_radians, Float32 y_radians, Float32 z_radi
  * @param matrix The matrix from which to base the vector.
  * @return A 3-component directional vector.
  */
-FINLINE Vec3 Mat4_forward(Mat4 matrix) {
+FINLINE Vec3 Mat4Forward(Mat4 matrix) {
     Vec3 forward;
     forward.x = -matrix.Data[2];
     forward.y = -matrix.Data[6];
@@ -1022,7 +1022,7 @@ FINLINE Vec3 Mat4_forward(Mat4 matrix) {
  * @param matrix The matrix from which to base the vector.
  * @return A 3-component directional vector.
  */
-FINLINE Vec3 Mat4_backward(Mat4 matrix) {
+FINLINE Vec3 Mat4Backward(Mat4 matrix) {
     Vec3 backward;
     backward.x = matrix.Data[2];
     backward.y = matrix.Data[6];
@@ -1037,7 +1037,7 @@ FINLINE Vec3 Mat4_backward(Mat4 matrix) {
  * @param matrix The matrix from which to base the vector.
  * @return A 3-component directional vector.
  */
-FINLINE Vec3 Mat4_up(Mat4 matrix) {
+FINLINE Vec3 Mat4Up(Mat4 matrix) {
     Vec3 up;
     up.x = matrix.Data[1];
     up.y = matrix.Data[5];
@@ -1052,7 +1052,7 @@ FINLINE Vec3 Mat4_up(Mat4 matrix) {
  * @param matrix The matrix from which to base the vector.
  * @return A 3-component directional vector.
  */
-FINLINE Vec3 Mat4_down(Mat4 matrix) {
+FINLINE Vec3 Mat4Down(Mat4 matrix) {
     Vec3 down;
     down.x = -matrix.Data[1];
     down.y = -matrix.Data[5];
@@ -1067,7 +1067,7 @@ FINLINE Vec3 Mat4_down(Mat4 matrix) {
  * @param matrix The matrix from which to base the vector.
  * @return A 3-component directional vector.
  */
-FINLINE Vec3 Mat4_left(Mat4 matrix) {
+FINLINE Vec3 Mat4Left(Mat4 matrix) {
     Vec3 left;
     left.x = -matrix.Data[0];
     left.y = -matrix.Data[4];
@@ -1082,7 +1082,7 @@ FINLINE Vec3 Mat4_left(Mat4 matrix) {
  * @param matrix The matrix from which to base the vector.
  * @return A 3-component directional vector.
  */
-FINLINE Vec3 Mat4_right(Mat4 matrix) {
+FINLINE Vec3 Mat4Right(Mat4 matrix) {
     Vec3 right;
     right.x = matrix.Data[0];
     right.y = matrix.Data[4];

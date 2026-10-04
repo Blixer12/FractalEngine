@@ -37,6 +37,37 @@
         },
         {
             "type": "shell",
+            "label": "Build Unit Tests",
+            "windows": {
+                "command": "${workspaceFolder}/Tests/Build.bat"
+            },
+            "linux": {
+                "command": "${workspaceFolder}/Tests/Build.sh"
+            },
+            "options": {
+                "cwd": "${workspaceFolder}/Tests"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": "build"
+        },
+        {
+            "type": "shell",
+            "label": "Clean Everything",
+            "windows": {
+                "command": "${workspaceFolder}/CleanAll.bat"
+            },
+            "linux": {
+                "command": "${workspaceFolder}/CleanAll.sh"
+            },
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "build"
+        },
+        {
+            "type": "shell",
             "label": "Build Everything",
             "windows": {
                 "command": "${workspaceFolder}/BuildAll.bat"
@@ -54,21 +85,21 @@
                 "kind": "build",
                 "isDefault": true
             }
-         },
-         {
-             "type": "shell",
-             "label": "Clean Everything",
-             "windows": {
-                 "command": "${workspaceFolder}\\CleanAll.bat"
-             },
-             "linux": {
-                 "command": "${workspaceFolder}/CleanAll.sh"
-             },
-             "options": {
-                 "cwd": "${workspaceFolder}"
-             },
-             "group": "build"
-         }
+        },
+        {
+            "type": "shell",
+            "label": "Post Build",
+            "windows": {
+                "command": "${workspaceFolder}/PostBuild.bat"
+            },
+            "linux": {
+                "command": "${workspaceFolder}/PostBuild.sh"
+            },
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "build"
+        }
     ],
     "version": "2.0.0"
 }

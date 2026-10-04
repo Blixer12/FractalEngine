@@ -5,7 +5,7 @@
 struct PlatformState;
 struct StaticMeshData;
 
-Bool8 CrystalInitialize(const char* AppName, struct PlatformState* Platform);
+Bool8 CrystalInitialize(UInt64* MemoryRequirement, void* State, const char* AppName);
 void CrystalShutdown();
 
 void CrystalOnResize(UInt16 Width, UInt16 Height);

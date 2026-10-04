@@ -95,7 +95,6 @@ void VulkanSwapchainPresent(
 void Create(VulkanContext* Context, UInt32 Width, UInt32 Height, VulkanSwapchain* Swapchain)
 {
     VkExtent2D SwapchainExtent = {Width, Height};
-    Swapchain->MaxFramesInFlight = 2;
 
     VkSurfaceFormatKHR SwapchainFormat = {0};
     Bool8 FoundIdealFormat = false;
@@ -215,6 +214,8 @@ void Create(VulkanContext* Context, UInt32 Width, UInt32 Height, VulkanSwapchain
     if (MaxImageCount > 0 && ImageCount > MaxImageCount) {
         ImageCount = MaxImageCount;
     }
+
+    Swapchain->MaxFramesInFlight = ImageCount - 1;
 
     VkSwapchainCreateInfoKHR SwapchainCreateInfo = {0};
     SwapchainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;

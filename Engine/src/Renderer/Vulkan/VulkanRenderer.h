@@ -2,7 +2,7 @@
 
 #include "Renderer/CrystalBackend.h"
 
-Bool8 VulkanRendererInitialize(CrystalBackend* Backend, const char* AppName, struct PlatformState* PlatformState);
+Bool8 VulkanRendererInitialize(CrystalBackend* Backend, const char* AppName);
 void VulkanRendererShutdown(CrystalBackend* Backend);
 
 void VulkanRendererOnResized(CrystalBackend* Backend, UInt16 Width, UInt16 Height);

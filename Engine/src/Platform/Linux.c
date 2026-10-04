@@ -13,6 +13,7 @@
 #include <xkbcommon/xkbcommon-x11.h> // For native XCB key mapping
 
 #include <sys/time.h>
+#include <sys/stat.h>
 
 #define XCB_BUTTON_INDEX_6 ((enum xcb_button_index_t)6)
 #define XCB_BUTTON_INDEX_7 ((enum xcb_button_index_t)7)
@@ -33,7 +34,7 @@
 #include <vulkan/vulkan.h>
 #include "Renderer/Vulkan/VulkanDef.inl"
 
-typedef struct InternalState {
+typedef struct PlatformState {
     xcb_connection_t* Connection;
     xcb_window_t Window;
     xcb_screen_t* Screen;
@@ -46,44 +47,50 @@ typedef struct InternalState {
     Int32 XkbDeviceId;
 
     VkSurfaceKHR Surface;
-} InternalState;
+} PlatformState;
+
+static PlatformState* StatePtr;
 
 Keys TranslateKeyCode(xkb_keysym_t XKeycode);
 
-Bool8 PlatformStartup( PlatformState* Platform, const char* WindowName, Int32 X, Int32 Y, Int32 Width, Int32 Height)
+Bool8 PlatformSystemStartup(UInt64* MemoryRequirement, void* State, const char* WindowName, Int32 X, Int32 Y, Int32 Width, Int32 Height)
 {
-    Platform->InternalState = malloc(sizeof(InternalState));
-    InternalState* State = (InternalState*)Platform->InternalState;
+    *MemoryRequirement = sizeof(PlatformState);
+    if (State == 0) {
+        return true;
+    }
+
+    StatePtr = State;
 
     // 1. Connect directly to X Server via XCB
     int ScreenIdx = 0;
-    State->Connection = xcb_connect(NULL, &ScreenIdx);
-    if (xcb_connection_has_error(State->Connection)) {
+    StatePtr->Connection = xcb_connect(NULL, &ScreenIdx);
+    if (xcb_connection_has_error(StatePtr->Connection)) {
         FLFATAL("Failed to connect to X11 server via raw XCB.");
         return false;
     }
 
     // 2. Setup modern XKB Keyboard Context (No Xlib dependency)
-    State->XkbContext = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
-    xkb_x11_setup_xkb_extension(State->Connection, 
+    StatePtr->XkbContext = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
+    xkb_x11_setup_xkb_extension(StatePtr->Connection, 
                                 XKB_X11_MIN_MAJOR_XKB_VERSION, 
                                 XKB_X11_MIN_MINOR_XKB_VERSION, 
                                 XKB_X11_SETUP_XKB_EXTENSION_NO_FLAGS, 
                                 NULL, NULL, NULL, NULL);
     
-    State->XkbDeviceId = xkb_x11_get_core_keyboard_device_id(State->Connection);
-    State->XkbKeymap = xkb_x11_keymap_new_from_device(State->XkbContext, State->Connection, State->XkbDeviceId, XKB_KEYMAP_COMPILE_NO_FLAGS);
-    State->XkbState = xkb_x11_state_new_from_device(State->XkbKeymap, State->Connection, State->XkbDeviceId);
+    StatePtr->XkbDeviceId = xkb_x11_get_core_keyboard_device_id(StatePtr->Connection);
+    StatePtr->XkbKeymap = xkb_x11_keymap_new_from_device(StatePtr->XkbContext, StatePtr->Connection, StatePtr->XkbDeviceId, XKB_KEYMAP_COMPILE_NO_FLAGS);
+    StatePtr->XkbState = xkb_x11_state_new_from_device(StatePtr->XkbKeymap, StatePtr->Connection, StatePtr->XkbDeviceId);
 
-    const struct xcb_setup_t* Setup = xcb_get_setup(State->Connection);
+    const struct xcb_setup_t* Setup = xcb_get_setup(StatePtr->Connection);
     xcb_screen_iterator_t It = xcb_setup_roots_iterator(Setup);
     for (Int32 s = ScreenIdx; s > 0; s--) {
         xcb_screen_next(&It);
     }
-    State->Screen = It.data;
+    StatePtr->Screen = It.data;
 
     // Allocate a XID for the window to be created.
-    State->Window = xcb_generate_id(State->Connection);
+    StatePtr->Window = xcb_generate_id(StatePtr->Connection);
 
     // Register event types.
     // XCB_CW_BACK_PIXEL = filling then window bg with a single colour
@@ -97,21 +104,21 @@ Bool8 PlatformStartup( PlatformState* Platform, const char* WindowName, Int32 X,
                        XCB_EVENT_MASK_STRUCTURE_NOTIFY;
 
     // Values to be sent over XCB (bg colour, events)
-    UInt32 ValueList[] = {State->Screen->black_pixel, EventValues};
+    UInt32 ValueList[] = {StatePtr->Screen->black_pixel, EventValues};
 
     // Create the window
     xcb_void_cookie_t Cookie = xcb_create_window(
-        State->Connection,
+        StatePtr->Connection,
         XCB_COPY_FROM_PARENT,  // depth
-        State->Window,
-        State->Screen->root,            // parent
+        StatePtr->Window,
+        StatePtr->Screen->root,            // parent
         X,                              //x
         Y,                              //y
         Width,                          //width
         Height,                         //height
         0,                              // No border
         XCB_WINDOW_CLASS_INPUT_OUTPUT,  //class
-        State->Screen->root_visual,
+        StatePtr->Screen->root_visual,
         EventMask,
         ValueList);
 
@@ -119,9 +126,9 @@ Bool8 PlatformStartup( PlatformState* Platform, const char* WindowName, Int32 X,
 
     // Change the title
     xcb_change_property(
-        State->Connection,
+        StatePtr->Connection,
         XCB_PROP_MODE_REPLACE,
-        State->Window,
+        StatePtr->Window,
         XCB_ATOM_WM_NAME,
         XCB_ATOM_STRING,
         8,  // data should be viewed 8 bits at a time
@@ -129,38 +136,38 @@ Bool8 PlatformStartup( PlatformState* Platform, const char* WindowName, Int32 X,
         WindowName);
 
 xcb_intern_atom_cookie_t WmDeleteCookie = xcb_intern_atom(
-    State->Connection,
+    StatePtr->Connection,
     0,
     strlen("WM_DELETE_WINDOW"),
     "WM_DELETE_WINDOW"
 );
 
 xcb_intern_atom_cookie_t WmProtocolsCookie = xcb_intern_atom(
-    State->Connection,
+    StatePtr->Connection,
     0,
     strlen("WM_PROTOCOLS"),
     "WM_PROTOCOLS"
 );
 
 xcb_intern_atom_reply_t* WmDeleteReply = xcb_intern_atom_reply(
-    State->Connection,
+    StatePtr->Connection,
     WmDeleteCookie,
     NULL
 );
 
 xcb_intern_atom_reply_t* WmProtocolsReply = xcb_intern_atom_reply(
-    State->Connection,
+    StatePtr->Connection,
     WmProtocolsCookie,
     NULL
 );
 
-State->WmDeleteWin = WmDeleteReply->atom;
-State->WmProtocols = WmProtocolsReply->atom;
+StatePtr->WmDeleteWin = WmDeleteReply->atom;
+StatePtr->WmProtocols = WmProtocolsReply->atom;
 
 xcb_change_property(
-        State->Connection,
+        StatePtr->Connection,
         XCB_PROP_MODE_REPLACE,
-        State->Window,
+        StatePtr->Window,
         WmProtocolsReply->atom,
         4,
         32,
@@ -168,10 +175,10 @@ xcb_change_property(
         &WmDeleteReply->atom);
 
     // Map the window to the screen
-    xcb_map_window(State->Connection, State->Window);
+    xcb_map_window(StatePtr->Connection, StatePtr->Window);
 
     // Flush the stream
-    Int32 StreamResult = xcb_flush(State->Connection);
+    Int32 StreamResult = xcb_flush(StatePtr->Connection);
     if (StreamResult <= 0) {
         FLFATAL("An error occurred when flusing the stream: %d", StreamResult);
         return false;
@@ -181,23 +188,21 @@ xcb_change_property(
 
 }
 
-void PlatformShutdown(PlatformState* Platform)
+void PlatformSystemShutdown(void* State)
 {
-    // Simply cold-cast to the known type.
-    InternalState* State = (InternalState*)Platform->InternalState;
+    (void)State;
 
     // Free modern keyboard tracking states
-    xkb_state_unref(State->XkbState);
-    xkb_keymap_unref(State->XkbKeymap);
-    xkb_context_unref(State->XkbContext);
+    xkb_state_unref(StatePtr->XkbState);
+    xkb_keymap_unref(StatePtr->XkbKeymap);
+    xkb_context_unref(StatePtr->XkbContext);
 
-    xcb_destroy_window(State->Connection, State->Window);
-    xcb_disconnect(State->Connection); // Safely close the direct server socket
+    xcb_destroy_window(StatePtr->Connection, StatePtr->Window);
+    xcb_disconnect(StatePtr->Connection); // Safely close the direct server socket
 }
 
-Bool8 PlatformPollEvents(PlatformState* Platform)
+Bool8 PlatformPollEvents()
 {
-    InternalState* State = (InternalState*)Platform->InternalState;
 
     xcb_generic_event_t* Event = NULL;
     xcb_client_message_event_t* ClientMessage;
@@ -205,7 +210,7 @@ Bool8 PlatformPollEvents(PlatformState* Platform)
     Bool8 QuitFlagged = false;
 
     // Poll for events until null is returned.
-    while ((Event = xcb_poll_for_event(State->Connection)) != NULL) {
+    while ((Event = xcb_poll_for_event(StatePtr->Connection)) != NULL) {
         
         if (Event == 0) 
         {
@@ -224,7 +229,7 @@ Bool8 PlatformPollEvents(PlatformState* Platform)
                 xcb_keycode_t Code = KbEvent->detail;
 
                 // Pure XCB modern string translation via libxkbcommon
-                xkb_keysym_t KeySymbol = xkb_state_key_get_one_sym(State->XkbState, Code);
+                xkb_keysym_t KeySymbol = xkb_state_key_get_one_sym(StatePtr->XkbState, Code);
 
                 Keys Key = TranslateKeyCode(KeySymbol);
                 InputProcessKey(Key, Pressed);
@@ -284,7 +289,7 @@ Bool8 PlatformPollEvents(PlatformState* Platform)
                 ClientMessage = (xcb_client_message_event_t*)Event;
 
                 // Window close
-                if (ClientMessage->data.data32[0] == State->WmDeleteWin) {
+                if (ClientMessage->data.data32[0] == StatePtr->WmDeleteWin) {
                     QuitFlagged = true;
                 }
             } break;
@@ -366,14 +371,14 @@ void PlatformGetRequiredExtensions(const char*** ExtensionsVector)
     VectorAppend(*ExtensionsVector, &"VK_KHR_xcb_surface");
 }
 
-Bool8 PlatformCreateVulkanSurface(PlatformState* Platform, VulkanContext* Context) {
+Bool8 PlatformCreateVulkanSurface(PlatformState* State, VulkanContext* Context) {
     // Cold Casts to the known type
-    InternalState* State = (InternalState*)Platform->State;
+    PlatformState* State = (PlatformState*)StatePtr->State;
 
     VkXcbSurfaceCreateInfoKHR CreateInfo = {0};
     CreateInfo.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
-    CreateInfo.connection = State->Connection;
-    CreateInfo.window = State->Window;
+    CreateInfo.connection = StatePtr->Connection;
+    CreateInfo.window = StatePtr->Window;
 
     VkResult Result = vkCreateXcbSurfaceKHR(
         Context->Instance,

@@ -18,6 +18,9 @@
 
 #include "VulkanPlatform.h"
 
+// Shaders
+#include "Shaders/VulkanObjectShader.h"
+
 static VulkanContext Context;
 static UInt32 CachedFramebufferWidth = 0;
 static UInt32 CachedFramebufferHeight = 0;
@@ -35,10 +38,9 @@ Bool8 RecreateSwapchain(CrystalBackend* Backend);
 void RegenerateFramebuffers(CrystalBackend* Backend, VulkanSwapchain* Swapchain, VulkanRenderpass* Renderpass);
 
 
-Bool8 VulkanRendererInitialize(CrystalBackend* Backend, const char* AppName, struct PlatformState* PlatformState) {
+Bool8 VulkanRendererInitialize(CrystalBackend* Backend, const char* AppName) {
     
     (void)Backend;
-    (void)PlatformState;
 
     // Function Pointers
     Context.FindMemoryIndex = FindMemoryIndex;
@@ -165,7 +167,7 @@ Bool8 VulkanRendererInitialize(CrystalBackend* Backend, const char* AppName, str
 
     // Surface
     FLDEBUG("Creating Vulkan surface...");
-    if (!PlatformCreateVulkanSurface(PlatformState, &Context)) {
+    if (!PlatformCreateVulkanSurface(&Context)) {
         FLERROR("Failed to create platform surface!");
         return false;
     }
@@ -220,6 +222,13 @@ Bool8 VulkanRendererInitialize(CrystalBackend* Backend, const char* AppName, str
         Context.ImagesInFlight[i] = 0; 
     }
 
+    // Create Builtin Shaders
+    if (!VulkanObjectShaderCreate(&Context, &Context.ObjectShader))
+    {
+        FLERROR("Error loading Builtin Basic Lighting Shader.");
+        return false;
+    }
+
     FLINFO("Vulkan renderer initialized successfully");
     return true;
 }
@@ -229,7 +238,9 @@ void VulkanRendererShutdown(CrystalBackend* Backend)
 {
     (void)Backend;
     vkDeviceWaitIdle(Context.Device.LogicalDevice);
-    
+
+    VulkanObjectShaderDestroy(&Context, &Context.ObjectShader);
+   
     for (UInt32 i = 0; i < Context.Swapchain.MaxFramesInFlight; i++) {
         if (Context.ImageAvailableSemaphores[i]) {
             vkDestroySemaphore(

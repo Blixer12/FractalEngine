@@ -20,42 +20,51 @@ typedef struct InputState {
     MouseState MousePrevious;
 } InputState;
 
-static Bool8 Initialized;
-static InputState State;
+static InputState* StatePtr;
 
-void InputSystemInitialize()
+void InputSystemInitialize(UInt64* MemoryRequirement, void* State) 
 {
-    FMZeroMemory(&State, sizeof(InputState));
-    Initialized = true;
-    FLINFO("Input Subsystem Intialized");
+    *MemoryRequirement = (UInt64)sizeof(InputState);
+    if (State == 0) 
+    {
+        return;
+    }
+
+    FMZeroMemory(State, sizeof(InputState));
+    StatePtr = State;
+
+    (void)MemoryRequirement;
+
+    FLINFO("Input subsystem initialized.");
 }
 
-void InputSystemShutdown()
+void InputSystemShutdown(void* State)
 {
     //TODO: Shutdown Routines when needed
-    Initialized = false;
+    (void)State;
+    StatePtr = 0;
 }
 
 void InputUpdate(Float64 DeltaTime)
 {
     (void)DeltaTime;
-    if (!Initialized)
+    if (!StatePtr)
     {
         return;
     }
 
     // Copies current state into Previous
-    FMCopyMemory(&State.KeyboardPrevious, &State.KeyboardCurrent, sizeof(KeyboardState));
-    FMCopyMemory(&State.MousePrevious, &State.MouseCurrent, sizeof(MouseState));
+    FMCopyMemory(&StatePtr->KeyboardPrevious, &StatePtr->KeyboardCurrent, sizeof(KeyboardState));
+    FMCopyMemory(&StatePtr->MousePrevious, &StatePtr->MouseCurrent, sizeof(MouseState));
 }
 
-void InputProccessKey(Keys Key, Bool8 Pressed)
+void InputProcessKey(Keys Key, Bool8 Pressed)
 {
     // Only handle this if the state actually changed.
-    if (State.KeyboardCurrent.Keys[Key] != Pressed)
+    if (StatePtr->KeyboardCurrent.Keys[Key] != Pressed)
     {
         // Update internal state.
-        State.KeyboardCurrent.Keys[Key] = Pressed;
+        StatePtr->KeyboardCurrent.Keys[Key] = Pressed;
 
         // Fire off an event for immediate processing.
         EventContext Context;
@@ -66,9 +75,9 @@ void InputProccessKey(Keys Key, Bool8 Pressed)
 
 void InputProcessMouseButton(MouseButtons Button, Bool8 Pressed)
 {
-    if (State.MouseCurrent.MouseButtons[Button] != Pressed)
+    if (StatePtr->MouseCurrent.MouseButtons[Button] != Pressed)
     {
-        State.MouseCurrent.MouseButtons[Button] = Pressed;
+        StatePtr->MouseCurrent.MouseButtons[Button] = Pressed;
 
         EventContext Context;
         Context.Data.UInt16[0] = Button;
@@ -78,14 +87,14 @@ void InputProcessMouseButton(MouseButtons Button, Bool8 Pressed)
 
 void InputProcessMouseMove(Int16 X, Int16 Y)
 {
-    if (State.MouseCurrent.X != X || State.MouseCurrent.Y != Y)
+    if (StatePtr->MouseCurrent.X != X || StatePtr->MouseCurrent.Y != Y)
     {
         //NOTE: Enable this if debugging mouse input.
         //FLTRACE("Mouse Position: (%i, %i)", X, Y);
 
         // Update internal state.
-        State.MouseCurrent.X = X;
-        State.MouseCurrent.Y = Y;
+        StatePtr->MouseCurrent.X = X;
+        StatePtr->MouseCurrent.Y = Y;
 
         // Fire the event.
         EventContext Context;
@@ -105,91 +114,91 @@ void InputProcessMouseWheel(Int8 WheelDelta)
 // --- KEYBOARD INPUT ---
 Bool8 InputIsKeyDown(Keys Key)
 {
-    if (!Initialized)
+    if (!StatePtr)
     {
         return false;
     }
-    return State.KeyboardCurrent.Keys[Key] == true;
+    return StatePtr->KeyboardCurrent.Keys[Key] == true;
 }
 Bool8 InputIsKeyUp(Keys Key)
 {
-    if (!Initialized)
+    if (!StatePtr)
     {
         return true;
     }
-    return State.KeyboardCurrent.Keys[Key] == false;
+    return StatePtr->KeyboardCurrent.Keys[Key] == false;
 }
 Bool8 InputWasKeyDown(Keys Key)
 {
-    if (!Initialized)
+    if (!StatePtr)
     {
         return false;
     }
-    return State.KeyboardPrevious.Keys[Key] == true;
+    return StatePtr->KeyboardPrevious.Keys[Key] == true;
 }
 Bool8 InputWasKeyUp(Keys Key)
 {
-    if (!Initialized)
+    if (!StatePtr)
     {
         return true;
     }
-    return State.KeyboardPrevious.Keys[Key] == false;
+    return StatePtr->KeyboardPrevious.Keys[Key] == false;
 }
 
 // --- MOUSE INPUT ---
 Bool8 InputIsMouseButtonDown(MouseButtons Button)
 {
-    if (!Initialized)
+    if (!StatePtr)
     {
         return false;
     }
-    return State.MouseCurrent.MouseButtons[Button] == true;
+    return StatePtr->MouseCurrent.MouseButtons[Button] == true;
 }
 Bool8 InputIsMouseButtonUp(MouseButtons Button)
 {
-    if (!Initialized)
+    if (!StatePtr)
     {
         return true;
     }
-    return State.MouseCurrent.MouseButtons[Button] == false;
+    return StatePtr->MouseCurrent.MouseButtons[Button] == false;
 }
 Bool8 InputWasMouseButtonDown(MouseButtons Button)
 {
-    if (!Initialized)
+    if (!StatePtr)
     {
         return false;
     }
-    return State.MousePrevious.MouseButtons[Button] == true;
+    return StatePtr->MousePrevious.MouseButtons[Button] == true;
 }
 Bool8 InputWasMouseButtonUp(MouseButtons Button)
 {
-    if (!Initialized)
+    if (!StatePtr)
     {
         return true;
     }
-    return State.MousePrevious.MouseButtons[Button] == false;
+    return StatePtr->MousePrevious.MouseButtons[Button] == false;
 }
 
 // --- MOUSE MOVEMENT ---
 void InputGetMousePosition(Int32 * X, Int32 * Y)
 {
-    if (!Initialized)
+    if (!StatePtr)
     {
         *X = 0;
         *Y = 0;
         return;
     }
-    *X = State.MouseCurrent.X;
-    *Y = State.MouseCurrent.Y;
+    *X = StatePtr->MouseCurrent.X;
+    *Y = StatePtr->MouseCurrent.Y;
 }
 void InputGetPreviousMousePosition(Int32* X, Int32* Y)
 {
- if (!Initialized)
+ if (!StatePtr)
     {
         *X = 0;
         *Y = 0;
         return;
     }
-    *X = State.MousePrevious.X;
-    *Y = State.MousePrevious.Y;
+    *X = StatePtr->MousePrevious.X;
+    *Y = StatePtr->MousePrevious.Y;
 }

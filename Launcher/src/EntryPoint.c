@@ -19,6 +19,7 @@ Bool8 CreateGame(Game* TargetGame)
     TargetGame->OnResize = GameOnResize;
 
     TargetGame->State = FMAllocate(sizeof(GameState), MEMORY_TAG_GAME);
+    TargetGame->AppState = 0;
 
     return true;
 }

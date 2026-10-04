@@ -32,11 +32,14 @@
                 "_UNICODE",
                 "FEXPORT"
             ],
+            "compilerArgs": [
+                "-std=c23"
+            ],
             "windowsSdkVersion": "10.0.18362.0",
-            "compilerPath": "C:\\Program Files (x86)\\Microsoft Visual Studio\\18\\BuildTools\\VC\\Tools\\MSVC\\14.51.36231\\bin\\Hostx64\\x64\\cl.exe",
+            "compilerPath": "C:/Program Files (x86)/Microsoft Visual Studio/18/BuildTools/VC/Tools/Llvm/x64/bin/clang-cl.exe",
             "cStandard": "c23",
             "cppStandard": "c++23",
-            "intelliSenseMode": "windows-msvc-x64"
+            "intelliSenseMode": "windows-clang-x64"
         }
     ],
     "version": 4

@@ -23,8 +23,15 @@ typedef struct EventContext {
     } Data;
 } EventContext;
 
-Bool8 EventSystemInitialize();
-void EventSystemShutdown();
+/**
+ * @brief Initializes the event system. Call twice; once to obtain memory requirement (passing
+ * state = 0), then a second time passing allocated memory to state.
+ * 
+ * @param MemoryRequirement The required size of the state memory.
+ * @param State Either 0 or the allocated block of state memory.
+ */
+void EventSystemInitialize(UInt64* MemoryRequirement, void* State);
+void EventSystemShutdown(void* State);
 
 typedef Bool8 (*PFN_OnEvent)(UInt16 Code, void* Sender, void* ReceiverInst, EventContext Data);
 

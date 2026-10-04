@@ -17,7 +17,7 @@ typedef struct CrystalBackend {
     struct PlatformState* Platform;
     UInt64 FrameNumber;
 
-    Bool8 (*Initialize)(struct CrystalBackend* Backend, const char* AppName, struct PlatformState* Platform);
+    Bool8 (*Initialize)(struct CrystalBackend* Backend, const char* AppName);
     void (*Shutdown)(struct CrystalBackend* Backend);
 
     void (*Resized)(struct CrystalBackend* Backend, UInt16 Width, UInt16 Height);

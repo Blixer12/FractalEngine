@@ -1,19 +1,17 @@
 BUILD_DIR := bin
 OBJ_DIR := Object
 
-# Matches assembly name 'FractalEngine' from Build.sh
 ASSEMBLY := FractalEngine
 EXTENSION := 
 
-# Aligned with Build.sh compiler & linker flags
-COMPILER_FLAGS := -g -Wall -Werror -std=c23 -fdeclspec -fPIC
+COMPILER_FLAGS := -g -MD -Wall -Werror -std=c23 -fdeclspec -fPIC
 INCLUDE_FLAGS := -ILauncher/src -IEngine/src -I$(VULKAN_SDK)/include
 LINKER_FLAGS := -L./$(BUILD_DIR) -lFractal -Wl,-rpath,'$$ORIGIN'
 DEFINES := -D_DEBUG -DFIMPORT -D_GNU_SOURCE
 
-SRC_FILES := $(shell find Launcher/src -name "*.c")
-DIRECTORIES := $(shell find Launcher/src -type d)
-OBJ_FILES := $(SRC_FILES:%=$(OBJ_DIR)/%.o)
+SRC_FILES := $(shell find Launcher/src -name "*.c" 2>/dev/null)
+DIRECTORIES := $(shell find Launcher/src -type d 2>/dev/null)
+OBJ_FILES := $(SRC_FILES:%.c=$(OBJ_DIR)/%.o)
 
 all: scaffold compile link
 
@@ -38,6 +36,8 @@ clean:
 	@rm -f $(BUILD_DIR)/$(ASSEMBLY)$(EXTENSION)
 	@rm -rf $(OBJ_DIR)/Launcher
 
-$(OBJ_DIR)/%.c.o: %.c
+$(OBJ_DIR)/%.o: %.c
 	@echo Compiling $<...
 	@clang $< $(COMPILER_FLAGS) -c -o $@ $(DEFINES) $(INCLUDE_FLAGS)
+
+-include $(OBJ_FILES:.o=.d)

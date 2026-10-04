@@ -148,8 +148,8 @@ typedef enum Keys {
     DefineKey(RShift, 0xA1),
     DefineKey(LControl, 0xA2),
     DefineKey(RControl, 0xA3),
-    DefineKey(LMenu, 0xA4),
-    DefineKey(RMenu, 0xA5),
+    DefineKey(LAlt, 0xA4),
+    DefineKey(RAlt, 0xA5),
 
     // --- PUNCTUATION AND SYMBOLS ---
     DefineKey(Semicolon, 0xBA),  // ; or :
@@ -168,8 +168,15 @@ typedef enum Keys {
     KeysCount
 } Keys;
 
-void InputSystemInitialize();
-void InputSystemShutdown();
+/**
+ * @brief Initializes the input system. Call twice; once to obtain memory requirement (passing
+ * state = 0), then a second time passing allocated memory to state.
+ * 
+ * @param MemoryRequirement The required size of the state memory.
+ * @param State Either 0 or the allocated block of state memory.
+ */
+void InputSystemInitialize(UInt64* MemoryRequirement, void* State);
+void InputSystemShutdown(void* State);
 void InputUpdate(Float64 DeltaTime);
 
 // --- KEYBOARD INPUT ---
@@ -178,7 +185,7 @@ FAPI Bool8 InputIsKeyUp(Keys Key);
 FAPI Bool8 InputWasKeyDown(Keys Key);
 FAPI Bool8 InputWasKeyUp(Keys Key);
 
-void InputProccessKey(Keys Key, Bool8 Pressed);
+void InputProcessKey(Keys Key, Bool8 Pressed);
 
 // --- MOUSE INPUT ---
 FAPI Bool8 InputIsMouseButtonDown(MouseButtons Button);

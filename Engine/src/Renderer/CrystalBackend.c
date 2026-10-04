@@ -2,10 +2,8 @@
 
 #include "Vulkan/VulkanRenderer.h"
 
-Bool8 CrystalBackendCreate(CrystalBackendType Type, struct PlatformState* Platform, CrystalBackend* Backend)
+Bool8 CrystalBackendCreate(CrystalBackendType Type, CrystalBackend* Backend)
 {
-    Backend->Platform = Platform;
-
     if (Type == CRYSTAL_BACKEND_TYPE_VULKAN)
     {
         Backend->Initialize = VulkanRendererInitialize;

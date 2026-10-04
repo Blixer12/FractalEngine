@@ -8,6 +8,6 @@ typedef struct Clock
     Float64 Elapsed;
 } Clock;
 
-void ClockUpdate(Clock* Clock);
-void ClockStart(Clock* Clock);
-void ClockStop(Clock* Clock);
+FAPI void ClockUpdate(Clock* Clock);
+FAPI void ClockStart(Clock* Clock);
+FAPI void ClockStop(Clock* Clock);

@@ -1,0 +1,96 @@
+[INFO]:  Input subsystem initialized.
+[ERROR]: The Crystal backend does not exist to accept resize: 1280, 720
+[DEBUG]: Required Extensions:
+[DEBUG]: VK_KHR_surface
+[DEBUG]: VK_KHR_win32_surface
+[DEBUG]: VK_EXT_debug_utils
+[INFO]:  Validation layers enabled. Enumerating...
+[INFO]:  Searching for layer: VK_LAYER_KHRONOS_validation...
+[INFO]:  Found.
+[INFO]:  All required validation layers are present.
+[WARN]:  Removing layer VK_LAYER_AMD_switchable_graphics (C:\WINDOWS\System32\DriverStore\FileRepository\amdvlk.inf_amd64_84e67d07ae71bda8\amd-vulkan64.json) because it is a duplicate of VK_LAYER_AMD_switchable_graphics (C:\WINDOWS\System32\DriverStore\FileRepository\u0203303.inf_amd64_e5876a26758f154c\B026363\amd-vulkan64.json)
+[INFO]:  Vulkan Instance created
+[DEBUG]: Vulkan debugger created.
+[DEBUG]: Creating Vulkan surface...
+[DEBUG]: Vulkan surface created.
+[DEBUG]: Creating devices...
+[DEBUG]: Evaluating Queue Families for: AMD Radeon RX 9060 XT
+[DEBUG]:               Graphics | Present | Compute | Transfer
+[DEBUG]:     Queue [0]:   Graphics: YES | Present: YES | Compute: YES | Transfer: YES (Score: 4)
+[DEBUG]:     Queue [1]:   Graphics: NO  | Present: YES | Compute: YES | Transfer: YES (Score: 3)
+[DEBUG]:     Queue [2]:   Graphics: NO  | Present: NO  | Compute: NO  | Transfer: YES (Score: 1)
+[DEBUG]:     Queue [3]:   Graphics: NO  | Present: NO  | Compute: NO  | Transfer: NO  (Score: 0)
+[DEBUG]:     Queue [4]:   Graphics: NO  | Present: NO  | Compute: NO  | Transfer: NO  (Score: 0)
+[DEBUG]: GPU [AMD Radeon RX 9060 XT] Queue Selection Result -> Graphics: FOUND (0) | Present: FOUND (0) | Compute: FOUND (1) | Transfer: FOUND (2)
+[DEBUG]: Device [AMD Radeon RX 9060 XT] meets queue requirements.
+[DEBUG]: Graphics Family Index: 0
+[DEBUG]: Present Family Index:  0
+[DEBUG]: Transfer Family Index: 2
+[DEBUG]: Compute Family Index:  1
+[DEBUG]: GPU [AMD Radeon RX 9060 XT] calculated system score evaluation: 4233
+[DEBUG]: Evaluating Queue Families for: AMD Radeon(TM) Graphics
+[DEBUG]:               Graphics | Present | Compute | Transfer
+[DEBUG]:     Queue [0]:   Graphics: YES | Present: YES | Compute: YES | Transfer: YES (Score: 4)
+[DEBUG]:     Queue [1]:   Graphics: NO  | Present: YES | Compute: YES | Transfer: YES (Score: 3)
+[DEBUG]:     Queue [2]:   Graphics: NO  | Present: NO  | Compute: NO  | Transfer: YES (Score: 1)
+[DEBUG]:     Queue [3]:   Graphics: NO  | Present: NO  | Compute: NO  | Transfer: NO  (Score: 0)
+[DEBUG]:     Queue [4]:   Graphics: NO  | Present: NO  | Compute: NO  | Transfer: NO  (Score: 0)
+[DEBUG]: GPU [AMD Radeon(TM) Graphics] Queue Selection Result -> Graphics: FOUND (0) | Present: FOUND (0) | Compute: FOUND (1) | Transfer: FOUND (2)
+[DEBUG]: Device [AMD Radeon(TM) Graphics] meets queue requirements.
+[DEBUG]: Graphics Family Index: 0
+[DEBUG]: Present Family Index:  0
+[DEBUG]: Transfer Family Index: 2
+[DEBUG]: Compute Family Index:  1
+[DEBUG]: GPU [AMD Radeon(TM) Graphics] calculated system score evaluation: 3332
+[INFO]:  --> Successfully elected physical system GPU: AMD Radeon RX 9060 XT (Type: Discrete, Score: 4233)
+[INFO]:  GPU Driver version: 2.0.395
+[INFO]:  Vulkan API version: 1.4.349
+[DEBUG]: Shared System memory: 15.46 GB
+[DEBUG]: Local GPU memory: 15.92 GB
+[DEBUG]: Creating logical device...
+[DEBUG]: Logical device created
+[DEBUG]: Queues Obtained
+[DEBUG]: Graphics command pool created
+[DEBUG]: Elected depth attachment format: 126
+[DEBUG]: Swapchain created successfuly.
+[DEBUG]: Creating Command Buffers...
+[DEBUG]: Vulkan command buffers created successfully.
+[DEBUG]: Graphics pipeline created
+[INFO]:  Vulkan renderer initialized successfully
+[DEBUG]: GameInitialized() called!
+[DEBUG]: System memory use (Tagged):
+  UNKNOWN         : 0.00 Bytes
+  ARRAY           : 0.00 Bytes
+  VECTOR          : 648.00 Bytes
+  DICT            : 0.00 Bytes
+  RING_QUEUE      : 0.00 Bytes
+  BST             : 0.00 Bytes
+  STRING          : 0.00 Bytes
+  APPLICATION     : 0.00 Bytes
+  JOB             : 0.00 Bytes
+  TEXTURE         : 0.00 Bytes
+  MAT_INST        : 0.00 Bytes
+  RENDERER        : 176.00 Bytes
+  GAME            : 0.00 Bytes
+  TRANSFORM       : 0.00 Bytes
+  ENTITY          : 0.00 Bytes
+  ENTITY_NODE     : 0.00 Bytes
+  SCENE           : 0.00 Bytes
+  LINEAR_ALLOCATOR: 0.00 Bytes
+
+[DEBUG]: Elected depth attachment format: 126
+[DEBUG]: Swapchain created successfuly.
+[DEBUG]: Vulkan command buffers created successfully.
+[DEBUG]: Resized, booting...
+[DEBUG]: Elected depth attachment format: 126
+[DEBUG]: Swapchain created successfuly.
+[DEBUG]: Vulkan command buffers created successfully.
+[DEBUG]: Resized, booting...
+[DEBUG]: Event Code APP_QUIT Recieved, Shutting Down.
+[DEBUG]: Destroying Vulkan device
+[DEBUG]: Destroying command pools...
+[DEBUG]: Destroying logical device...
+[DEBUG]: Releasing physical device resources...
+[DEBUG]: Destroying Vulkan Surface
+[DEBUG]: Destroying Debugger...
+[DEBUG]: Destroying Instance...

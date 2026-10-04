@@ -24,8 +24,15 @@ typedef enum LogLevel
 } LogLevel;
 
 
-Bool8 LogCreate();
-void LogShutdown();
+/**
+ * @brief Creates the log system. Call twice; once to obtain memory requirement (passing
+ * state = 0), then a second time passing allocated memory to state.
+ * 
+ * @param MemoryRequirement The required size of the state memory.
+ * @param State Either 0 or the allocated block of state memory.
+ */
+Bool8 LogCreate(UInt64* MemoryRequirement, void* State);
+void LogDestroy(void* State);
 
 FAPI void LogOutput(LogLevel Level, const char* Message, ...);
 

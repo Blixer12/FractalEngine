@@ -16,7 +16,7 @@ do {                                                                            
         VkResult _Result = (expr);                                                                              \
         if ((_Result) < VK_SUCCESS) {                                                                           \
             FLERROR("Vulkan Error %i executing: %s (File: %s, Line: %d)", _Result, #expr, __FILE__, __LINE__);  \
-            FASSERT_MSG(false, "Vulkan runtime crash!");               \
+            FASSERT_MSG(false, "Vulkan runtime crash!");                                                        \
         }                                                                                                       \
         else if (_Result == VK_SUBOPTIMAL_KHR) {                                                                \
             FLWARN("Vulkan Suboptimal Swapchain detected (File: %s, Line: %d)", __FILE__, __LINE__);            \
@@ -161,6 +161,28 @@ typedef struct VulkanFence {
     Bool8 IsSignaled;
 } VulkanFence;
 
+typedef struct VulkanShaderStage {
+    VkShaderModuleCreateInfo CreateInfo;
+    VkShaderModule Handle;
+    VkPipelineShaderStageCreateInfo ShaderStageCreateInfo;
+} VulkanShaderStage;
+
+typedef struct VulkanPipeline {
+    VkPipeline Handle;
+    VkPipelineLayout PipelineLayout;
+} VulkanPipeline;
+
+#define OBJECT_SHADER_STAGE_COUNT 2
+typedef struct VulkanObjectShader {
+    // vertex, fragment
+    VulkanShaderStage Stages[OBJECT_SHADER_STAGE_COUNT];
+
+    VulkanPipeline Pipeline;
+
+
+} VulkanObjectShader;
+
+
 typedef struct VulkanContext {
     VkInstance Instance;
     VkAllocationCallbacks* Allocator;
@@ -194,6 +216,8 @@ typedef struct VulkanContext {
     UInt32 FramebufferWidth;
     UInt32 FramebufferHeight;
     Bool8 WindowResized;
+
+    VulkanObjectShader ObjectShader;
 
     Int32 (*FindMemoryIndex)(UInt32 TypeFilter, UInt32 PropertyFlags);
     

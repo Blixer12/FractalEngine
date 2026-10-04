@@ -4,5 +4,5 @@
 
 struct PlatformState;
 
-Bool8 CrystalBackendCreate(CrystalBackendType Type, struct PlatformState* Platform, CrystalBackend* Backend);
+Bool8 CrystalBackendCreate(CrystalBackendType Type, CrystalBackend* Backend);
 void CrystalBackendDestroy(CrystalBackend* Backend);

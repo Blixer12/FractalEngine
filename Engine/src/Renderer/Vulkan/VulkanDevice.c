@@ -75,7 +75,7 @@ Bool8 VulkanDeviceCreate(VulkanContext* Context)
         IndexCount++;
     }
 
-    UInt32 Indices[IndexCount];
+    UInt32 Indices[32];
     UInt8 Index = 0;
 
     Indices[Index++] = Context->Device.GraphicsQueueIndex;
@@ -95,7 +95,7 @@ Bool8 VulkanDeviceCreate(VulkanContext* Context)
         Indices[Index++] = Context->Device.TransferQueueIndex;
     }
 
-    VkDeviceQueueCreateInfo QueueCreateInfos[IndexCount];
+    VkDeviceQueueCreateInfo QueueCreateInfos[32];
 
     for (UInt32 i = 0; i < IndexCount; i++)
     {
@@ -323,8 +323,8 @@ Bool8 VulkanDeviceDetectDepthFormat(VulkanDevice* Device)
 Bool8 SelectPhysicalDevice(VulkanContext* Context)
 {
     UInt32 PhysicalDeviceCount = 0;
-    // VkPhysicalDevice PhysicalDevices[8];
-    // UInt32 MaxDevices = 8;
+    VkPhysicalDevice PhysicalDevices[32];
+    const UInt32 MaxDevices = 32;
 
     VK_CHECK(vkEnumeratePhysicalDevices(Context->Instance, &PhysicalDeviceCount, 0));
 
@@ -334,12 +334,11 @@ Bool8 SelectPhysicalDevice(VulkanContext* Context)
         return false;
     }
 
-    // if (PhysicalDeviceCount > MaxDevices) {
-    //     FLWARN("More than 8 GPUs found! Clamping to 8");
-    //     PhysicalDeviceCount = MaxDevices;
-    // }
+    if (PhysicalDeviceCount > MaxDevices) {
+        FLWARN("More than 32 GPUs found! (HOW?) Clamping to 32");
+        PhysicalDeviceCount = MaxDevices;
+    }
 
-    VkPhysicalDevice PhysicalDevices[PhysicalDeviceCount];
     VK_CHECK(vkEnumeratePhysicalDevices(Context->Instance, &PhysicalDeviceCount, PhysicalDevices));
 
     VkPhysicalDevice BestDevice = VK_NULL_HANDLE;
@@ -718,7 +717,7 @@ Int32 ScorePhysicalDevice(
     if (Preferences->DiscreteGPU && Properties->deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
         Score += 1000; 
     } else if (Properties->deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) {
-        Score += 100;  
+        Score += 500;  
     }
 
     VkPhysicalDeviceMemoryProperties MemoryProperties;

@@ -11,6 +11,7 @@ Bool8 GameInitialize(Game* Instance)
 
 Bool8 GameUpdate(Game* Instance, Float32 DeltaTime) 
 {
+
     (void)Instance;
     (void)DeltaTime;
     return true;

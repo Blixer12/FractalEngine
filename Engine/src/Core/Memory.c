@@ -12,34 +12,52 @@ struct MemoryStats {
 };
 
 static const char* MemoryTagStrings[MEMORY_TAG_MAX_TAGS] = {
-    "UNKNOWN    ",
-    "ARRAY      ",
-    "VECTOR     ",
-    "DICT       ",
-    "RING_QUEUE ",
-    "BST        ",
-    "STRING     ",
-    "APPLICATION",
-    "JOB        ",
-    "TEXTURE    ",
-    "MAT_INST   ",
-    "RENDERER   ",
-    "GAME       ",
-    "TRANSFORM  ",
-    "ENTITY     ",
-    "ENTITY_NODE",
-    "SCENE      "};
+    "UNKNOWN         ",
+    "ARRAY           ",
+    "VECTOR          ",
+    "DICT            ",
+    "RING_QUEUE      ",
+    "BST             ",
+    "STRING          ",
+    "APPLICATION     ",
+    "JOB             ",
+    "TEXTURE         ",
+    "MAT_INST        ",
+    "RENDERER        ",
+    "GAME            ",
+    "TRANSFORM       ",
+    "ENTITY          ",
+    "ENTITY_NODE     ",
+    "SCENE           ",
+    "LINEAR_ALLOCATOR"};
 
-static struct MemoryStats Stats;
+typedef struct MemoryState {
+    struct MemoryStats Stats;
+    UInt64 AllocationCount;
+} MemoryState;
 
-void InitializeMemory()
+static MemoryState* StatePtr;
+
+void MemorySystemInitialize(UInt64* MemoryRequirement, void* State)
 {
-    PlatformZeroMemory(&Stats, sizeof(Stats));
+    *MemoryRequirement = (UInt64)sizeof(MemoryState);
+    if (State == 0)
+    {
+        return;
+    }
+
+    StatePtr = State;
+    StatePtr->AllocationCount = 0;
+
+    PlatformZeroMemory(&StatePtr->Stats, sizeof(StatePtr->Stats));
+
+    (void)MemoryRequirement;
 }
 
-void ShutdownMemory()
+void MemorySystemShutdown(void* State)
 {
-
+    (void)State;
+    StatePtr = 0;
 }
 
 void* FMAllocate(UInt64 Size, MemoryTag Tag)
@@ -53,9 +71,13 @@ void* FMAllocate(UInt64 Size, MemoryTag Tag)
         #endif
     }
 
-    Stats.TotalAllocated += Size;
-    Stats.TaggedAllocations[Tag] += Size;
-
+    if (StatePtr)
+    {
+        StatePtr->Stats.TotalAllocated += Size;
+        StatePtr->Stats.TaggedAllocations[Tag] += Size;
+        StatePtr->AllocationCount++;
+    }
+    
     //TODO: Memory Allignment
     void* Block = PlatformAllocate(Size, false);
     PlatformZeroMemory(Block, Size);
@@ -74,8 +96,12 @@ void FMFree(void* Block, UInt64 Size, MemoryTag Tag)
     }
 
     //TODO: Memory Allignment
-    Stats.TotalAllocated -= Size;
-    Stats.TaggedAllocations[Tag] -= Size;
+    if (StatePtr)
+    {
+        StatePtr->Stats.TotalAllocated -= Size;
+        StatePtr->Stats.TaggedAllocations[Tag] -= Size;
+    }
+
     PlatformFree(Block, false);
 }
 
@@ -107,21 +133,21 @@ char* FMGetMemoryUsageString()
         char unit[6] = "Bytes";
         Float64 amount = 1.0;
 
-        if (Stats.TaggedAllocations[i] >= GB) {
+        if (StatePtr->Stats.TaggedAllocations[i] >= GB) {
             unit[0] = 'G';
             unit[1] = 'B';
             unit[2] = 0;   // Force the string to end right here, cutting off any leftover letters!
-            amount = Stats.TaggedAllocations[i] / (Float64)GB;
-        } else if (Stats.TaggedAllocations[i] >= MB) {
+            amount = StatePtr->Stats.TaggedAllocations[i] / (Float64)GB;
+        } else if (StatePtr->Stats.TaggedAllocations[i] >= MB) {
             unit[0] = 'M';
             unit[1] = 'B';
             unit[2] = 0;   // Force the string to end here
-            amount = Stats.TaggedAllocations[i] / (Float64)MB;
-        } else if (Stats.TaggedAllocations[i] >= KB) {
+            amount = StatePtr->Stats.TaggedAllocations[i] / (Float64)MB;
+        } else if (StatePtr->Stats.TaggedAllocations[i] >= KB) {
             unit[0] = 'K';
             unit[1] = 'B';
             unit[2] = 0;   // Force the string to end here
-            amount = Stats.TaggedAllocations[i] / (Float64)KB;
+            amount = StatePtr->Stats.TaggedAllocations[i] / (Float64)KB;
         } else {
             unit[0] = 'B';
             unit[1] = 'y';
@@ -129,7 +155,7 @@ char* FMGetMemoryUsageString()
             unit[3] = 'e';
             unit[4] = 's';
             unit[5] = 0;   // Properly null-terminate the full word
-            amount = (Float64)Stats.TaggedAllocations[i];
+            amount = (Float64)StatePtr->Stats.TaggedAllocations[i];
         }
 
         Int32 Length = snprintf(Buffer + Offset, 32768, "  %s: %.2f %s\n",MemoryTagStrings[i], amount, unit);
@@ -138,4 +164,13 @@ char* FMGetMemoryUsageString()
 
     char* FinalString = StringDuplicate(Buffer);    
     return FinalString;
+}
+
+UInt64 GetMemoryAllocationCount()
+{
+    if (StatePtr)
+    {
+        return StatePtr->AllocationCount;
+    }
+    return 0;
 }

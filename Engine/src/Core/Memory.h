@@ -5,7 +5,7 @@
 typedef enum MemoryTag {
     // For temporary use. Should be assigned one of the below or have a new tag created.
     MEMORY_TAG_UNKNOWN,
-    
+
     MEMORY_TAG_ARRAY,
     MEMORY_TAG_VECTOR,
     MEMORY_TAG_DICT,
@@ -23,11 +23,21 @@ typedef enum MemoryTag {
     MEMORY_TAG_ENTITY_NODE,
     MEMORY_TAG_SCENE,
 
+    // Allocators
+    MEMORY_TAG_LINEAR_ALLOCATOR,
+
     MEMORY_TAG_MAX_TAGS
 } MemoryTag;
 
-FAPI void InitializeMemory();
-FAPI void ShutdownMemory();
+/**
+ * @brief Initializes the memory system. Call twice; once to obtain memory requirement (passing
+ * state = 0), then a second time passing allocated memory to state.
+ * 
+ * @param MemoryRequirement The required size of the state memory.
+ * @param State Either 0 or the allocated block of state memory.
+ */
+FAPI void MemorySystemInitialize(UInt64* MemoryRequirement, void* State);
+FAPI void MemorySystemShutdown(void* State);
 
 FAPI void* FMAllocate(UInt64 Size, MemoryTag Tag);
 FAPI void FMFree(void* Block, UInt64 Size, MemoryTag Tag);
@@ -35,3 +45,4 @@ FAPI void* FMZeroMemory(void* Block, UInt64 Size);
 FAPI void* FMCopyMemory(void* Dest, const void* Source, UInt64 Size);
 FAPI void* FMSetMemory(void* Dest, Int32 Value, UInt64 Size);
 FAPI char* FMGetMemoryUsageString();
+FAPI UInt64 GetMemoryAllocationCount();

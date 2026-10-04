@@ -5,18 +5,21 @@
 #include "Core/Logger.h"
 #include "Core/Memory.h"
 
-static CrystalBackend* Backend = 0;
+static CrystalBackend* StatePtr;
 
-Bool8 CrystalInitialize(const char* AppName, struct PlatformState* Platform)
+Bool8 CrystalInitialize(UInt64* MemoryRequirement, void* State, const char* AppName)
 {
-    (void)AppName;
-    Backend = FMAllocate(sizeof(CrystalBackend), MEMORY_TAG_RENDERER);
+    *MemoryRequirement = sizeof(CrystalBackend);
+    if (State == 0) {
+        return true;
+    }
+    StatePtr = State;
 
     //TODO: Make this Configurable
-    CrystalBackendCreate(CRYSTAL_BACKEND_TYPE_VULKAN, Platform, Backend);
-    Backend->FrameNumber = 0;
+    CrystalBackendCreate(CRYSTAL_BACKEND_TYPE_VULKAN, StatePtr);
+    StatePtr->FrameNumber = 0;
 
-    if (!Backend->Initialize(Backend, AppName, Platform))
+    if (!StatePtr->Initialize(StatePtr, AppName))
     {
         FLFATAL("Renderer Backend failed to Initialize! Shutting down Application");
         return false;
@@ -26,27 +29,29 @@ Bool8 CrystalInitialize(const char* AppName, struct PlatformState* Platform)
 }
 void CrystalShutdown()
 {
-    Backend->Shutdown(Backend);
-    CrystalBackendDestroy(Backend);
-    FMFree(Backend, sizeof(CrystalBackend), MEMORY_TAG_RENDERER);
+    if (StatePtr) {
+        StatePtr->Shutdown(StatePtr);
+        CrystalBackendDestroy(StatePtr);
+        StatePtr = 0;
+    }
 }
 
 Bool8 CrystalBeginFrame(Float32 DeltaTime)
 {
-    return Backend->BeginFrame(Backend, DeltaTime);
+    return StatePtr->BeginFrame(StatePtr, DeltaTime);
 }
 
 Bool8 CrystalEndFrame(Float32 DeltaTime)
 {
-    Bool8 Result = Backend->EndFrame(Backend, DeltaTime);
-    Backend->FrameNumber++;
+    Bool8 Result = StatePtr->EndFrame(StatePtr, DeltaTime);
+    StatePtr->FrameNumber++;
     return Result;
 }
 
 void CrystalOnResize(UInt16 Width, UInt16 Height)
 {
-    if (Backend) {
-        Backend->Resized(Backend, Width, Height);
+    if (StatePtr) {
+        StatePtr->Resized(StatePtr, Width, Height);
     } else {
         FLERROR("The Crystal backend does not exist to accept resize: %i, %i", Width, Height);
     }

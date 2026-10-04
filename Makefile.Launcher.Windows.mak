@@ -5,9 +5,10 @@ OBJ_DIR := Object
 ASSEMBLY := FractalEngine
 EXTENSION := .exe
 
-COMPILER_FLAGS := /Zi /W4 /WX /TC /std:clatest
+COMPILER_FLAGS := /Z7 /W4 /WX /TC -Werror=vla /std:clatest /clang:-MMD /clang:-MF /clang:"$@.d"
 INCLUDE_FLAGS := /ILauncher\src /IEngine\src /I"$(VULKAN_SDK)\Include"
-LINKER_FLAGS := /link /LIBPATH:"$(BUILD_DIR)" Fractal.lib user32.lib /OUT:"$(BUILD_DIR)\$(ASSEMBLY)$(EXTENSION)"
+
+LINKER_FLAGS := /link /DEBUG /PDB:"$(BUILD_DIR)\$(ASSEMBLY).pdb" /LIBPATH:"$(BUILD_DIR)" Fractal.lib user32.lib /OUT:"$(BUILD_DIR)\$(ASSEMBLY)$(EXTENSION)"
 DEFINES := /D_DEBUG /DFIMPORT /D_CRT_SECURE_NO_WARNINGS
 
 Wildcard = $(wildcard $1$2) $(foreach d,$(wildcard $1*),$(call Wildcard,$d/,$2))
@@ -42,3 +43,5 @@ $(OBJ_DIR)/%.c.obj: %.c
 	@echo Compiling $<...
 	@if not exist "$(subst /,\,$(dir $@))" mkdir "$(subst /,\,$(dir $@))"
 	@clang-cl $< $(COMPILER_FLAGS) /c /Fo:"$@" $(DEFINES) $(INCLUDE_FLAGS)
+
+-include $(OBJ_FILES:.c.obj=.d)

@@ -69,3 +69,7 @@ typedef Vec4 Quaternion;
 typedef union Mat4U {
     alignas(16) Float32 Data[16];
 } Mat4;
+
+typedef struct Vertex3D {
+    Vec3 Position;
+} Vertex3D;
