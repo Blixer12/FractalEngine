@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
+#include "Renderer/CrystalDef.inl"
 
 #include "Defines.h"
 
@@ -54,9 +55,6 @@ typedef struct VulkanPhysicalDevicePreferences {
 
     // --- PRESENTATION & SWAPCHAIN ---
     Bool8 PresentModeFifoLatestReady; // (VK_KHR_present_mode_fifo_latest_ready)
-    
-    // --- LIMITS ---
-    UInt32 MinimumPushConstantsSize;
 } VulkanPhysicalDevicePreferences;
 
 typedef struct VulkanSwapchainSupportInfo {
@@ -189,6 +187,17 @@ typedef struct VulkanObjectShader {
 
     VulkanPipeline Pipeline;
 
+    VkDescriptorPool GlobalDescriptorPool;
+    VkDescriptorSetLayout GlobalDescriptorSetLayout;
+
+    // One pe-frame, we are triple buffering so 3
+    VkDescriptorSet GlobalDescriptorSets[3];
+
+    // Global Uniform Object
+    GlobalUniformObject GlobalUBO;
+
+    // Global Uniform Buffer
+    VulkanBuffer GlobalUniformBuffer;
 
 } VulkanObjectShader;
 

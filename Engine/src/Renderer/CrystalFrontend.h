@@ -11,3 +11,5 @@ void CrystalShutdown();
 void CrystalOnResize(UInt16 Width, UInt16 Height);
 
 Bool8 CrystalDrawFrame(RenderPacket* Packet);
+
+FAPI void CrystalSetView(Mat4 View);

@@ -2,7 +2,6 @@
 
 #include <EntryPoint.h>
 
-//TODO: Remove This later on
 #include <Core/Memory.h>
 
 // Function to Create the Game

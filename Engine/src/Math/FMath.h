@@ -1,8 +1,5 @@
 #pragma once
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wmissing-braces"
-
 #include "Defines.h"
 #include "MathDef.h"
 #include "Core/Memory.h"
@@ -1284,5 +1281,3 @@ FINLINE Float32 DegreesToRadians(Float32 Degrees) {
 FINLINE Float32 RadianToDegree(Float32 Radians) {
     return Radians * F_RAD2DEG_MULTIPLIER;
 }
-
-#pragma clang diagnostic pop

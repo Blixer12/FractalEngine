@@ -282,19 +282,20 @@ Bool8 AppOnKeyEvent(UInt16 Code, void* Sender, void* Reciever, EventContext Cont
 
             // Block anything else from processing this.
             return true;
+        
         } else if (KeyCode == AKey) {
             // Example on checking for a key
-            FLDEBUG("Explicit - A key pressed!");
+            // FLDEBUG("Explicit - A key pressed!");
         } else {
-            FLTRACE("'%c' key pressed in window.", KeyCode);
+            // FLTRACE("'%c' key pressed in window.", KeyCode);
         }
     } else if (Code == EVENT_KEY_UP) {
         UInt16 KeyCode = Context.Data.UInt16[0];
         if (KeyCode == BKey) {
             // Example on checking for a key
-            FLDEBUG("Explicit - B key released!");
+            // FLDEBUG("Explicit - B key released!");
         } else {
-            FLTRACE("'%c' key released in window.", KeyCode);
+            // FLTRACE("'%c' key released in window.", KeyCode);
         }
     }
     return false;
@@ -310,9 +311,9 @@ Bool8 AppOnMouseButtonEvent(UInt16 Code, void* Sender, void* Reciever, EventCont
         
         if (ButtonCode == MouseButtonRight)
         {
-            FLDEBUG("Explicit - Right mouse button pressed!");
+            // FLDEBUG("Explicit - Right mouse button pressed!");
         } else {
-            FLTRACE("Mouse button %d pressed in window.", ButtonCode);
+            // FLTRACE("Mouse button %d pressed in window.", ButtonCode);
         }
         
     } else if (Code == EVENT_MOUSE_UP)
@@ -320,9 +321,9 @@ Bool8 AppOnMouseButtonEvent(UInt16 Code, void* Sender, void* Reciever, EventCont
         UInt16 ButtonCode = Context.Data.UInt16[0];
         
         if (ButtonCode == MouseButtonLeft) {
-            FLDEBUG("Explicit - Left mouse button released!");
+            // FLDEBUG("Explicit - Left mouse button released!");
         } else {
-            FLTRACE("Mouse button %d released in window.", ButtonCode);
+            // FLTRACE("Mouse button %d released in window.", ButtonCode);
         }
     }
     return false;

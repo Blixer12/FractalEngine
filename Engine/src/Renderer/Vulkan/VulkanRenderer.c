@@ -205,7 +205,7 @@ Bool8 VulkanRendererInitialize(CrystalBackend* Backend, const char* AppName) {
         &Context,
         &Context.MainRenderpass, 
         0, 0, Context.FramebufferWidth, Context.FramebufferHeight,
-        0.05f, 0.05f, 0.05f, 1.0f, 
+        0.01f, 0.01f, 0.01f, 1.0f, 
         1.0f,
         0);
 
@@ -253,17 +253,19 @@ Bool8 VulkanRendererInitialize(CrystalBackend* Backend, const char* AppName) {
     Vertex3D Vertices[VertexCount];
     FMZeroMemory(Vertices, sizeof(Vertex3D) * VertexCount);
 
-    Vertices[0].Position.x = 0.0;
-    Vertices[0].Position.y = -0.5;
+    const Float32 Factor = 10.0f;
 
-    Vertices[1].Position.x = 0.5;
-    Vertices[1].Position.y = 0.5;
+    Vertices[0].Position.x = -0.5 * Factor;
+    Vertices[0].Position.y = -0.5 * Factor;
 
-    Vertices[2].Position.x = 0.0;
-    Vertices[2].Position.y = 0.5;
+    Vertices[1].Position.x = 0.5 * Factor;
+    Vertices[1].Position.y = 0.5 * Factor;
 
-    Vertices[3].Position.x = 0.5;
-    Vertices[3].Position.y = -0.5;
+    Vertices[2].Position.x = -0.5 * Factor;
+    Vertices[2].Position.y = 0.5 * Factor;
+
+    Vertices[3].Position.x = 0.5 * Factor;
+    Vertices[3].Position.y = -0.5 * Factor;
 
     constexpr UInt32 IndexCount = 6;
     UInt32 Indices[IndexCount] = {0, 1, 2, 0, 3, 1};
@@ -452,18 +454,24 @@ Bool8 VulkanRendererBeginFrame(CrystalBackend* Backend, Float32 DeltaTime)
         &Context.MainRenderpass,
         Context.Swapchain.Framebuffers[Context.ImageIndex].Handle);
 
-    // TODO: Temporary Code
+    return true;
+}
+
+void VullkanRendererUpdateGlobalState(Mat4 Projection, Mat4 View, Vec3 ViewPosition, Vec4 AmbientColor, Int32 Mode)
+{
+
+    (void)ViewPosition;
+    (void)AmbientColor;
+    (void)Mode;
+
     VulkanObjectShaderUse(&Context, &Context.ObjectShader);
 
-    VkDeviceSize Offsets[1] = {0};
-    vkCmdBindVertexBuffers(CommandBuffer->Handle, 0, 1, &Context.ObjectVertexBuffer.Handle, (VkDeviceSize*)Offsets);
+    Context.ObjectShader.GlobalUBO.Projection = Projection;
+    Context.ObjectShader.GlobalUBO.View = View;
 
-    vkCmdBindIndexBuffer(CommandBuffer->Handle, Context.ObjectIndexBuffer.Handle, 0, VK_INDEX_TYPE_UINT32);
+    // TODO: Other Properties
 
-    vkCmdDrawIndexed(CommandBuffer->Handle, 6, 1, 0, 0, 0);
-    // TODO: Temporary Code
-
-    return true;
+    VulkanObjectShaderUpdateGlobalState(&Context, &Context.ObjectShader);
 }
 
 Bool8 VulkanRendererEndFrame(CrystalBackend* Backend, Float32 DeltaTime)
@@ -525,6 +533,24 @@ Bool8 VulkanRendererEndFrame(CrystalBackend* Backend, Float32 DeltaTime)
         Context.ImageIndex);
 
     return true;
+}
+
+void VulkanRendererUpdateObject(Mat4 Model)
+{
+    VulkanObjectShaderUpdateObject(&Context, &Context.ObjectShader, Model);
+
+    // TODO: Temporary Code
+    VulkanObjectShaderUse(&Context, &Context.ObjectShader);
+
+    VulkanCommandBuffer* CommandBuffer = &Context.GraphicsCommandBuffers[Context.ImageIndex];
+
+    VkDeviceSize Offsets[1] = {0};
+    vkCmdBindVertexBuffers(CommandBuffer->Handle, 0, 1, &Context.ObjectVertexBuffer.Handle, (VkDeviceSize*)Offsets);
+
+    vkCmdBindIndexBuffer(CommandBuffer->Handle, Context.ObjectIndexBuffer.Handle, 0, VK_INDEX_TYPE_UINT32);
+
+    vkCmdDrawIndexed(CommandBuffer->Handle, 6, 1, 0, 0, 0);
+    // TODO: Temporary Code
 }
 
 VKAPI_ATTR VkBool32 VKAPI_CALL VkDebugCallback(

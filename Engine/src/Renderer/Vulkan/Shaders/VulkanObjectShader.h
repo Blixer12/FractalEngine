@@ -8,3 +8,7 @@ Bool8 VulkanObjectShaderCreate(VulkanContext* Context, VulkanObjectShader* Shade
 void VulkanObjectShaderDestroy(VulkanContext* Context, struct VulkanObjectShader* Shader);
 
 void VulkanObjectShaderUse(VulkanContext* Context, struct VulkanObjectShader* Shader);
+
+void VulkanObjectShaderUpdateGlobalState(VulkanContext* Context, struct VulkanObjectShader* Shader);
+
+void VulkanObjectShaderUpdateObject(VulkanContext* Context, struct VulkanObjectShader* Shader, Mat4 Model);

@@ -106,6 +106,14 @@ Bool8 VulkanGraphicsPipelineCreate(
     VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo = {0};
     PipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     
+    // Push Constants
+    VkPushConstantRange PushConstant;
+    PushConstant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT; //| VK_SHADER_STAGE_FRAGMENT_BIT;
+    PushConstant.offset = sizeof(Mat4) * 0;
+    PushConstant.size = sizeof(Mat4) * 4;
+    PipelineLayoutCreateInfo.pushConstantRangeCount = 1;
+    PipelineLayoutCreateInfo.pPushConstantRanges = &PushConstant;
+
     // Descriptor set layouts
     PipelineLayoutCreateInfo.setLayoutCount = DescriptorSetLayoutCount;
     PipelineLayoutCreateInfo.pSetLayouts = DescriptorSetLayouts;
