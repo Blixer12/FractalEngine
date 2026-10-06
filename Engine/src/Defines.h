@@ -62,6 +62,11 @@ STATIC_ASSERT(sizeof(Float64) == 8, "Expected Float64 to be 8 bytes.");
 STATIC_ASSERT(sizeof(Bool8)  == 1, "Expected Bool8 to be 1 byte");
 STATIC_ASSERT(sizeof(Bool32) == 4, "Expected Bool32 to be 4 bytes");
 
+/**
+ * @brief Any ID set to this should be considered Invalid
+ * and not actually pointing to a real Object (UInt64 limit, (UInt64)-1)
+ */
+constexpr UInt64 InvalidID = 0xFFFFFFFFFFFFFFFFULL;
 
 // Platform detection
 #if defined(_WIN32)
@@ -99,9 +104,10 @@ STATIC_ASSERT(sizeof(Bool32) == 4, "Expected Bool32 to be 4 bytes");
 #define FCLAMP(Value, Min, Max) (((Value) <= (Min)) ? (Min) : ((Value) >= (Max)) ? (Max) : (Value))
 
 #ifdef _MSC_VER
-#define FINLINE __forceinline
+#define FINLINE static __forceinline
 #define FNOINLINE __declspec(noinline)
 #else
 #define FINLINE static inline
 #define FNOINLINE
 #endif
+

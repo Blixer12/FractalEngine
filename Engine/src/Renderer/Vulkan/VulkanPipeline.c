@@ -110,7 +110,7 @@ Bool8 VulkanGraphicsPipelineCreate(
     VkPushConstantRange PushConstant;
     PushConstant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT; //| VK_SHADER_STAGE_FRAGMENT_BIT;
     PushConstant.offset = sizeof(Mat4) * 0;
-    PushConstant.size = sizeof(Mat4) * 4;
+    PushConstant.size = sizeof(Mat4) * 2;
     PipelineLayoutCreateInfo.pushConstantRangeCount = 1;
     PipelineLayoutCreateInfo.pPushConstantRanges = &PushConstant;
 

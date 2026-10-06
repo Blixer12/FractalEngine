@@ -27,7 +27,7 @@
 [DEBUG]: Present Family Index:  0
 [DEBUG]: Transfer Family Index: 2
 [DEBUG]: Compute Family Index:  1
-[DEBUG]: GPU [AMD Radeon RX 9060 XT] calculated system score evaluation: 4208
+[DEBUG]: GPU [AMD Radeon RX 9060 XT] calculated system score evaluation: 4308
 [DEBUG]: Evaluating Queue Families for: AMD Radeon(TM) Graphics
 [DEBUG]:               Graphics | Present | Compute | Transfer
 [DEBUG]:     Queue [0]:   Graphics: YES | Present: YES | Compute: YES | Transfer: YES (Score: 4)
@@ -41,8 +41,8 @@
 [DEBUG]: Present Family Index:  0
 [DEBUG]: Transfer Family Index: 2
 [DEBUG]: Compute Family Index:  1
-[DEBUG]: GPU [AMD Radeon(TM) Graphics] calculated system score evaluation: 3307
-[INFO]:  --> Successfully elected physical system GPU: AMD Radeon RX 9060 XT (Type: Discrete, Score: 4208)
+[DEBUG]: GPU [AMD Radeon(TM) Graphics] calculated system score evaluation: 3407
+[INFO]:  --> Successfully elected physical system GPU: AMD Radeon RX 9060 XT (Type: Discrete, Score: 4308)
 [INFO]:  GPU Driver version: 2.0.395
 [INFO]:  Vulkan API version: 1.4.349
 [DEBUG]: Shared System memory: 15.46 GB
@@ -55,8 +55,13 @@
 [DEBUG]: Swapchain created successfuly.
 [DEBUG]: Creating Command Buffers...
 [DEBUG]: Vulkan command buffers created successfully.
+[WARN]:  vkCreateGraphicsPipelines(): pCreateInfos[0] (SPIR-V Interface) [VK_SHADER_STAGE_VERTEX_BIT] has an Output value declared at Location 0 Component 0, but there is no corresponding Input declared in [VK_SHADER_STAGE_FRAGMENT_BIT].
+This is not invalid, but the write to the unused Output is discarded.
+The Output variable is:
+  pointer to Output -> sint32
 [DEBUG]: Graphics pipeline created
 [INFO]:  Vulkan renderer initialized successfully
+[DEBUG]: Creating Default Texture
 [DEBUG]: GameInitialized() called!
 [DEBUG]: System memory use (Tagged):
   UNKNOWN         : 0.00 Bytes
@@ -68,7 +73,7 @@
   STRING          : 0.00 Bytes
   APPLICATION     : 0.00 Bytes
   JOB             : 0.00 Bytes
-  TEXTURE         : 0.00 Bytes
+  TEXTURE         : 40.00 Bytes
   MAT_INST        : 0.00 Bytes
   RENDERER        : 176.00 Bytes
   GAME            : 0.00 Bytes

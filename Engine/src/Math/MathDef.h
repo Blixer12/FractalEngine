@@ -72,4 +72,5 @@ typedef union Mat4U {
 
 typedef struct Vertex3D {
     Vec3 Position;
+    Vec2 TextureCoordinates;
 } Vertex3D;

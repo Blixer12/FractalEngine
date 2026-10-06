@@ -55,6 +55,9 @@ typedef struct VulkanPhysicalDevicePreferences {
 
     // --- PRESENTATION & SWAPCHAIN ---
     Bool8 PresentModeFifoLatestReady; // (VK_KHR_present_mode_fifo_latest_ready)
+
+    // Push Constant Limits
+    UInt32 MinPushConstantsSize;
 } VulkanPhysicalDevicePreferences;
 
 typedef struct VulkanSwapchainSupportInfo {
@@ -181,6 +184,20 @@ typedef struct VulkanPipeline {
 } VulkanPipeline;
 
 #define OBJECT_SHADER_STAGE_COUNT 2
+
+typedef struct VulkanDescriptorState{
+    UInt64 Generations[3];
+} VulkanDescriptorState;
+
+#define VULKAN_OBJECT_SHADER_DESCRIPTOR_COUNT 2
+typedef struct VulkanObjectShaderObjectState {
+    VkDescriptorSet DescriptorSets[3];
+
+    VulkanDescriptorState DescriptorStates[VULKAN_OBJECT_SHADER_DESCRIPTOR_COUNT];
+} VulkanObjectShaderObjectState;
+
+#define VULKAN_OBJECT_MAX_COUNT 1024
+
 typedef struct VulkanObjectShader {
     // vertex, fragment
     VulkanShaderStage Stages[OBJECT_SHADER_STAGE_COUNT];
@@ -196,13 +213,25 @@ typedef struct VulkanObjectShader {
     // Global Uniform Object
     GlobalUniformObject GlobalUBO;
 
+    VkDescriptorPool ObjectDescriptorPool;
+    VkDescriptorSetLayout ObjectDescriptorSetLayout;
+
+    VulkanBuffer ObjectUniformBuffer;
+    // TODO: Manage a free list
+    UInt32 ObjectUniformBufferIndex;
+
     // Global Uniform Buffer
     VulkanBuffer GlobalUniformBuffer;
+
+    // TODO: Dynamic
+    VulkanObjectShaderObjectState ObjectStates[VULKAN_OBJECT_MAX_COUNT];
 
 } VulkanObjectShader;
 
 
 typedef struct VulkanContext {
+    Float32 FrameDeltaTime;
+
     VkInstance Instance;
     VkAllocationCallbacks* Allocator;
     VkSurfaceKHR Surface;
@@ -237,7 +266,9 @@ typedef struct VulkanContext {
 
     UInt32 FramebufferWidth;
     UInt32 FramebufferHeight;
-    Bool8 WindowResized;
+
+    UInt32 FramebufferCurrentGeneration;
+    UInt32 FramebufferLastGeneration;
 
     VulkanObjectShader ObjectShader;
 
@@ -250,6 +281,11 @@ typedef struct VulkanContext {
     VkDebugUtilsMessengerEXT DebugMessenger;
     #endif
 } VulkanContext;
+
+typedef struct VulkanTextureData {
+    VulkanImage Image;
+    VkSampler Sampler;
+} VulkanTextureData;
 
 static inline Bool8 VulkanFormatHasStencil(VkFormat Format)
 {

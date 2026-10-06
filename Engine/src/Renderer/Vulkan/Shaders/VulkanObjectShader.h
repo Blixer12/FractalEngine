@@ -9,6 +9,9 @@ void VulkanObjectShaderDestroy(VulkanContext* Context, struct VulkanObjectShader
 
 void VulkanObjectShaderUse(VulkanContext* Context, struct VulkanObjectShader* Shader);
 
-void VulkanObjectShaderUpdateGlobalState(VulkanContext* Context, struct VulkanObjectShader* Shader);
+void VulkanObjectShaderUpdateGlobalState(VulkanContext* Context, struct VulkanObjectShader* Shader, Float32 DeltaTime);
 
-void VulkanObjectShaderUpdateObject(VulkanContext* Context, struct VulkanObjectShader* Shader, Mat4 Model);
+void VulkanObjectShaderUpdateObject(VulkanContext* Context, struct VulkanObjectShader* Shader, GeometryRenderData* Data);
+
+Bool8 VulkanObjectShaderAcquireResources(VulkanContext* Context, struct VulkanObjectShader* Shader, UInt64* ObjectID);
+void VulkanObjectShaderReleaseResources(VulkanContext* Context, struct VulkanObjectShader* Shader, UInt64 ObjectID);

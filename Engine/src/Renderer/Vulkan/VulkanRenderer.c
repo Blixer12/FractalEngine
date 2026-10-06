@@ -4,6 +4,7 @@
 #include "VulkanDevice.h"
 #include "VulkanSwapchain.h"
 #include "VulkanRenderpass.h"
+#include "VulkanImage.h"
 #include "VulkanCommandBuffer.h"
 #include "VulkanFramebuffer.h"
 #include "VulkanFence.h"
@@ -257,21 +258,36 @@ Bool8 VulkanRendererInitialize(CrystalBackend* Backend, const char* AppName) {
 
     Vertices[0].Position.x = -0.5 * Factor;
     Vertices[0].Position.y = -0.5 * Factor;
+    Vertices[0].TextureCoordinates.u = 0.0f;
+    Vertices[0].TextureCoordinates.v = 0.0f;
 
     Vertices[1].Position.x = 0.5 * Factor;
     Vertices[1].Position.y = 0.5 * Factor;
+    Vertices[1].TextureCoordinates.u = 1.0f;
+    Vertices[1].TextureCoordinates.v = 1.0f;
 
     Vertices[2].Position.x = -0.5 * Factor;
     Vertices[2].Position.y = 0.5 * Factor;
+    Vertices[2].TextureCoordinates.u = 0.0f;
+    Vertices[2].TextureCoordinates.v = 1.0f;
 
     Vertices[3].Position.x = 0.5 * Factor;
     Vertices[3].Position.y = -0.5 * Factor;
+    Vertices[3].TextureCoordinates.u = 1.0f;
+    Vertices[3].TextureCoordinates.v = 0.0f;
 
     constexpr UInt32 IndexCount = 6;
     UInt32 Indices[IndexCount] = {0, 1, 2, 0, 3, 1};
 
     UploadDataRange(&Context, Context.Device.GraphicsCommandPool, 0, Context.Device.GraphicsQueue, &Context.ObjectVertexBuffer, 0, sizeof(Vertex3D) * VertexCount, Vertices);
     UploadDataRange(&Context, Context.Device.GraphicsCommandPool, 0, Context.Device.GraphicsQueue, &Context.ObjectIndexBuffer, 0, sizeof(UInt32) * IndexCount, Indices);
+
+    UInt64 ObjectID = 0;
+    if (!VulkanObjectShaderAcquireResources(&Context, &Context.ObjectShader, &ObjectID))
+    {
+        FLERROR("Failed to acquire Shader Resources");
+        return false;
+    }
 
     // TODO: End Temp Code
 
@@ -368,15 +384,16 @@ void VulkanRendererOnResized(CrystalBackend* Backend, UInt16 Width, UInt16 Heigh
     CachedFramebufferWidth = Width;
     CachedFramebufferHeight = Height;
     
-    Context.WindowResized = true;
+    Context.FramebufferCurrentGeneration++;
 
     // FLTRACE("Vulkan Renderer Backend->Resized: Width/Height: %i/%i", Width, Height);
 }
 
 Bool8 VulkanRendererBeginFrame(CrystalBackend* Backend, Float32 DeltaTime)
 {
-    (void)DeltaTime;
     (void)Backend;
+
+    Context.FrameDeltaTime = DeltaTime;
 
     VulkanDevice* Device = &Context.Device;
 
@@ -390,7 +407,7 @@ Bool8 VulkanRendererBeginFrame(CrystalBackend* Backend, Float32 DeltaTime)
         return false;
     }
 
-    if (Context.WindowResized) {
+    if (Context.FramebufferCurrentGeneration != Context.FramebufferLastGeneration) {
         VkResult Result = vkDeviceWaitIdle(Device->LogicalDevice);
         if (!VulkanResultIsSuccess(Result)) {
             FLERROR("VulkanRendererBeginFrame vkDeviceWaitIdle (2) failed: '%s'", VulkanResultString(Result, true));
@@ -471,7 +488,7 @@ void VullkanRendererUpdateGlobalState(Mat4 Projection, Mat4 View, Vec3 ViewPosit
 
     // TODO: Other Properties
 
-    VulkanObjectShaderUpdateGlobalState(&Context, &Context.ObjectShader);
+    VulkanObjectShaderUpdateGlobalState(&Context, &Context.ObjectShader, Context.FrameDeltaTime);
 }
 
 Bool8 VulkanRendererEndFrame(CrystalBackend* Backend, Float32 DeltaTime)
@@ -535,9 +552,9 @@ Bool8 VulkanRendererEndFrame(CrystalBackend* Backend, Float32 DeltaTime)
     return true;
 }
 
-void VulkanRendererUpdateObject(Mat4 Model)
+void VulkanRendererUpdateObject(GeometryRenderData* Data)
 {
-    VulkanObjectShaderUpdateObject(&Context, &Context.ObjectShader, Model);
+    VulkanObjectShaderUpdateObject(&Context, &Context.ObjectShader, Data);
 
     // TODO: Temporary Code
     VulkanObjectShaderUse(&Context, &Context.ObjectShader);
@@ -551,6 +568,120 @@ void VulkanRendererUpdateObject(Mat4 Model)
 
     vkCmdDrawIndexed(CommandBuffer->Handle, 6, 1, 0, 0, 0);
     // TODO: Temporary Code
+}
+
+void VulkanRendererCreateTexture(const char* Name, Bool8 AutoRelease, Int32 Width, Int32 Height, Int32 ChannelCount, const UInt8* Pixels, Bool8 HasTransparency, Texture* Texture)
+{
+    (void)Name;
+    (void)AutoRelease;
+
+    Texture->Width = Width;
+    Texture->Height = Height;
+    Texture->ChannelCount = ChannelCount;
+    Texture->Generation = InvalidID;
+
+    // TODO: Allocator for this bro
+    Texture->InternalData = (VulkanTextureData*)FMAllocate(sizeof(VulkanTextureData), MEMORY_TAG_TEXTURE);
+    VulkanTextureData* Data = (VulkanTextureData*)Texture->InternalData;
+    VkDeviceSize ImageSize = Width * Height * ChannelCount;
+
+    // NOTE: assumes 8 bits p[er channel
+    VkFormat ImageFormat = VK_FORMAT_R8G8B8A8_UNORM;
+
+    VkBufferUsageFlags Usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    VkMemoryPropertyFlags MemoryPropertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    VulkanBuffer Staging;
+    VulkanBufferCreate(&Context, ImageSize, Usage, MemoryPropertyFlags, true, &Staging);
+
+    VulkanBufferLoadData(&Context, &Staging, 0, ImageSize, 0, Pixels);
+
+    // NOTE: Lots of assumptions, will require config driven options for different texture types...
+    VulkanImageCreate(
+        &Context,
+        VK_IMAGE_TYPE_2D,
+        Width,
+        Height,
+        ImageFormat,
+        VK_IMAGE_TILING_OPTIMAL,
+        VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        true,
+        VK_IMAGE_ASPECT_COLOR_BIT,
+        &Data->Image);
+
+    VulkanCommandBuffer TempBuffer;
+    VkCommandPool Pool = Context.Device.GraphicsCommandPool;
+    VkQueue Queue = Context.Device.GraphicsQueue;
+    VulkanCommandBufferAllocateAndBeginSingleUse(&Context, Pool, &TempBuffer);
+
+    VulkanImageTransitionLayout(
+        &Context,
+        &TempBuffer,
+        &Data->Image,
+        ImageFormat,
+        VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+    VulkanImageCopyFromBuffer(&Context, &Data->Image, Staging.Handle, &TempBuffer);
+
+    VulkanImageTransitionLayout(
+        &Context,
+        &TempBuffer,
+        &Data->Image,
+        ImageFormat,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+    VulkanCommandBufferEndSingleUse(&Context, Pool, &TempBuffer, Queue);
+
+    VulkanBufferDestroy(&Context, &Staging);
+
+    // Float32 SamplerAnisotropy = FCLAMP(16.0f, 1.0f, Context.Device.Properties.limits.maxSamplerAnisotropy);
+
+    VkSamplerCreateInfo SamplerInfo = {0};
+    SamplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    // TODO: Should be config driven
+    SamplerInfo.magFilter = VK_FILTER_LINEAR;
+    SamplerInfo.minFilter = VK_FILTER_LINEAR;
+    SamplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    SamplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    SamplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    SamplerInfo.anisotropyEnable = VK_TRUE;
+    SamplerInfo.maxAnisotropy = 16.0f;
+    SamplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    SamplerInfo.unnormalizedCoordinates = VK_FALSE;
+    SamplerInfo.compareEnable = VK_FALSE;
+    SamplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+    SamplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    SamplerInfo.mipLodBias = 0.0f;
+    SamplerInfo.minLod = 0.0f;
+    SamplerInfo.maxLod = 0.0f;
+
+    VkResult Result = vkCreateSampler(Context.Device.LogicalDevice, &SamplerInfo, Context.Allocator, &Data->Sampler);
+
+    if (!VulkanResultIsSuccess(Result))
+    {
+        FLERROR("Error creating texture sampler: %s", VulkanResultString(Result, true));
+        return;
+    }
+
+    Texture->HasTransparency = HasTransparency;
+    Texture->Generation++;
+}
+
+void VulkanRendererDestroyTexture(Texture* Texture)
+{
+    vkDeviceWaitIdle(Context.Device.LogicalDevice);
+
+    VulkanTextureData* Data = (VulkanTextureData*)Texture->InternalData;
+
+    VulkanImageDestroy(&Context, &Data->Image);
+    FMZeroMemory(&Data->Image, sizeof(VulkanImage));
+    vkDestroySampler(Context.Device.LogicalDevice, Data->Sampler, Context.Allocator);
+    Data->Sampler = 0;
+
+    FMFree(Texture->InternalData, sizeof(VulkanTextureData), MEMORY_TAG_TEXTURE);
+    FMZeroMemory(Texture, sizeof(struct Texture));
 }
 
 VKAPI_ATTR VkBool32 VKAPI_CALL VkDebugCallback(
@@ -689,7 +820,7 @@ Bool8 RecreateSwapchain(CrystalBackend* Backend)
     CreateCommandBuffers(Backend);
 
     // Clear the tracking states
-    Context.WindowResized = false; 
+    Context.FramebufferLastGeneration = Context.FramebufferCurrentGeneration; 
     Context.RecreateSwapchain = false;
 
     return true;

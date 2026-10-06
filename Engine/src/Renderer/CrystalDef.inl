@@ -2,6 +2,7 @@
 
 #include "Defines.h"
 #include "Math/MathDef.h"
+#include "Resources/ResourceDef.h"
 
 typedef enum CrystalBackckendType {
     // Modern APIs
@@ -17,9 +18,22 @@ typedef enum CrystalBackckendType {
 typedef struct GlobalUniformObject {
     Mat4 Projection;
     Mat4 View;
-    Mat4 Model;
     Mat4 MatrixReserved0;
-}GlobalUniformObject;
+    Mat4 MatrixReserved1;
+} GlobalUniformObject;
+
+typedef struct LocalUniformObject {
+    Vec4 DiffuseColor;
+    Vec4 Reserved0;
+    Vec4 Reserved1;
+    Vec4 Reserved2;
+} LocalUniformObject;
+
+typedef struct GeometryRenderData {
+    UInt64 ObjectID;
+    Mat4 Model;
+    Texture* Textures[16];
+} GeometryRenderData;
 
 typedef struct CrystalBackend {
     UInt64 FrameNumber;
@@ -33,7 +47,19 @@ typedef struct CrystalBackend {
     void (*UpdateGlobalState)(Mat4 Projection, Mat4 View, Vec3 ViewPosition, Vec4 AmbientColor, Int32 Mode);
     Bool8 (*EndFrame)(struct CrystalBackend* Backend, Float32 DeltaTime);
 
-    void (*UpdateObject)(Mat4 Model);
+    void (*UpdateObject)(GeometryRenderData* Data);
+
+    void (*CreateTexture)(
+        const char* Name,
+        Bool8 AutoRelease,
+        Int32 Width,
+        Int32 Height,
+        Int32 ChannelCount,
+        const UInt8* Pixels,
+        Bool8 HasTransparency,
+        struct Texture* Texture);
+        
+    void (*DestroyTexture)(struct Texture* Texture);
 } CrystalBackend;
 
 typedef struct RenderPacket {

@@ -86,6 +86,100 @@ void VulkanImageViewCreate(
         VK_CHECK(vkCreateImageView(Context->Device.LogicalDevice, &ViewCreateInfo, Context->Allocator, &Image->View));
     }
 
+void VulkanImageTransitionLayout(
+    VulkanContext* Context,
+    VulkanCommandBuffer* CommandBuffer,
+    VulkanImage* Image,
+    VkFormat Format,
+    VkImageLayout OldLayout,
+    VkImageLayout NewLayout) {
+
+        (void)Format;
+
+        VkImageMemoryBarrier Barrier = {0};
+        Barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        Barrier.oldLayout = OldLayout;
+        Barrier.newLayout = NewLayout;
+        Barrier.srcQueueFamilyIndex = Context->Device.GraphicsQueueIndex;
+        Barrier.dstQueueFamilyIndex = Context->Device.GraphicsQueueIndex;
+        Barrier.image = Image->Handle;
+        Barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        Barrier.subresourceRange.baseMipLevel = 0;
+        Barrier.subresourceRange.levelCount = 1;
+        Barrier.subresourceRange.baseArrayLayer = 0;
+        Barrier.subresourceRange.layerCount = 1;
+
+        VkPipelineStageFlags SourceStage;
+        VkPipelineStageFlags DestinationStage;
+
+        // we dont care about the old layout - transition to optimal layout
+        if (OldLayout == VK_IMAGE_LAYOUT_UNDEFINED && NewLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+        {
+            Barrier.srcAccessMask = 0;
+            Barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+            // we dont care what stage it is in
+            SourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+
+            // for Copying
+            DestinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+        } else if (OldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && NewLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+        {
+            Barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            Barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+            SourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+
+            DestinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        } else {
+            FLERROR("Unsupported Image Layout Transition");
+            return;
+        }
+
+        vkCmdPipelineBarrier(
+            CommandBuffer->Handle,
+            SourceStage, DestinationStage,
+            0,
+            0, 0,
+            0, 0,
+            1, &Barrier);
+
+    }
+
+void VulkanImageCopyFromBuffer(
+    VulkanContext* Context,
+    VulkanImage* Image,
+    VkBuffer Buffer,
+    VulkanCommandBuffer* CommandBuffer) {
+
+        (void)Context;
+
+        VkBufferImageCopy Region;
+        FMZeroMemory(&Region, sizeof(Region));
+        Region.bufferOffset = 0;
+        Region.bufferRowLength = 0;
+        Region.bufferImageHeight = 0;
+
+        
+        Region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        Region.imageSubresource.mipLevel = 0;
+        Region.imageSubresource.baseArrayLayer = 0;
+        Region.imageSubresource.layerCount = 1;
+
+        Region.imageExtent.width = Image->Width;
+        Region.imageExtent.height = Image->Height;
+        Region.imageExtent.depth = 1;
+
+        vkCmdCopyBufferToImage(
+            CommandBuffer->Handle,
+            Buffer,
+            Image->Handle,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            1,
+            &Region);
+
+    }
+
 void VulkanImageDestroy(VulkanContext* Context, VulkanImage* Image)
 {
     if (Image->View) {

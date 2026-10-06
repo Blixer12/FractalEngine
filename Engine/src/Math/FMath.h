@@ -4,30 +4,30 @@
 #include "MathDef.h"
 #include "Core/Memory.h"
 
-#define F_PI 3.14159265358979323846f
-#define F_PI_2 (2.0f * F_PI)
-#define F_HALF_PI (0.5f * F_PI)
-#define F_QUARTER_PI (0.25f * F_PI)
-#define F_ONE_OVER_PI (1.0f / F_PI)
-#define F_ONE_OVER_TWO_PI (1.0f / F_PI_2)
-#define F_SQRT_TWO 1.41421356237309504880f
-#define F_SQRT_THREE 1.73205080756887729352f
-#define F_SQRT_ONE_OVER_TWO 0.70710678118654752440f
-#define F_SQRT_ONE_OVER_THREE 0.57735026918962576450f
-#define F_DEG2RAD_MULTIPLIER (F_PI / 180.0f)
-#define F_RAD2DEG_MULTIPLIER (180.0f / F_PI)
+static constexpr Float32 F_PI = 3.14159265358979323846f;
+static constexpr Float32 F_PI_2 = 2.0f * F_PI;
+static constexpr Float32 F_HALF_PI = 0.5f * F_PI;
+static constexpr Float32 F_QUARTER_PI = 0.25f * F_PI;
+static constexpr Float32 F_ONE_OVER_PI = 1.0f / F_PI;
+static constexpr Float32 F_ONE_OVER_TWO_PI = 1.0f / F_PI_2;
+static constexpr Float32 F_SQRT_TWO = 1.41421356237309504880f;
+static constexpr Float32 F_SQRT_THREE = 1.73205080756887729352f;
+static constexpr Float32 F_SQRT_ONE_OVER_TWO = 0.70710678118654752440f;
+static constexpr Float32 F_SQRT_ONE_OVER_THREE = 0.57735026918962576450f;
+static constexpr Float32 F_DEG2RAD_MULTIPLIER = F_PI / 180.0f;
+static constexpr Float32 F_RAD2DEG_MULTIPLIER = 180.0f / F_PI;
 
 // The multiplier to convert seconds to milliseconds.
-#define F_SEC_TO_MS_MULTIPLIER 1000.0f
+static constexpr Float32 F_SEC_TO_MS_MULTIPLIER = 1000.0f;
 
 // The multiplier to convert milliseconds to seconds.
-#define F_MS_TO_SEC_MULTIPLIER 0.001f
+static constexpr Float32 F_MS_TO_SEC_MULTIPLIER = 0.001f;
 
 // A huge number that should be larger than any valid number used.
-#define F_INFINITY 1e30f
+static constexpr Float32 F_INFINITY = 1e30f;
 
 // Smallest positive number where 1.0 + FLOAT_EPSILON != 0
-#define F_FLOAT_EPSILON 1.192092896e-07f
+static constexpr Float32 F_FLOAT_EPSILON = 1.192092896e-07f;
 
 // ------------------------------------------
 // General math functions

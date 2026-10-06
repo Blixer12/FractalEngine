@@ -8,6 +8,7 @@
 #include "Renderer/Vulkan/VulkanBuffer.h"
 
 #include "Math/MathDef.h"
+#include "Math/FMath.h"
 
 #define BUILTIN_SHADER_NAME_OBJECT "Builtin.ObjectShader"
 
@@ -50,6 +51,44 @@ Bool8 VulkanObjectShaderCreate(VulkanContext* Context, VulkanObjectShader* Shade
 
     VK_CHECK(vkCreateDescriptorPool(Context->Device.LogicalDevice, &GlobalPoolInfo, Context->Allocator, &Shader->GlobalDescriptorPool));
 
+    // Local Descriptors
+    const UInt32 LoclaSamplerCount = 1;
+    VkDescriptorType DescriptorTypes[VULKAN_OBJECT_SHADER_DESCRIPTOR_COUNT] = {
+        VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
+    };
+
+    VkDescriptorSetLayoutBinding Bindings[VULKAN_OBJECT_SHADER_DESCRIPTOR_COUNT];
+    FMZeroMemory(&Bindings, sizeof(VkDescriptorSetLayoutBinding) * VULKAN_OBJECT_SHADER_DESCRIPTOR_COUNT);
+    for (UInt32 i = 0; i < VULKAN_OBJECT_SHADER_DESCRIPTOR_COUNT; i++)
+    {
+        Bindings[i].binding = i;
+        Bindings[i].descriptorCount = 1;
+        Bindings[i].descriptorType = DescriptorTypes[i];
+        Bindings[i].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    }
+
+    VkDescriptorSetLayoutCreateInfo LayoutInfo = {0};
+    LayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    LayoutInfo.bindingCount = 2;
+    LayoutInfo.pBindings = Bindings;
+    VK_CHECK(vkCreateDescriptorSetLayout(Context->Device.LogicalDevice, &LayoutInfo, Context->Allocator, &Shader->ObjectDescriptorSetLayout));
+
+    VkDescriptorPoolSize ObjectPoolSizes[2];
+    ObjectPoolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    ObjectPoolSizes[0].descriptorCount = VULKAN_OBJECT_MAX_COUNT;
+
+    ObjectPoolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    ObjectPoolSizes[1].descriptorCount = LoclaSamplerCount * VULKAN_OBJECT_MAX_COUNT;
+
+    VkDescriptorPoolCreateInfo ObjectPoolInfo = {0};
+    ObjectPoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    ObjectPoolInfo.poolSizeCount = 2;
+    ObjectPoolInfo.pPoolSizes = ObjectPoolSizes;
+    ObjectPoolInfo.maxSets = VULKAN_OBJECT_MAX_COUNT;
+
+    VK_CHECK(vkCreateDescriptorPool(Context->Device.LogicalDevice, &ObjectPoolInfo, Context->Allocator, &Shader->ObjectDescriptorPool));
+
     // Pipeline Generation
     VkViewport Viewport;
     Viewport.x = 0.0f;
@@ -66,16 +105,18 @@ Bool8 VulkanObjectShaderCreate(VulkanContext* Context, VulkanObjectShader* Shade
 
     // Attributes
     UInt32 Offset = 0;
-    constexpr Int32 AttributeCount = 1;
+    constexpr Int32 AttributeCount = 2;
     VkVertexInputAttributeDescription AttributeDescriptions[AttributeCount];
     
     // Position
     VkFormat Formats[AttributeCount] = {
-        VK_FORMAT_R32G32B32_SFLOAT
+        VK_FORMAT_R32G32B32_SFLOAT,
+        VK_FORMAT_R32G32_SFLOAT
     };
 
     UInt64 Sizes[AttributeCount] = {
-        sizeof(Vec3)
+        sizeof(Vec3),
+        sizeof(Vec2)
     };
     for (UInt32 i = 0; i < AttributeCount; i++)
     {
@@ -87,9 +128,10 @@ Bool8 VulkanObjectShaderCreate(VulkanContext* Context, VulkanObjectShader* Shade
     }
 
     // Descriptor set Layouts
-    const Int32 DescriptorSetLayoutCount = 1;
-    VkDescriptorSetLayout Layouts[1] = {
-        Shader->GlobalDescriptorSetLayout
+    const Int32 DescriptorSetLayoutCount = 2;
+    VkDescriptorSetLayout Layouts[2] = {
+        Shader->GlobalDescriptorSetLayout,
+        Shader->ObjectDescriptorSetLayout
     };
 
 
@@ -146,6 +188,18 @@ Bool8 VulkanObjectShaderCreate(VulkanContext* Context, VulkanObjectShader* Shade
 
     VK_CHECK(vkAllocateDescriptorSets(Context->Device.LogicalDevice, &AllocateInfo, Shader->GlobalDescriptorSets));
 
+    if (!VulkanBufferCreate(
+        Context,
+        sizeof(LocalUniformObject), //* MAX_MATERIAL_INSTANCE_COUNT
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        true,
+        &Shader->ObjectUniformBuffer))
+        {
+            FLERROR("Material Instance buffer creation failed for object shader");
+            return false;
+        }
+
     return true;
 }
 
@@ -153,7 +207,12 @@ void VulkanObjectShaderDestroy(VulkanContext* Context, struct VulkanObjectShader
 {
     VkDevice LogicalDevice = Context->Device.LogicalDevice;
 
+    vkDestroyDescriptorPool(LogicalDevice, Shader->ObjectDescriptorPool, Context->Allocator);
+    vkDestroyDescriptorSetLayout(LogicalDevice, Shader->ObjectDescriptorSetLayout, Context->Allocator);
+
+
     VulkanBufferDestroy(Context, &Shader->GlobalUniformBuffer);
+    VulkanBufferDestroy(Context, &Shader->ObjectUniformBuffer);
 
     VulkanPipelineDestroy(Context, &Shader->Pipeline);
 
@@ -175,8 +234,9 @@ void VulkanObjectShaderUse(VulkanContext* Context, struct VulkanObjectShader* Sh
     VulkanPipelineBind(&Context->GraphicsCommandBuffers[ImageIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, Shader->Pipeline);
 }
 
-void VulkanObjectShaderUpdateGlobalState(VulkanContext* Context, struct VulkanObjectShader* Shader)
+void VulkanObjectShaderUpdateGlobalState(VulkanContext* Context, struct VulkanObjectShader* Shader, Float32 DeltaTime)
 {
+    (void)DeltaTime;
     UInt32 ImageIndex = Context->ImageIndex;
     VkCommandBuffer CommandBuffer = Context->GraphicsCommandBuffers[ImageIndex].Handle;
     VkDescriptorSet GlobalDescriptors = Shader->GlobalDescriptorSets[ImageIndex];
@@ -205,10 +265,158 @@ void VulkanObjectShaderUpdateGlobalState(VulkanContext* Context, struct VulkanOb
     vkCmdBindDescriptorSets(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Shader->Pipeline.PipelineLayout, 0, 1, &GlobalDescriptors, 0, 0);
 }
 
-void VulkanObjectShaderUpdateObject(VulkanContext* Context, struct VulkanObjectShader* Shader, Mat4 Model)
+void VulkanObjectShaderUpdateObject(VulkanContext* Context, struct VulkanObjectShader* Shader, GeometryRenderData* Data)
 {
     UInt32 ImageIndex = Context->ImageIndex;
     VkCommandBuffer CommandBuffer = Context->GraphicsCommandBuffers[ImageIndex].Handle;
 
-    vkCmdPushConstants(CommandBuffer, Shader->Pipeline.PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Mat4), &Model);
+    vkCmdPushConstants(CommandBuffer, Shader->Pipeline.PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Mat4), &Data->Model);
+
+    VulkanObjectShaderObjectState* ObjectState = &Shader->ObjectStates[Data->ObjectID];
+    VkDescriptorSet ObjectDescriptorSet = ObjectState->DescriptorSets[ImageIndex];
+
+    // TODO: If needs update
+    VkWriteDescriptorSet DescriptorWrites[VULKAN_OBJECT_SHADER_DESCRIPTOR_COUNT];
+    FMZeroMemory(DescriptorWrites, sizeof(VkWriteDescriptorSet) * VULKAN_OBJECT_SHADER_DESCRIPTOR_COUNT);
+    UInt32 DescriptorCount = 0;
+    UInt32 DescriptorIndex = 0;
+
+    UInt32 Range = sizeof(LocalUniformObject);
+    UInt64 Offset = sizeof(LocalUniformObject) * Data->ObjectID;
+    LocalUniformObject LBO;
+
+    // TODO: Diffuse color from Material
+    static Float32 Accumulator = 0.0f;
+    Accumulator += Context->FrameDeltaTime;
+    Float32 S = (Fsin(Accumulator) + 1.0f) / 2.0f;
+    LBO.DiffuseColor = Vec4Create(S, S, S, 1.0f);
+
+    VulkanBufferLoadData(Context, &Shader->ObjectUniformBuffer, Offset, Range, 0, &LBO);
+
+    if (ObjectState->DescriptorStates[DescriptorIndex].Generations[ImageIndex] == InvalidID)
+    {
+        VkDescriptorBufferInfo BufferInfo;
+        BufferInfo.buffer = Shader->ObjectUniformBuffer.Handle;
+        BufferInfo.offset = Offset;
+        BufferInfo.range = Range;
+
+        VkWriteDescriptorSet Descriptor = {0};
+        Descriptor.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        Descriptor.dstSet = ObjectDescriptorSet;
+        Descriptor.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        Descriptor.descriptorCount = 1;
+        Descriptor.pBufferInfo = &BufferInfo;
+
+        DescriptorWrites[DescriptorCount] = Descriptor;
+        DescriptorCount++;
+
+        ObjectState->DescriptorStates[DescriptorIndex].Generations[ImageIndex] = 1;
+    }
+
+    DescriptorIndex++;
+
+    // TODO: Samplers
+    const UInt64 SamplerCount = 1;
+    VkDescriptorImageInfo ImageInfos[1];
+    for (UInt32 SamplerIndex = 0; SamplerIndex < SamplerCount; SamplerIndex++)
+    {
+        Texture* T = Data->Textures[SamplerIndex];
+        UInt64* DescriptorGeneration = &ObjectState->DescriptorStates[DescriptorIndex].Generations[ImageIndex];
+
+        if (T && (*DescriptorGeneration != T->Generation || *DescriptorGeneration == InvalidID))
+        {
+            VulkanTextureData* InternalData = (VulkanTextureData*)T->InternalData;
+
+            ImageInfos[SamplerIndex].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            ImageInfos[SamplerIndex].imageView = InternalData->Image.View;
+            ImageInfos[SamplerIndex].sampler = InternalData->Sampler;
+
+            VkWriteDescriptorSet Descriptor = {0};
+            Descriptor.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            Descriptor.dstSet = ObjectDescriptorSet;
+            Descriptor.dstBinding = 1;
+            Descriptor.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            Descriptor.descriptorCount = 1;
+            Descriptor.pImageInfo = &ImageInfos[SamplerIndex];
+            
+
+            DescriptorWrites[DescriptorCount] = Descriptor;
+            DescriptorCount++;
+
+            if (T->Generation != InvalidID)
+            {
+                DescriptorGeneration = &T->Generation;
+            }
+
+            DescriptorIndex++;
+        }
+    }
+
+    if (DescriptorCount > 0)
+    {
+        vkUpdateDescriptorSets(Context->Device.LogicalDevice, DescriptorCount, DescriptorWrites, 0, 0);
+    }
+
+    vkCmdBindDescriptorSets(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Shader->Pipeline.PipelineLayout, 1, 1, &ObjectDescriptorSet, 0, 0);
+}
+
+Bool8 VulkanObjectShaderAcquireResources(VulkanContext* Context, struct VulkanObjectShader* Shader, UInt64* ObjectID)
+{
+    *ObjectID = Shader->ObjectUniformBufferIndex;
+    Shader->ObjectUniformBufferIndex++;
+
+    UInt32 CurrentObjectID = *ObjectID;
+    VulkanObjectShaderObjectState* ObjectState = &Shader->ObjectStates[CurrentObjectID];
+    for (UInt32 i = 0; i < VULKAN_OBJECT_SHADER_DESCRIPTOR_COUNT; i++)
+    {
+        for (size_t j = 0; j < 3; j++)
+        {
+            ObjectState->DescriptorStates[i].Generations[j] = InvalidID;
+        }
+        
+    }
+
+    VkDescriptorSetLayout Layouts[3] = {
+        Shader->ObjectDescriptorSetLayout,
+        Shader->ObjectDescriptorSetLayout,
+        Shader->ObjectDescriptorSetLayout
+    };
+
+    VkDescriptorSetAllocateInfo AllocateInfo = {0};
+    AllocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    AllocateInfo.descriptorPool = Shader->ObjectDescriptorPool;
+    AllocateInfo.descriptorSetCount = 3;
+    AllocateInfo.pSetLayouts = Layouts;
+
+    VkResult Result = vkAllocateDescriptorSets(Context->Device.LogicalDevice, &AllocateInfo, ObjectState->DescriptorSets);
+    if (Result != VK_SUCCESS)
+    {
+        FLERROR("Error allocating descriptor sets");
+        return false;
+    }
+
+    return true;
+}
+
+void VulkanObjectShaderReleaseResources(VulkanContext* Context, struct VulkanObjectShader* Shader, UInt64 ObjectID)
+{
+    VulkanObjectShaderObjectState* ObjectState = &Shader->ObjectStates[ObjectID];
+
+    const UInt32 DescriptorSetCount = 3;
+
+    VkResult Result = vkFreeDescriptorSets(Context->Device.LogicalDevice, Shader->ObjectDescriptorPool, DescriptorSetCount, ObjectState->DescriptorSets);
+    if (Result != VK_SUCCESS)
+    {
+        FLERROR("Error freeing object shader descriptor sets");
+    }
+
+    for (UInt64 i = 0; i < VULKAN_OBJECT_SHADER_DESCRIPTOR_COUNT; i++)
+    {
+        for (UInt64 j = 0; j < VULKAN_OBJECT_MAX_COUNT; j++)
+        {
+            ObjectState->DescriptorStates[i].Generations[j] = InvalidID;
+        }
+        
+    }
+    
 }

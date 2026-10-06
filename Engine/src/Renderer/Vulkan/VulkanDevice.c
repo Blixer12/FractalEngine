@@ -19,9 +19,6 @@ typedef struct VulkanPhysicalDeviceRequirements {
     
     Bool8 DynamicRendering;
     Bool8 Synchronization2;
-
-    // Push Constant Limits
-    UInt32 MinPushConstantsSize;
 } VulkanPhysicalDeviceRequirements;
 
 typedef struct VulkanPhysicalDeviceQueueFamilyInfo {
@@ -367,8 +364,6 @@ Bool8 SelectPhysicalDevice(VulkanContext* Context)
     Requirements.DynamicRendering  = true;
     Requirements.Synchronization2  = true;
 
-    Requirements.MinPushConstantsSize = 256;
-
     // Initializes extension dynamic array
     Requirements.DeviceExtensionNames = VectorCreate(const char*);
     VectorAppend(Requirements.DeviceExtensionNames, (const char*)VK_KHR_SWAPCHAIN_EXTENSION_NAME);
@@ -423,6 +418,8 @@ Bool8 SelectPhysicalDevice(VulkanContext* Context)
 
             // --- PRESENTATION & SWAPCHAIN ---
             Preferences.PresentModeFifoLatestReady = true;
+
+            Preferences.MinPushConstantsSize = 256;
 
             // Calculate scoring metrics for this pass
             Int32 CurrentScore = ScorePhysicalDevice(PhysicalDevices[i], &Properties, &Features, &Preferences);
@@ -693,13 +690,7 @@ for (UInt32 i = 0; i < QueueFamilyCount; ++i) {
 
         if (Requirements->SamplerAnisotropy && !Features->samplerAnisotropy) 
         {
-            FLWARN("Device [%s] dropped: Device does not support SamplerAnisotrophy.", Properties->deviceName);
-            return false;
-        }
-
-        if (Properties->limits.maxPushConstantsSize < Requirements->MinPushConstantsSize)
-        {
-            FLWARN("Device [%s] dropped: Device does not have a minimum push constant of 256.", Properties->deviceName);
+            FLWARN("Device [%s] dropped: Device does not support SamplerAnisotropy.", Properties->deviceName);
             return false;
         }
 
@@ -803,6 +794,8 @@ Int32 ScorePhysicalDevice(
     // 4. --- CORE 1.0 HARDWARE FEATURES ---
     if (Preferences->GeometryShader && Features->geometryShader)                    Score += 10;
     if (Preferences->WireframeMode && Features->fillModeNonSolid)                   Score += 50;
+
+    if (Preferences->MinPushConstantsSize <= Properties->limits.maxPushConstantsSize) Score += 100;
 
     // 6. --- COMPUTE MUSCLE TIE-BREAKERS ---
     if (Properties->limits.maxImageDimension2D >= 16384)                            Score += 150;

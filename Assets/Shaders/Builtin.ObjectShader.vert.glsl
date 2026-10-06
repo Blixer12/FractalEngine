@@ -1,6 +1,7 @@
 #version 460
 
 layout(location = 0) in vec3 InPosition;
+layout(location = 1) in vec2 TextureCoordinates;
 
 layout(set = 0, binding = 0) uniform GlobalUniformObject
 {
@@ -13,8 +14,14 @@ layout(push_constant) uniform PushConstants
     mat4 Model; // 64 Bytes
 } PushConstant;
 
+layout(location = 0) out int Mode;
+
+layout(location = 1) out struct DataTransferObject {
+    vec2 TextureCoordinates;
+} OutDTO;
 
 void main()
 {
+    OutDTO.TextureCoordinates = TextureCoordinates;
     gl_Position = GlobalUBO.Projection * GlobalUBO.View * PushConstant.Model * vec4(InPosition, 1.0);
 }

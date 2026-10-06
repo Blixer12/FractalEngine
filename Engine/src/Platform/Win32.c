@@ -194,7 +194,7 @@ void PlatformConsoleWrite(const char* Message, UInt8 Color)
         "\033[96m"       // TRACE: Direct Bright Cyan
     };
 
-    enum { MessageLength = 32768 };
+    static constexpr UInt32 MessageLength = 32768;
     static char DebuggerMessage[MessageLength];
 
     const char* LineStart = Message;
@@ -237,7 +237,7 @@ void PlatformConsoleWriteError(const char* Message, UInt8 Color)
         "\033[96m"       // TRACE: Direct Bright Cyan
     };
 
-    enum { MessageLength = 32768 };
+    constexpr UInt32 MessageLength = 32768;
     static char DebuggerMessage[MessageLength];
 
     const char* LineStart = Message;

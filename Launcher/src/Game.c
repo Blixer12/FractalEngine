@@ -98,24 +98,24 @@ Bool8 GameUpdate(Game* Instance, Float32 DeltaTime)
         Velocity.y -= 1.0f;
     }
 
-    if (InputIsKeyDown('Q') || InputIsKeyDown(LeftKey))
+    if (InputIsKeyDown(QKey) || InputIsKeyDown(LeftKey))
     {
-        CameraYaw(State, 1.0f * DeltaTime);
+        CameraYaw(State, 3.0f * DeltaTime);
     }
 
-    if (InputIsKeyDown('E') || InputIsKeyDown(RightKey))
+    if (InputIsKeyDown(EKey) || InputIsKeyDown(RightKey))
     {
-        CameraYaw(State, -1.0f * DeltaTime);
+        CameraYaw(State, -3.0f * DeltaTime);
     }
 
     if (InputIsKeyDown(UpKey))
     {
-        CameraPitch(State, 1.0f * DeltaTime);
+        CameraPitch(State, 3.0f * DeltaTime);
     }
 
     if (InputIsKeyDown(DownKey))
     {
-        CameraPitch(State, -1.0f * DeltaTime);
+        CameraPitch(State, -3.0f * DeltaTime);
     }
 
     Vec3 Zero = Vec3Zero();

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Renderer/CrystalBackend.h"
+#include "Resources/ResourceDef.h"
 
 Bool8 VulkanRendererInitialize(CrystalBackend* Backend, const char* AppName);
 void VulkanRendererShutdown(CrystalBackend* Backend);
@@ -11,4 +12,16 @@ Bool8 VulkanRendererBeginFrame(CrystalBackend* Backend, Float32 DeltaTime);
 void VullkanRendererUpdateGlobalState(Mat4 Projection, Mat4 View, Vec3 ViewPosition, Vec4 AmbientColor, Int32 Mode);
 Bool8 VulkanRendererEndFrame(CrystalBackend* Backend, Float32 DeltaTime);
 
-void VulkanRendererUpdateObject(Mat4 Model);
+void VulkanRendererUpdateObject(GeometryRenderData* Data);
+
+void VulkanRendererCreateTexture(
+    const char* Name,
+    Bool8 AutoRelease,
+    Int32 Width,
+    Int32 Height,
+    Int32 ChannelCount,
+    const UInt8* Pixels,
+    Bool8 HasTransparency,
+    Texture* Texture);
+
+void VulkanRendererDestroyTexture(Texture* Texture);

@@ -3,7 +3,7 @@
 #include "Memory.h"
 #include "Containers/Vector.h"
 
-#define MAX_MESSAGE_CODES 16384
+constexpr UInt16 MaxMessageCodes = 16384;
 
 typedef struct RegisteredEvent {
     void* Receiver;
@@ -15,7 +15,7 @@ typedef struct EventCodeEntry {
 } EventCodeEntry;
 
 typedef struct EventState {
-    EventCodeEntry Registered[MAX_MESSAGE_CODES];
+    EventCodeEntry Registered[MaxMessageCodes];
 } EventState;
 
 static EventState* StatePtr;
@@ -39,7 +39,7 @@ void EventSystemShutdown(void* State)
     if (StatePtr)
     {
         // Free the events arrays. And objects pointed to should be destroyed on their own.
-        for(UInt16 i = 0; i < MAX_MESSAGE_CODES; ++i)
+        for(UInt16 i = 0; i < MaxMessageCodes; ++i)
         {
             if (StatePtr->Registered[i].Events != 0)
             {
