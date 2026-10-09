@@ -55,18 +55,15 @@
 [DEBUG]: Swapchain created successfuly.
 [DEBUG]: Creating Command Buffers...
 [DEBUG]: Vulkan command buffers created successfully.
-[WARN]:  vkCreateGraphicsPipelines(): pCreateInfos[0] (SPIR-V Interface) [VK_SHADER_STAGE_VERTEX_BIT] has an Output value declared at Location 0 Component 0, but there is no corresponding Input declared in [VK_SHADER_STAGE_FRAGMENT_BIT].
-This is not invalid, but the write to the unused Output is discarded.
-The Output variable is:
-  pointer to Output -> sint32
 [DEBUG]: Graphics pipeline created
 [INFO]:  Vulkan renderer initialized successfully
 [DEBUG]: Creating Default Texture
+[TRACE]: Crystal: Material Created
 [DEBUG]: GameInitialized() called!
 [DEBUG]: System memory use (Tagged):
   UNKNOWN         : 0.00 Bytes
   ARRAY           : 0.00 Bytes
-  VECTOR          : 648.00 Bytes
+  VECTOR          : 688.00 Bytes
   DICT            : 0.00 Bytes
   RING_QUEUE      : 0.00 Bytes
   BST             : 0.00 Bytes
@@ -83,7 +80,11 @@ The Output variable is:
   SCENE           : 0.00 Bytes
   LINEAR_ALLOCATOR: 0.00 Bytes
 
+[TRACE]: Texture 'WhiteStone' does not yet exist. Created, and ReferenceCount is now 1.
+[TRACE]: Crystal: Material Created
+[TRACE]: Material 'TestMaterial' does not yet exist. Created, and ReferenceCount is now 1.
 [DEBUG]: Event Code APP_QUIT Recieved, Shutting Down.
+[TRACE]: Destroying material 'Default'...
 [DEBUG]: Destroying Vulkan device
 [DEBUG]: Destroying command pools...
 [DEBUG]: Destroying logical device...

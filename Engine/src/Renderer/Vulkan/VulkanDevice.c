@@ -97,7 +97,7 @@ Bool8 VulkanDeviceCreate(VulkanContext* Context)
 
     VkDeviceQueueCreateInfo QueueCreateInfos[32];
 
-    for (UInt32 i = 0; i < IndexCount; i++)
+    for (UInt32 i = 0; i < IndexCount; ++i)
     {
         Float32 QueuePriority = 1.0f;
         QueueCreateInfos[i].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -158,10 +158,34 @@ Bool8 VulkanDeviceCreate(VulkanContext* Context)
     DeviceCreateInfo.pEnabledFeatures = NULL;
     DeviceCreateInfo.pNext = &EnableFeatures2;
 
-    const char* EnabledExtensions[2];
+    // Detect VK_KHR_portability_subset support
+    Bool8 PortabilityRequired = false;
+    UInt32 AvailableExtensionCount = 0;
+    VK_CHECK(vkEnumerateDeviceExtensionProperties(Context->Device.PhysicalDevice, 0, &AvailableExtensionCount, 0));
+
+    if (AvailableExtensionCount != 0) {
+        VkExtensionProperties* AvailableExtensions = FMAllocate(sizeof(VkExtensionProperties) * AvailableExtensionCount, MEMORY_TAG_RENDERER);
+        VK_CHECK(vkEnumerateDeviceExtensionProperties(Context->Device.PhysicalDevice, 0, &AvailableExtensionCount, AvailableExtensions));
+
+        for (UInt32 i = 0; i < AvailableExtensionCount; ++i) {
+            if (StringsEqual(AvailableExtensions[i].extensionName, "VK_KHR_portability_subset")) {
+                FLINFO("Adding required extension 'VK_KHR_portability_subset'.");
+                PortabilityRequired = true;
+                break;
+            }
+        }
+        FMFree(AvailableExtensions, sizeof(VkExtensionProperties) * AvailableExtensionCount, MEMORY_TAG_RENDERER);
+    }
+
+    // Populate enabled extensions array
+    const char* EnabledExtensions[3];
     UInt32 ExtensionCount = 0;
 
     EnabledExtensions[ExtensionCount++] = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
+
+    if (PortabilityRequired) {
+        EnabledExtensions[ExtensionCount++] = "VK_KHR_portability_subset";
+    }
 
     if (EnableFifoLatest.presentModeFifoLatestReady) {
         EnabledExtensions[ExtensionCount++] = VK_KHR_PRESENT_MODE_FIFO_LATEST_READY_EXTENSION_NAME;
@@ -351,6 +375,8 @@ Bool8 SelectPhysicalDevice(VulkanContext* Context)
 
     VulkanPhysicalDevicePreferences BestPreferences = {0};
 
+    Bool8 SupportsDeviceLocalHostVisible = false;
+
     Bool8 DeviceFound = false;
 
     // Hard Requirements (Must be met, or the engine crashes/exits)
@@ -378,6 +404,17 @@ Bool8 SelectPhysicalDevice(VulkanContext* Context)
 
         VkPhysicalDeviceMemoryProperties Memory;
         vkGetPhysicalDeviceMemoryProperties(PhysicalDevices[i], &Memory);
+
+        // Checks the device for local + host visible combo wombo
+        for (UInt32 i = 0; i < Memory.memoryTypeCount; ++i)
+        {
+            if (
+                ((Memory.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) != 0) &&
+                ((Memory.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) != 0)) {
+                SupportsDeviceLocalHostVisible = true;
+                break;
+            }
+        }
 
         VulkanPhysicalDeviceQueueFamilyInfo QueueInfo = {0};
 
@@ -468,6 +505,8 @@ Bool8 SelectPhysicalDevice(VulkanContext* Context)
     // Cache the validated preferences for this winning device
     Context->Preferences = BestPreferences;
 
+
+
     vkGetPhysicalDeviceProperties(BestDevice, &BestProperties);
     // GPU type string mapping
     const char* DeviceTypeString = "Unknown";
@@ -521,6 +560,7 @@ Bool8 SelectPhysicalDevice(VulkanContext* Context)
          }
      }
 
+    Context->Device.SupportsDeviceLocalHostVisible = SupportsDeviceLocalHostVisible;
     return DeviceFound;
 }
 
@@ -658,7 +698,7 @@ for (UInt32 i = 0; i < QueueFamilyCount; ++i) {
                 for (UInt32 i = 0; i < RequiredExtensionCount; ++i) {
                     Bool8 Found = false;
                     for (UInt32 j = 0; j < AvailableExtensionCount; ++j) {
-                        if (StringCompare(Requirements->DeviceExtensionNames[i], AvailableExtensions[j].extensionName)) {
+                        if (StringsEqual(Requirements->DeviceExtensionNames[i], AvailableExtensions[j].extensionName)) {
                             Found = true;
                             break;
                         }

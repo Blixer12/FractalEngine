@@ -15,14 +15,9 @@ Bool8 CrystalDrawFrame(RenderPacket* Packet);
 // HACK: should not be exposed...
 FAPI void CrystalSetView(Mat4 View);
 
-void CrystalCreateTexture(
-        const char* Name,
-        Bool8 AutoRelease,
-        Int32 Width,
-        Int32 Height,
-        Int32 ChannelCount,
-        const UInt8* Pixels,
-        Bool8 HasTransparency,
-        struct Texture* Texture);
+void CrystalCreateTexture(const UInt8* Pixels, struct Texture* Texture);
         
 void CrystalDestroyTexture(struct Texture* Texture);
+
+Bool8 CrystalCreateMaterial(struct Material* Material);
+void CrystalDestroyMaterial(struct Material* Material);

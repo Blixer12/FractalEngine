@@ -88,6 +88,8 @@ typedef struct VulkanDevice {
     Int32 TransferQueueIndex;
     Int32 ComputeQueueIndex;
 
+    Bool8 SupportsDeviceLocalHostVisible;
+
     VkQueue GraphicsQueue;
     VkQueue PresentQueue;
     VkQueue TransferQueue;
@@ -183,24 +185,26 @@ typedef struct VulkanPipeline {
     VkPipelineLayout PipelineLayout;
 } VulkanPipeline;
 
-#define OBJECT_SHADER_STAGE_COUNT 2
+constexpr UInt32 MaterialShaderStageCount =  2;
 
 typedef struct VulkanDescriptorState{
-    UInt64 Generations[3];
+    UInt32 Generations[3];
+    UInt32 IDs[3];
 } VulkanDescriptorState;
 
-#define VULKAN_OBJECT_SHADER_DESCRIPTOR_COUNT 2
-typedef struct VulkanObjectShaderObjectState {
+constexpr UInt32 VulkanMaterialShaderDescriptorCount = 2;
+constexpr UInt32 VulkanMaterialShaderSamplerCount = 1;
+typedef struct VulkanMaterialShaderInstanceState {
     VkDescriptorSet DescriptorSets[3];
 
-    VulkanDescriptorState DescriptorStates[VULKAN_OBJECT_SHADER_DESCRIPTOR_COUNT];
-} VulkanObjectShaderObjectState;
+    VulkanDescriptorState DescriptorStates[VulkanMaterialShaderDescriptorCount];
+} VulkanMaterialShaderInstanceState;
 
-#define VULKAN_OBJECT_MAX_COUNT 1024
+constexpr UInt32 VulkanMaxMaterialCount = 1024;
 
-typedef struct VulkanObjectShader {
+typedef struct VulkanMaterialShader {
     // vertex, fragment
-    VulkanShaderStage Stages[OBJECT_SHADER_STAGE_COUNT];
+    VulkanShaderStage Stages[MaterialShaderStageCount];
 
     VulkanPipeline Pipeline;
 
@@ -213,6 +217,9 @@ typedef struct VulkanObjectShader {
     // Global Uniform Object
     GlobalUniformObject GlobalUBO;
 
+    // Global Uniform Buffer
+    VulkanBuffer GlobalUniformBuffer;
+
     VkDescriptorPool ObjectDescriptorPool;
     VkDescriptorSetLayout ObjectDescriptorSetLayout;
 
@@ -220,13 +227,12 @@ typedef struct VulkanObjectShader {
     // TODO: Manage a free list
     UInt32 ObjectUniformBufferIndex;
 
-    // Global Uniform Buffer
-    VulkanBuffer GlobalUniformBuffer;
+    TextureUse SamplerUses[VulkanMaterialShaderSamplerCount];
 
     // TODO: Dynamic
-    VulkanObjectShaderObjectState ObjectStates[VULKAN_OBJECT_MAX_COUNT];
+    VulkanMaterialShaderInstanceState InstanceStates[VulkanMaxMaterialCount];
 
-} VulkanObjectShader;
+} VulkanMaterialShader;
 
 
 typedef struct VulkanContext {
@@ -270,7 +276,7 @@ typedef struct VulkanContext {
     UInt32 FramebufferCurrentGeneration;
     UInt32 FramebufferLastGeneration;
 
-    VulkanObjectShader ObjectShader;
+    VulkanMaterialShader MaterialShader;
 
     UInt64 GeometryVertexOffset;
     UInt64 GeometryIndexOffset;

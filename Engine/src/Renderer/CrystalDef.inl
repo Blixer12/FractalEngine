@@ -22,17 +22,16 @@ typedef struct GlobalUniformObject {
     Mat4 MatrixReserved1;
 } GlobalUniformObject;
 
-typedef struct LocalUniformObject {
-    Vec4 DiffuseColor;
+typedef struct MaterialUniformObject {
+    Vec4 BaseColor;
     Vec4 Reserved0;
     Vec4 Reserved1;
     Vec4 Reserved2;
-} LocalUniformObject;
+} MaterialUniformObject;
 
 typedef struct GeometryRenderData {
-    UInt64 ObjectID;
     Mat4 Model;
-    Texture* Textures[16];
+    Material* Material;
 } GeometryRenderData;
 
 typedef struct CrystalBackend {
@@ -49,17 +48,12 @@ typedef struct CrystalBackend {
 
     void (*UpdateObject)(GeometryRenderData* Data);
 
-    void (*CreateTexture)(
-        const char* Name,
-        Bool8 AutoRelease,
-        Int32 Width,
-        Int32 Height,
-        Int32 ChannelCount,
-        const UInt8* Pixels,
-        Bool8 HasTransparency,
-        struct Texture* Texture);
-        
+    void (*CreateTexture)(const UInt8* Pixels, struct Texture* Texture);
     void (*DestroyTexture)(struct Texture* Texture);
+
+    Bool8 (*CreateMaterial)(struct Material* Material);
+    void (*DestroyMaterial)(struct Material* Material);
+
 } CrystalBackend;
 
 typedef struct RenderPacket {

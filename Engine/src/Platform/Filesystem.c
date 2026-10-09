@@ -9,8 +9,8 @@
 #include <sys/stat.h>
 
 #if defined(_WIN32)
-    typedef struct _stat64 PlatformStatStruct;
-    #define PlatformStatFunc _stat64
+    typedef struct _stat PlatformStatStruct;
+    #define PlatformStatFunc _stat
 #else
     typedef struct stat PlatformStatStruct;
     #define PlatformStatFunc stat
@@ -80,14 +80,14 @@ void FilesystemClose(FileHandle* Handle) {
     }
 }
 
-Bool8 FileSystemReadLine(FileHandle* Handle, char** LineBuffer) {
-    if (Handle->Handle) {
-        // Since we are reading a single line, it should be safe to assume this is enough characters.
-        char Buffer[32768];
-        if (fgets(Buffer, 32768, (FILE*)Handle->Handle) != 0) {
-            UInt64 Length = strlen(Buffer);
-            *LineBuffer = FMAllocate((sizeof(char) * Length) + 1, MEMORY_TAG_STRING);
-            strcpy(*LineBuffer, Buffer);
+Bool8 FilesystemReadLine(FileHandle* Handle, UInt64 MaxLength, char** LineBuffer, UInt64* LineLength)
+{
+    if (Handle->Handle && LineBuffer && LineLength && MaxLength > 0)
+    {
+        char* Buffer = *LineBuffer;
+        if (fgets(Buffer, MaxLength, (FILE*)Handle->Handle) != 0)
+        {
+            *LineLength = strlen(*LineBuffer);
             return true;
         }
     }

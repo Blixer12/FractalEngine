@@ -5,12 +5,12 @@ if not exist "%cd%\bin\Assets\Shaders\" mkdir "%cd%\bin\Assets\Shaders"
 
 echo "Compiling Shaders..."
 
-echo "Assets/Shaders/Builtin.ObjectShader.vert.glsl -> bin/Assets/Shaders/Builtin.ObjectShader.vert.spv"
-%VULKAN_SDK%\bin\glslc.exe --target-env=vulkan1.3 -fshader-stage=vert Assets/Shaders/Builtin.ObjectShader.vert.glsl -o bin/Assets/Shaders/Builtin.ObjectShader.vert.spv
+echo "Assets/Shaders/Builtin.MaterialShader.vert.glsl -> bin/Assets/Shaders/Builtin.MaterialShader.vert.spv"
+%VULKAN_SDK%\bin\glslc.exe --target-env=vulkan1.3 -fshader-stage=vert Assets/Shaders/Builtin.MaterialShader.vert.glsl -o bin/Assets/Shaders/Builtin.MaterialShader.vert.spv
 IF %ERRORLEVEL% NEQ 0 (echo Error: %ERRORLEVEL% && exit)
 
-echo "Assets/Shaders/Builtin.ObjectShader.frag.glsl -> bin/Assets/Shaders/Builtin.ObjectShader.frag.spv"
-%VULKAN_SDK%\bin\glslc.exe --target-env=vulkan1.3 -fshader-stage=frag Assets/Shaders/Builtin.ObjectShader.frag.glsl -o bin/Assets/Shaders/Builtin.ObjectShader.frag.spv
+echo "Assets/Shaders/Builtin.MaterialShader.frag.glsl -> bin/Assets/Shaders/Builtin.MaterialShader.frag.spv"
+%VULKAN_SDK%\bin\glslc.exe --target-env=vulkan1.3 -fshader-stage=frag Assets/Shaders/Builtin.MaterialShader.frag.glsl -o bin/Assets/Shaders/Builtin.MaterialShader.frag.spv
 IF %ERRORLEVEL% NEQ 0 (echo Error: %ERRORLEVEL% && exit)
 
 echo "Copying Assets..."

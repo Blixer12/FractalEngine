@@ -128,7 +128,7 @@ char* FMGetMemoryUsageString()
 
     char Buffer[32768] = "System memory use (Tagged):\n";
     UInt64 Offset = StringLength(Buffer);
-    for(UInt32 i = 0; i < MEMORY_TAG_MAX_TAGS; i++)
+    for(UInt32 i = 0; i < MEMORY_TAG_MAX_TAGS; ++i)
     {
         char unit[6] = "Bytes";
         Float64 amount = 1.0;

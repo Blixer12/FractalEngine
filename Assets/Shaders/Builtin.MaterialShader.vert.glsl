@@ -14,7 +14,7 @@ layout(push_constant) uniform PushConstants
     mat4 Model; // 64 Bytes
 } PushConstant;
 
-layout(location = 0) out int Mode;
+// layout(location = 0) out int Mode;
 
 layout(location = 1) out struct DataTransferObject {
     vec2 TextureCoordinates;

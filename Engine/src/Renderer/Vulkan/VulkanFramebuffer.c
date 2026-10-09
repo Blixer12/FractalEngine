@@ -12,7 +12,7 @@ void VulkanFramebufferCreate(
     VulkanFramebuffer* Framebuffer) {
 
         Framebuffer->Attachments = FMAllocate(sizeof(VkImageView) * AttachmentCount, MEMORY_TAG_RENDERER);
-        for (UInt32 i = 0; i < AttachmentCount; i++)
+        for (UInt32 i = 0; i < AttachmentCount; ++i)
         {
             Framebuffer->Attachments[i] = Attachments[i];
         }

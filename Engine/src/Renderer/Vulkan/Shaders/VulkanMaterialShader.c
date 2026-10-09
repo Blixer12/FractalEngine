@@ -1,4 +1,4 @@
-#include "VulkanObjectShader.h"
+#include "VulkanMaterialShader.h"
 
 #include "Core/Logger.h"
 #include "Core/Memory.h"
@@ -7,20 +7,24 @@
 #include "Renderer/Vulkan/VulkanPipeline.h"
 #include "Renderer/Vulkan/VulkanBuffer.h"
 
+#include "Systems/TextureSystem.h"
+
 #include "Math/MathDef.h"
 #include "Math/FMath.h"
 
-#define BUILTIN_SHADER_NAME_OBJECT "Builtin.ObjectShader"
+constexpr char BuiltinShaderNameMaterial[] = "Builtin.MaterialShader";
 
 
-Bool8 VulkanObjectShaderCreate(VulkanContext* Context, VulkanObjectShader* Shader) {
+Bool8 VulkanMaterialShaderCreate(VulkanContext* Context, VulkanMaterialShader* Shader) 
+{
+
     // Shader module init per stage.
-    char StageTypeStrings[OBJECT_SHADER_STAGE_COUNT][5] = {"vert", "frag"};
-    VkShaderStageFlagBits StageTypes[OBJECT_SHADER_STAGE_COUNT] = {VK_SHADER_STAGE_VERTEX_BIT, VK_SHADER_STAGE_FRAGMENT_BIT};
+    char StageTypeStrings[MaterialShaderStageCount][5] = {"vert", "frag"};
+    VkShaderStageFlagBits StageTypes[MaterialShaderStageCount] = {VK_SHADER_STAGE_VERTEX_BIT, VK_SHADER_STAGE_FRAGMENT_BIT};
 
-    for (UInt32 i = 0; i < OBJECT_SHADER_STAGE_COUNT; i++) {
-        if (!CreateShaderModule(Context, BUILTIN_SHADER_NAME_OBJECT, StageTypeStrings[i], StageTypes[i], i, Shader->Stages)) {
-            FLERROR("Unable to create %s shader module for '%s'.", StageTypeStrings[i], BUILTIN_SHADER_NAME_OBJECT);
+    for (UInt32 i = 0; i < MaterialShaderStageCount; ++i) {
+        if (!CreateShaderModule(Context, BuiltinShaderNameMaterial, StageTypeStrings[i], StageTypes[i], i, Shader->Stages)) {
+            FLERROR("Unable to create %s shader module for '%s'.", StageTypeStrings[i], BuiltinShaderNameMaterial);
             return false;
         }
     }
@@ -51,16 +55,17 @@ Bool8 VulkanObjectShaderCreate(VulkanContext* Context, VulkanObjectShader* Shade
 
     VK_CHECK(vkCreateDescriptorPool(Context->Device.LogicalDevice, &GlobalPoolInfo, Context->Allocator, &Shader->GlobalDescriptorPool));
 
+    Shader->SamplerUses[0] = TEXTURE_USE_MAP_DIFFUSE;
+
     // Local Descriptors
-    const UInt32 LoclaSamplerCount = 1;
-    VkDescriptorType DescriptorTypes[VULKAN_OBJECT_SHADER_DESCRIPTOR_COUNT] = {
+    VkDescriptorType DescriptorTypes[VulkanMaterialShaderDescriptorCount] = {
         VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
         VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
     };
 
-    VkDescriptorSetLayoutBinding Bindings[VULKAN_OBJECT_SHADER_DESCRIPTOR_COUNT];
-    FMZeroMemory(&Bindings, sizeof(VkDescriptorSetLayoutBinding) * VULKAN_OBJECT_SHADER_DESCRIPTOR_COUNT);
-    for (UInt32 i = 0; i < VULKAN_OBJECT_SHADER_DESCRIPTOR_COUNT; i++)
+    VkDescriptorSetLayoutBinding Bindings[VulkanMaterialShaderDescriptorCount];
+    FMZeroMemory(&Bindings, sizeof(VkDescriptorSetLayoutBinding) * VulkanMaterialShaderDescriptorCount);
+    for (UInt32 i = 0; i < VulkanMaterialShaderDescriptorCount; ++i)
     {
         Bindings[i].binding = i;
         Bindings[i].descriptorCount = 1;
@@ -76,16 +81,17 @@ Bool8 VulkanObjectShaderCreate(VulkanContext* Context, VulkanObjectShader* Shade
 
     VkDescriptorPoolSize ObjectPoolSizes[2];
     ObjectPoolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    ObjectPoolSizes[0].descriptorCount = VULKAN_OBJECT_MAX_COUNT;
+    ObjectPoolSizes[0].descriptorCount = VulkanMaxMaterialCount;
 
     ObjectPoolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    ObjectPoolSizes[1].descriptorCount = LoclaSamplerCount * VULKAN_OBJECT_MAX_COUNT;
+    ObjectPoolSizes[1].descriptorCount = VulkanMaterialShaderSamplerCount * VulkanMaxMaterialCount;
 
     VkDescriptorPoolCreateInfo ObjectPoolInfo = {0};
     ObjectPoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     ObjectPoolInfo.poolSizeCount = 2;
     ObjectPoolInfo.pPoolSizes = ObjectPoolSizes;
-    ObjectPoolInfo.maxSets = VULKAN_OBJECT_MAX_COUNT;
+    ObjectPoolInfo.maxSets = VulkanMaxMaterialCount;
+    ObjectPoolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 
     VK_CHECK(vkCreateDescriptorPool(Context->Device.LogicalDevice, &ObjectPoolInfo, Context->Allocator, &Shader->ObjectDescriptorPool));
 
@@ -118,7 +124,7 @@ Bool8 VulkanObjectShaderCreate(VulkanContext* Context, VulkanObjectShader* Shade
         sizeof(Vec3),
         sizeof(Vec2)
     };
-    for (UInt32 i = 0; i < AttributeCount; i++)
+    for (UInt32 i = 0; i < AttributeCount; ++i)
     {
         AttributeDescriptions[i].binding = 0;
         AttributeDescriptions[i].location = i;
@@ -135,9 +141,9 @@ Bool8 VulkanObjectShaderCreate(VulkanContext* Context, VulkanObjectShader* Shade
     };
 
 
-    VkPipelineShaderStageCreateInfo StageCreateInfos[OBJECT_SHADER_STAGE_COUNT];
+    VkPipelineShaderStageCreateInfo StageCreateInfos[MaterialShaderStageCount];
     FMZeroMemory(StageCreateInfos, sizeof(StageCreateInfos));
-    for (UInt32 i = 0; i < OBJECT_SHADER_STAGE_COUNT; i++)
+    for (UInt32 i = 0; i < MaterialShaderStageCount; ++i)
     {
         StageCreateInfos[i].sType = Shader->Stages[i].ShaderStageCreateInfo.sType;
         StageCreateInfos[i] = Shader->Stages[i].ShaderStageCreateInfo;
@@ -150,7 +156,7 @@ Bool8 VulkanObjectShaderCreate(VulkanContext* Context, VulkanObjectShader* Shade
         AttributeDescriptions,
         DescriptorSetLayoutCount,
         Layouts,
-        OBJECT_SHADER_STAGE_COUNT,
+        MaterialShaderStageCount,
         StageCreateInfos,
         Viewport,
         Scissor,
@@ -162,11 +168,12 @@ Bool8 VulkanObjectShaderCreate(VulkanContext* Context, VulkanObjectShader* Shade
         return false;
     }
 
+    UInt32 DeviceLocalBits = Context->Device.SupportsDeviceLocalHostVisible ? VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT : 0;
     if (!VulkanBufferCreate(
         Context,
         sizeof(GlobalUniformObject) * 3,
         VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | DeviceLocalBits,
         true,
         &Shader->GlobalUniformBuffer))
         {
@@ -190,9 +197,9 @@ Bool8 VulkanObjectShaderCreate(VulkanContext* Context, VulkanObjectShader* Shade
 
     if (!VulkanBufferCreate(
         Context,
-        sizeof(LocalUniformObject), //* MAX_MATERIAL_INSTANCE_COUNT
+        sizeof(MaterialUniformObject) * VulkanMaxMaterialCount, //* MAX_MATERIAL_INSTANCE_COUNT
         VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
         true,
         &Shader->ObjectUniformBuffer))
         {
@@ -203,7 +210,7 @@ Bool8 VulkanObjectShaderCreate(VulkanContext* Context, VulkanObjectShader* Shade
     return true;
 }
 
-void VulkanObjectShaderDestroy(VulkanContext* Context, struct VulkanObjectShader* Shader) 
+void VulkanMaterialShaderDestroy(VulkanContext* Context, struct VulkanMaterialShader* Shader) 
 {
     VkDevice LogicalDevice = Context->Device.LogicalDevice;
 
@@ -221,20 +228,20 @@ void VulkanObjectShaderDestroy(VulkanContext* Context, struct VulkanObjectShader
     vkDestroyDescriptorSetLayout(LogicalDevice, Shader->GlobalDescriptorSetLayout, Context->Allocator);
 
     // Destroy Shader Modules
-    for (UInt32 i = 0; i < OBJECT_SHADER_STAGE_COUNT; i++)
+    for (UInt32 i = 0; i < MaterialShaderStageCount; ++i)
     {
         vkDestroyShaderModule(Context->Device.LogicalDevice, Shader->Stages[i].Handle, Context->Allocator);
         Shader->Stages[i].Handle = 0;
     }
 }
 
-void VulkanObjectShaderUse(VulkanContext* Context, struct VulkanObjectShader* Shader) 
+void VulkanMaterialShaderUse(VulkanContext* Context, struct VulkanMaterialShader* Shader) 
 {
     UInt32 ImageIndex = Context->ImageIndex;
     VulkanPipelineBind(&Context->GraphicsCommandBuffers[ImageIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, Shader->Pipeline);
 }
 
-void VulkanObjectShaderUpdateGlobalState(VulkanContext* Context, struct VulkanObjectShader* Shader, Float32 DeltaTime)
+void VulkanMaterialShaderUpdateGlobalState(VulkanContext* Context, struct VulkanMaterialShader* Shader, Float32 DeltaTime)
 {
     (void)DeltaTime;
     UInt32 ImageIndex = Context->ImageIndex;
@@ -265,35 +272,37 @@ void VulkanObjectShaderUpdateGlobalState(VulkanContext* Context, struct VulkanOb
     vkCmdBindDescriptorSets(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Shader->Pipeline.PipelineLayout, 0, 1, &GlobalDescriptors, 0, 0);
 }
 
-void VulkanObjectShaderUpdateObject(VulkanContext* Context, struct VulkanObjectShader* Shader, GeometryRenderData* Data)
+void VulkanMaterialShaderUpdateObject(VulkanContext* Context, struct VulkanMaterialShader* Shader, GeometryRenderData Data)
 {
     UInt32 ImageIndex = Context->ImageIndex;
     VkCommandBuffer CommandBuffer = Context->GraphicsCommandBuffers[ImageIndex].Handle;
 
-    vkCmdPushConstants(CommandBuffer, Shader->Pipeline.PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Mat4), &Data->Model);
+    vkCmdPushConstants(CommandBuffer, Shader->Pipeline.PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Mat4), &Data.Model);
 
-    VulkanObjectShaderObjectState* ObjectState = &Shader->ObjectStates[Data->ObjectID];
-    VkDescriptorSet ObjectDescriptorSet = ObjectState->DescriptorSets[ImageIndex];
+    VulkanMaterialShaderInstanceState* InstanceState = &Shader->InstanceStates[Data.Material->InternalID];
+    VkDescriptorSet ObjectDescriptorSet = InstanceState->DescriptorSets[ImageIndex];
 
     // TODO: If needs update
-    VkWriteDescriptorSet DescriptorWrites[VULKAN_OBJECT_SHADER_DESCRIPTOR_COUNT];
-    FMZeroMemory(DescriptorWrites, sizeof(VkWriteDescriptorSet) * VULKAN_OBJECT_SHADER_DESCRIPTOR_COUNT);
+    VkWriteDescriptorSet DescriptorWrites[VulkanMaterialShaderDescriptorCount];
+    FMZeroMemory(DescriptorWrites, sizeof(VkWriteDescriptorSet) * VulkanMaterialShaderDescriptorCount);
     UInt32 DescriptorCount = 0;
     UInt32 DescriptorIndex = 0;
 
-    UInt32 Range = sizeof(LocalUniformObject);
-    UInt64 Offset = sizeof(LocalUniformObject) * Data->ObjectID;
-    LocalUniformObject LBO;
+    UInt32 Range = sizeof(MaterialUniformObject);
+    UInt64 Offset = sizeof(MaterialUniformObject) * Data.Material->InternalID;
+    MaterialUniformObject LBO;
 
-    // TODO: Diffuse color from Material
-    static Float32 Accumulator = 0.0f;
-    Accumulator += Context->FrameDeltaTime;
-    Float32 S = (Fsin(Accumulator) + 1.0f) / 2.0f;
-    LBO.DiffuseColor = Vec4Create(S, S, S, 1.0f);
+    // // TODO: Diffuse color from Material
+    // static Float32 Accumulator = 0.0f;
+    // Accumulator += Context->FrameDeltaTime;
+    // Float32 S = (Fsin(Accumulator) + 1.0f) / 2.0f;
+    // LBO.BaseColor = Vec4Create(S, S, S, 1.0f);
+    LBO.BaseColor = Data.Material->BaseColor;
 
     VulkanBufferLoadData(Context, &Shader->ObjectUniformBuffer, Offset, Range, 0, &LBO);
 
-    if (ObjectState->DescriptorStates[DescriptorIndex].Generations[ImageIndex] == InvalidID)
+    UInt32* GlobalUBOGeneration = &InstanceState->DescriptorStates[DescriptorIndex].Generations[ImageIndex];
+    if (*GlobalUBOGeneration == InvalidID || *GlobalUBOGeneration != Data.Material->Generation)
     {
         VkDescriptorBufferInfo BufferInfo;
         BufferInfo.buffer = Shader->ObjectUniformBuffer.Handle;
@@ -310,20 +319,39 @@ void VulkanObjectShaderUpdateObject(VulkanContext* Context, struct VulkanObjectS
         DescriptorWrites[DescriptorCount] = Descriptor;
         DescriptorCount++;
 
-        ObjectState->DescriptorStates[DescriptorIndex].Generations[ImageIndex] = 1;
+        *GlobalUBOGeneration = Data.Material->Generation;
     }
 
     DescriptorIndex++;
 
-    // TODO: Samplers
+    // Samplers
     const UInt64 SamplerCount = 1;
     VkDescriptorImageInfo ImageInfos[1];
     for (UInt32 SamplerIndex = 0; SamplerIndex < SamplerCount; SamplerIndex++)
     {
-        Texture* T = Data->Textures[SamplerIndex];
-        UInt64* DescriptorGeneration = &ObjectState->DescriptorStates[DescriptorIndex].Generations[ImageIndex];
+        TextureUse Use = Shader->SamplerUses[SamplerIndex];
+        Texture* T = 0;
+        switch (Use)
+        {
+            case TEXTURE_USE_MAP_DIFFUSE:
+                T = Data.Material->BaseColorMap.Texture;
+                break;
+            default:
+            FLERROR("Unable to bind sampler to unknown use");
+            return;
+        }
+        UInt32* DescriptorGeneration = &InstanceState->DescriptorStates[DescriptorIndex].Generations[ImageIndex];
+        UInt32* DescriptorID = &InstanceState->DescriptorStates[DescriptorIndex].IDs[ImageIndex];
 
-        if (T && (*DescriptorGeneration != T->Generation || *DescriptorGeneration == InvalidID))
+        // If texture is NOT loaded, use default
+        if (T->Generation == InvalidID)
+        {
+            T = TextureSystemGetDefaultTexture();
+
+            *DescriptorGeneration = InvalidID;
+        }
+
+        if (T && (*DescriptorGeneration != T->Generation || *DescriptorGeneration == InvalidID || *DescriptorID != T->ID || *DescriptorID == InvalidID))
         {
             VulkanTextureData* InternalData = (VulkanTextureData*)T->InternalData;
 
@@ -345,9 +373,10 @@ void VulkanObjectShaderUpdateObject(VulkanContext* Context, struct VulkanObjectS
 
             if (T->Generation != InvalidID)
             {
-                DescriptorGeneration = &T->Generation;
+                *DescriptorGeneration = T->Generation;
+                *DescriptorID = T->ID;
             }
-
+            
             DescriptorIndex++;
         }
     }
@@ -360,18 +389,18 @@ void VulkanObjectShaderUpdateObject(VulkanContext* Context, struct VulkanObjectS
     vkCmdBindDescriptorSets(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Shader->Pipeline.PipelineLayout, 1, 1, &ObjectDescriptorSet, 0, 0);
 }
 
-Bool8 VulkanObjectShaderAcquireResources(VulkanContext* Context, struct VulkanObjectShader* Shader, UInt64* ObjectID)
+Bool8 VulkanMaterialShaderAcquireResources(VulkanContext* Context, struct VulkanMaterialShader* Shader, Material* Material)
 {
-    *ObjectID = Shader->ObjectUniformBufferIndex;
+    Material->InternalID = Shader->ObjectUniformBufferIndex;
     Shader->ObjectUniformBufferIndex++;
 
-    UInt32 CurrentObjectID = *ObjectID;
-    VulkanObjectShaderObjectState* ObjectState = &Shader->ObjectStates[CurrentObjectID];
-    for (UInt32 i = 0; i < VULKAN_OBJECT_SHADER_DESCRIPTOR_COUNT; i++)
+    VulkanMaterialShaderInstanceState* ObjectState = &Shader->InstanceStates[Material->InternalID];
+    for (UInt32 i = 0; i < VulkanMaterialShaderDescriptorCount; ++i)
     {
-        for (size_t j = 0; j < 3; j++)
+        for (UInt32 j = 0; j < 3; j++)
         {
             ObjectState->DescriptorStates[i].Generations[j] = InvalidID;
+            ObjectState->DescriptorStates[i].IDs[j] = InvalidID;
         }
         
     }
@@ -398,25 +427,28 @@ Bool8 VulkanObjectShaderAcquireResources(VulkanContext* Context, struct VulkanOb
     return true;
 }
 
-void VulkanObjectShaderReleaseResources(VulkanContext* Context, struct VulkanObjectShader* Shader, UInt64 ObjectID)
+void VulkanMaterialShaderReleaseResources(VulkanContext* Context, struct VulkanMaterialShader* Shader, Material* Material)
 {
-    VulkanObjectShaderObjectState* ObjectState = &Shader->ObjectStates[ObjectID];
+    VulkanMaterialShaderInstanceState* InstanceState = &Shader->InstanceStates[Material->InternalID];
 
     const UInt32 DescriptorSetCount = 3;
 
-    VkResult Result = vkFreeDescriptorSets(Context->Device.LogicalDevice, Shader->ObjectDescriptorPool, DescriptorSetCount, ObjectState->DescriptorSets);
+    VkResult Result = vkFreeDescriptorSets(Context->Device.LogicalDevice, Shader->ObjectDescriptorPool, DescriptorSetCount, InstanceState->DescriptorSets);
     if (Result != VK_SUCCESS)
     {
         FLERROR("Error freeing object shader descriptor sets");
     }
 
-    for (UInt64 i = 0; i < VULKAN_OBJECT_SHADER_DESCRIPTOR_COUNT; i++)
+    for (UInt32 i = 0; i < VulkanMaterialShaderDescriptorCount; ++i)
     {
-        for (UInt64 j = 0; j < VULKAN_OBJECT_MAX_COUNT; j++)
+        for (UInt32 j = 0; j < VulkanMaxMaterialCount; j++)
         {
-            ObjectState->DescriptorStates[i].Generations[j] = InvalidID;
+            InstanceState->DescriptorStates[i].Generations[j] = InvalidID;
+            InstanceState->DescriptorStates[i].IDs[j] = InvalidID;
         }
         
     }
+
+    Material->InternalID = InvalidID;
     
 }

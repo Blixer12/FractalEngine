@@ -23,7 +23,7 @@
 #include "VulkanPlatform.h"
 
 // Shaders
-#include "Shaders/VulkanObjectShader.h"
+#include "Shaders/VulkanMaterialShader.h"
 
 static VulkanContext Context;
 static UInt32 CachedFramebufferWidth = 0;
@@ -56,10 +56,8 @@ void UploadDataRange(VulkanContext* Context, VkCommandPool Pool, VkFence Fence, 
 }
 
 
-Bool8 VulkanRendererInitialize(CrystalBackend* Backend, const char* AppName) {
-    
-    (void)Backend;
-
+Bool8 VulkanRendererInitialize(CrystalBackend* Backend, const char* AppName) 
+{
     // Function Pointers
     Context.FindMemoryIndex = FindMemoryIndex;
 
@@ -89,7 +87,7 @@ Bool8 VulkanRendererInitialize(CrystalBackend* Backend, const char* AppName) {
 
     FLDEBUG("Required Extensions:");
     UInt32 Length = VectorSize(RequiredExtensions);
-    for (UInt32 i = 0; i < Length; i++)
+    for (UInt32 i = 0; i < Length; ++i)
     {
         FLDEBUG(RequiredExtensions[i]);
     }
@@ -117,7 +115,7 @@ Bool8 VulkanRendererInitialize(CrystalBackend* Backend, const char* AppName) {
         FLINFO("Searching for layer: %s...", RequiredValidationLayers[i]);
         Bool8 Found = false;
         for (UInt32 j = 0; j < AvailableLayerCount; ++j) {
-            if (StringCompare(RequiredValidationLayers[i], AvailableLayers[j].layerName)) {
+            if (StringsEqual(RequiredValidationLayers[i], AvailableLayers[j].layerName)) {
                 Found = true;
                 FLINFO("Found.");
                 break;
@@ -225,12 +223,12 @@ Bool8 VulkanRendererInitialize(CrystalBackend* Backend, const char* AppName) {
     VkSemaphoreCreateInfo SemaphoreCreateInfo = {0};
     SemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-    for (UInt32 i = 0; i < Context.Swapchain.MaxFramesInFlight; i++) {
+    for (UInt32 i = 0; i < Context.Swapchain.MaxFramesInFlight; ++i) {
         vkCreateSemaphore(Context.Device.LogicalDevice, &SemaphoreCreateInfo, Context.Allocator, &Context.ImageAvailableSemaphores[i]);
         VulkanFenceCreate(&Context, true, &Context.InFlightFences[i]);
     }
 
-    for (UInt32 i = 0; i < Context.Swapchain.ImageCount; i++)
+    for (UInt32 i = 0; i < Context.Swapchain.ImageCount; ++i)
     {
         vkCreateSemaphore(Context.Device.LogicalDevice, &SemaphoreCreateInfo, Context.Allocator, &Context.QueueCompleteSemaphores[i]);
     }
@@ -241,7 +239,7 @@ Bool8 VulkanRendererInitialize(CrystalBackend* Backend, const char* AppName) {
     }
 
     // Create Builtin Shaders
-    if (!VulkanObjectShaderCreate(&Context, &Context.ObjectShader))
+    if (!VulkanMaterialShaderCreate(&Context, &Context.MaterialShader))
     {
         FLERROR("Error loading Builtin Basic Lighting Shader.");
         return false;
@@ -281,14 +279,6 @@ Bool8 VulkanRendererInitialize(CrystalBackend* Backend, const char* AppName) {
 
     UploadDataRange(&Context, Context.Device.GraphicsCommandPool, 0, Context.Device.GraphicsQueue, &Context.ObjectVertexBuffer, 0, sizeof(Vertex3D) * VertexCount, Vertices);
     UploadDataRange(&Context, Context.Device.GraphicsCommandPool, 0, Context.Device.GraphicsQueue, &Context.ObjectIndexBuffer, 0, sizeof(UInt32) * IndexCount, Indices);
-
-    UInt64 ObjectID = 0;
-    if (!VulkanObjectShaderAcquireResources(&Context, &Context.ObjectShader, &ObjectID))
-    {
-        FLERROR("Failed to acquire Shader Resources");
-        return false;
-    }
-
     // TODO: End Temp Code
 
     FLINFO("Vulkan renderer initialized successfully");
@@ -304,9 +294,9 @@ void VulkanRendererShutdown(CrystalBackend* Backend)
     VulkanBufferDestroy(&Context, &Context.ObjectVertexBuffer);
     VulkanBufferDestroy(&Context, &Context.ObjectIndexBuffer);
 
-    VulkanObjectShaderDestroy(&Context, &Context.ObjectShader);
+    VulkanMaterialShaderDestroy(&Context, &Context.MaterialShader);
    
-    for (UInt32 i = 0; i < Context.Swapchain.MaxFramesInFlight; i++) {
+    for (UInt32 i = 0; i < Context.Swapchain.MaxFramesInFlight; ++i) {
         if (Context.ImageAvailableSemaphores[i]) {
             vkDestroySemaphore(
                 Context.Device.LogicalDevice,
@@ -316,7 +306,7 @@ void VulkanRendererShutdown(CrystalBackend* Backend)
         VulkanFenceDestroy(&Context, &Context.InFlightFences[i]);
     }
 
-    for (UInt32 i = 0; i < Context.Swapchain.ImageCount; i++) {
+    for (UInt32 i = 0; i < Context.Swapchain.ImageCount; ++i) {
         if (Context.QueueCompleteSemaphores[i]) {
             vkDestroySemaphore(Context.Device.LogicalDevice, Context.QueueCompleteSemaphores[i], Context.Allocator);
         }
@@ -333,7 +323,7 @@ void VulkanRendererShutdown(CrystalBackend* Backend)
 
 
 
-    for (UInt32 i = 0; i < Context.Swapchain.ImageCount; i++)
+    for (UInt32 i = 0; i < Context.Swapchain.ImageCount; ++i)
     {
         if (Context.GraphicsCommandBuffers[i].Handle)
         {
@@ -347,7 +337,7 @@ void VulkanRendererShutdown(CrystalBackend* Backend)
     VectorDestroy(Context.GraphicsCommandBuffers);
     Context.GraphicsCommandBuffers = 0;
 
-    for (UInt32 i = 0; i < Context.Swapchain.ImageCount; i++)
+    for (UInt32 i = 0; i < Context.Swapchain.ImageCount; ++i)
     {
         VulkanFramebufferDestroy(&Context, &Context.Swapchain.Framebuffers[i]);
     }
@@ -481,14 +471,14 @@ void VullkanRendererUpdateGlobalState(Mat4 Projection, Mat4 View, Vec3 ViewPosit
     (void)AmbientColor;
     (void)Mode;
 
-    VulkanObjectShaderUse(&Context, &Context.ObjectShader);
+    VulkanMaterialShaderUse(&Context, &Context.MaterialShader);
 
-    Context.ObjectShader.GlobalUBO.Projection = Projection;
-    Context.ObjectShader.GlobalUBO.View = View;
+    Context.MaterialShader.GlobalUBO.Projection = Projection;
+    Context.MaterialShader.GlobalUBO.View = View;
 
     // TODO: Other Properties
 
-    VulkanObjectShaderUpdateGlobalState(&Context, &Context.ObjectShader, Context.FrameDeltaTime);
+    VulkanMaterialShaderUpdateGlobalState(&Context, &Context.MaterialShader, Context.FrameDeltaTime);
 }
 
 Bool8 VulkanRendererEndFrame(CrystalBackend* Backend, Float32 DeltaTime)
@@ -554,10 +544,10 @@ Bool8 VulkanRendererEndFrame(CrystalBackend* Backend, Float32 DeltaTime)
 
 void VulkanRendererUpdateObject(GeometryRenderData* Data)
 {
-    VulkanObjectShaderUpdateObject(&Context, &Context.ObjectShader, Data);
+    VulkanMaterialShaderUpdateObject(&Context, &Context.MaterialShader, *Data);
 
     // TODO: Temporary Code
-    VulkanObjectShaderUse(&Context, &Context.ObjectShader);
+    VulkanMaterialShaderUse(&Context, &Context.MaterialShader);
 
     VulkanCommandBuffer* CommandBuffer = &Context.GraphicsCommandBuffers[Context.ImageIndex];
 
@@ -570,20 +560,12 @@ void VulkanRendererUpdateObject(GeometryRenderData* Data)
     // TODO: Temporary Code
 }
 
-void VulkanRendererCreateTexture(const char* Name, Bool8 AutoRelease, Int32 Width, Int32 Height, Int32 ChannelCount, const UInt8* Pixels, Bool8 HasTransparency, Texture* Texture)
+void VulkanRendererCreateTexture(const UInt8* Pixels, Texture* Texture)
 {
-    (void)Name;
-    (void)AutoRelease;
-
-    Texture->Width = Width;
-    Texture->Height = Height;
-    Texture->ChannelCount = ChannelCount;
-    Texture->Generation = InvalidID;
-
     // TODO: Allocator for this bro
     Texture->InternalData = (VulkanTextureData*)FMAllocate(sizeof(VulkanTextureData), MEMORY_TAG_TEXTURE);
     VulkanTextureData* Data = (VulkanTextureData*)Texture->InternalData;
-    VkDeviceSize ImageSize = Width * Height * ChannelCount;
+    VkDeviceSize ImageSize = Texture->Width * Texture->Height * Texture->ChannelCount;
 
     // NOTE: assumes 8 bits p[er channel
     VkFormat ImageFormat = VK_FORMAT_R8G8B8A8_UNORM;
@@ -599,8 +581,8 @@ void VulkanRendererCreateTexture(const char* Name, Bool8 AutoRelease, Int32 Widt
     VulkanImageCreate(
         &Context,
         VK_IMAGE_TYPE_2D,
-        Width,
-        Height,
+        Texture->Width,
+        Texture->Height,
         ImageFormat,
         VK_IMAGE_TILING_OPTIMAL,
         VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
@@ -665,7 +647,6 @@ void VulkanRendererCreateTexture(const char* Name, Bool8 AutoRelease, Int32 Widt
         return;
     }
 
-    Texture->HasTransparency = HasTransparency;
     Texture->Generation++;
 }
 
@@ -675,13 +656,49 @@ void VulkanRendererDestroyTexture(Texture* Texture)
 
     VulkanTextureData* Data = (VulkanTextureData*)Texture->InternalData;
 
-    VulkanImageDestroy(&Context, &Data->Image);
-    FMZeroMemory(&Data->Image, sizeof(VulkanImage));
-    vkDestroySampler(Context.Device.LogicalDevice, Data->Sampler, Context.Allocator);
-    Data->Sampler = 0;
+    if (Data)
+    {
+        VulkanImageDestroy(&Context, &Data->Image);
+        FMZeroMemory(&Data->Image, sizeof(VulkanImage));
+        vkDestroySampler(Context.Device.LogicalDevice, Data->Sampler, Context.Allocator);
+        Data->Sampler = 0;
+        
+        FMFree(Texture->InternalData, sizeof(VulkanTextureData), MEMORY_TAG_TEXTURE);
+    }
 
-    FMFree(Texture->InternalData, sizeof(VulkanTextureData), MEMORY_TAG_TEXTURE);
     FMZeroMemory(Texture, sizeof(struct Texture));
+}
+
+Bool8 VulkanRendererCreateMaterial(struct Material* Material)
+{
+    if (Material)
+    {
+        if (!VulkanMaterialShaderAcquireResources(&Context, &Context.MaterialShader, Material))
+        {
+            FLERROR("VulkanRendererCreateMaterial - failed to acquire shader resources");
+            return false;
+        }
+
+        FLTRACE("Crystal: Material Created");
+        return true;
+    }
+
+    FLERROR("VulkanRendererCreateMaterial called with nullptr, creation failed");
+    return false;
+}
+
+void VulkanRendererDestroyMaterial(struct Material* Material)
+{
+    if (Material) {
+        if (Material->InternalID != InvalidID) {
+            VulkanMaterialShaderReleaseResources(&Context, &Context.MaterialShader, Material);
+        } else {
+            FLWARN("VulkanRendererDestroyMaterial called with InternalID = InvalidId. Nothing was done");
+        }
+    } else {
+        FLWARN("VulkanRendererDestroyMaterial called with nullptr, Nothing was done");
+    }
+
 }
 
 VKAPI_ATTR VkBool32 VKAPI_CALL VkDebugCallback(
@@ -714,7 +731,7 @@ Int32 FindMemoryIndex(UInt32 TypeFilter, UInt32 PropertyFlags)
     VkPhysicalDeviceMemoryProperties MemoryProperties = {0};
     vkGetPhysicalDeviceMemoryProperties(Context.Device.PhysicalDevice, &MemoryProperties);
 
-    for (UInt32 i = 0; i < MemoryProperties.memoryTypeCount; i++)
+    for (UInt32 i = 0; i < MemoryProperties.memoryTypeCount; ++i)
     {
         if (TypeFilter & (1 << i) && (MemoryProperties.memoryTypes[i].propertyFlags & PropertyFlags) == PropertyFlags)
         {
@@ -732,13 +749,13 @@ void CreateCommandBuffers(CrystalBackend* Backend)
 
     if (!Context.GraphicsCommandBuffers) {
         Context.GraphicsCommandBuffers = VectorReserve(VulkanCommandBuffer, Context.Swapchain.ImageCount);
-        for (UInt32 i = 0; i < Context.Swapchain.ImageCount; i++)
+        for (UInt32 i = 0; i < Context.Swapchain.ImageCount; ++i)
         {
             FMZeroMemory(&Context.GraphicsCommandBuffers[i], sizeof(VulkanCommandBuffer));
         }
     }
 
-    for (UInt32 i = 0; i < Context.Swapchain.ImageCount; i++) {
+    for (UInt32 i = 0; i < Context.Swapchain.ImageCount; ++i) {
         if (Context.GraphicsCommandBuffers[i].Handle) {
             VulkanCommandBufferFree(
                 &Context,
@@ -828,7 +845,7 @@ Bool8 RecreateSwapchain(CrystalBackend* Backend)
 
 void RegenerateFramebuffers(CrystalBackend* Backend, VulkanSwapchain* Swapchain, VulkanRenderpass* Renderpass) {
     (void)Backend;
-    for (UInt32 i = 0; i < Swapchain->ImageCount; i++) {
+    for (UInt32 i = 0; i < Swapchain->ImageCount; ++i) {
         UInt32 AttachmentCount = 2;
         VkImageView Attachments[] = {
             Swapchain->Views[i],

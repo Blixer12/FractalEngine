@@ -1,0 +1,8 @@
+# Material file example? looks like TOML
+
+# Material file example i guess
+
+Version=0.1
+Name=TestMaterial
+BaseColor=1.0 1.0 1.0 1.0
+BaseColorMapName=WhiteStone

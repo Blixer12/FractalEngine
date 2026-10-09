@@ -267,7 +267,7 @@ void Create(VulkanContext* Context, UInt32 Width, UInt32 Height, VulkanSwapchain
     }
     VK_CHECK(vkGetSwapchainImagesKHR(Context->Device.LogicalDevice, Swapchain->Handle, &Swapchain->ImageCount, Swapchain->Images));
 
-    for (UInt32 i = 0; i < Swapchain->ImageCount; i++)
+    for (UInt32 i = 0; i < Swapchain->ImageCount; ++i)
     {
         VkImageViewCreateInfo ViewInfo = {0};
         ViewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -314,7 +314,7 @@ void Destroy(VulkanContext* Context, VulkanSwapchain* Swapchain)
 
     VulkanImageDestroy(Context, &Swapchain->DepthAttachment);
     
-    for (UInt32 i = 0; i < Swapchain->ImageCount; i++)
+    for (UInt32 i = 0; i < Swapchain->ImageCount; ++i)
     {
         vkDestroyImageView(Context->Device.LogicalDevice, Swapchain->Views[i], Context->Allocator);
     }

@@ -15,11 +15,14 @@ static LogState* StatePtr;
 
 void AppendToLogFile(const char* Message)
 {
-    UInt64 Length = StringLength(Message);
-    UInt64 Written = 0;
-    if (!FilesystemWrite(&StatePtr->LogFileHandle, Length, Message, &Written))
+    if (StatePtr && StatePtr->LogFileHandle.IsValid)
     {
-        PlatformConsoleWriteError("[ERROR]: Failed writing to Console.log", LOG_ERROR);
+        UInt64 Length = StringLength(Message);
+        UInt64 Written = 0;
+        if (!FilesystemWrite(&StatePtr->LogFileHandle, Length, Message, &Written))
+        {
+            PlatformConsoleWriteError("[ERROR]: Failed writing to Console.log", LOG_ERROR);
+        }
     }
 }
 

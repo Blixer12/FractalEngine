@@ -1,7 +1,9 @@
 #include "Game.h"
 
 #include <Core/Logger.h>
+
 #include <Core/Input.h>
+#include <Core/Event.h>
 
 #include <Math/FMath.h>
 
@@ -56,8 +58,14 @@ Bool8 GameInitialize(Game* Instance)
 
 Bool8 GameUpdate(Game* Instance, Float32 DeltaTime) 
 {
-    (void)Instance;
-    (void)DeltaTime;
+    // NOTE: Temporary
+    if (InputIsKeyUp(TKey) && InputWasKeyDown(TKey))
+    {
+        FLDEBUG("Swapping texture!");
+        EventContext Context = {0};
+        EventFire(EVENT_DEBUG0, Instance, Context);
+    }
+    // NOTE: End temporary
 
     GameState* State = (GameState*)Instance->State;
 

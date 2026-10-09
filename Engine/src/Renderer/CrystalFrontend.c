@@ -8,6 +8,14 @@
 
 #include "Resources/ResourceDef.h"
 
+#include "Systems/TextureSystem.h"
+#include "Systems/MaterialSystem.h"
+
+// NOTE: Temporary
+#include "Core/FString.h"
+#include "Core/Event.h"
+// NOTE: End temporary
+
 typedef struct CrystalState {
     CrystalBackend Backend;
     Mat4 Projection;
@@ -15,10 +23,45 @@ typedef struct CrystalState {
     Float32 NearClip;
     Float32 FarClip;
 
-    Texture DefaultTexture;
+    // NOTE: Temporary
+    Material* TestMaterial;
+    // NOTE: End temporary
 } CrystalState;
 
 static CrystalState* StatePtr;
+
+Bool8 EventOnDebugEvent(UInt16 Code, void* Sender, void* Reciever, EventContext Data)
+{
+    (void)Code;
+    (void)Sender;
+    (void)Reciever;
+    (void)Data;
+
+    const char* Names[4] = {
+        "Cobblestone",
+        "Paving",
+        "Paving2",
+        "WhiteStone"};
+    static Int8 Choice = 3;
+
+    const char* OldName = Names[Choice];
+
+    Choice++;
+    Choice %= 4;
+
+    // Acquire the new texture
+    StatePtr->TestMaterial->BaseColorMap.Texture = TextureSystemAcquire(Names[Choice], true);
+    if (!StatePtr->TestMaterial->BaseColorMap.Texture)
+    {
+        FLWARN("EventOnDebugEvent - No Texture! using default!");
+        StatePtr->TestMaterial->BaseColorMap.Texture = TextureSystemGetDefaultTexture();
+    }
+
+    TextureSystemRelease(OldName);
+    return true;
+}
+
+// NOTE: End temporary
 
 Bool8 CrystalInitialize(UInt64* MemoryRequirement, void* State, const char* AppName)
 {
@@ -27,6 +70,10 @@ Bool8 CrystalInitialize(UInt64* MemoryRequirement, void* State, const char* AppN
         return true;
     }
     StatePtr = State;
+
+    // NOTE: Temporary
+    EventRegister(EVENT_DEBUG0, StatePtr, EventOnDebugEvent);
+    // NOTE: End temporary
 
     //TODO: Make this Configurable
     CrystalBackendCreate(CRYSTAL_BACKEND_TYPE_VULKAN, &StatePtr->Backend);
@@ -40,65 +87,25 @@ Bool8 CrystalInitialize(UInt64* MemoryRequirement, void* State, const char* AppN
 
     StatePtr->NearClip = 0.001f;
     StatePtr->FarClip = 1000.0f;
-    StatePtr->Projection = Mat4Perspective(DegreesToRadians(70.0f), 1280/720.0f, StatePtr->NearClip, StatePtr->FarClip);
+    StatePtr->Projection = Mat4Perspective(DegreesToRadians(45.0f), 1280/720.0f, StatePtr->NearClip, StatePtr->FarClip);
 
     Vec3 Position = {.x = 0.0f, .y =0.0f, .z = 30.0f}; // 30.0f
     StatePtr->View = Mat4Translation(Position);
     StatePtr->View = Mat4Inverse(StatePtr->View);
-
-    // NOTE: Creates a default texture, 256x256 checkerboard on the fly!
-    // Eliminates Asset Dependency!
-    
-    FLDEBUG("Creating Default Texture");
-    constexpr UInt32 TextureDimensions = 256;
-    constexpr UInt32 Channels = 4;
-    constexpr UInt32 PixelCount = TextureDimensions * TextureDimensions;
-    UInt8 Pixels[PixelCount * Channels];
-
-    FMSetMemory(Pixels, 255, sizeof(UInt8) * PixelCount * Channels);
-
-
-    for (UInt64 Row = 0; Row < TextureDimensions; Row++)
-    {
-        for (UInt64 Column = 0; Column < TextureDimensions; Column++)
-        {
-            UInt64 Index = (Row * TextureDimensions) + Column;
-            UInt64 IndexChannels = Index * Channels;
-            if (Row % 2) {
-                if (Column % 2) {
-                    Pixels[IndexChannels + 0] = 0;
-                    Pixels[IndexChannels + 1] = 0;
-                    Pixels[IndexChannels + 1] = 255;
-                }
-            } else {
-                if (!(Column % 2)) {
-                    Pixels[IndexChannels + 0] = 0;
-                    Pixels[IndexChannels + 1] = 0;
-                    Pixels[IndexChannels + 2] = 255;
-                }
-            }
-        } 
-    }
-    
-    StatePtr->Backend.CreateTexture(
-        "Default",
-        false,
-        TextureDimensions,
-        TextureDimensions,
-        4,
-        Pixels,
-        false,
-        &StatePtr->DefaultTexture
-    );
 
     return true;
 }
 void CrystalShutdown()
 {
     if (StatePtr) {
-        CrystalDestroyTexture(&StatePtr->DefaultTexture);
+        // NOTE: Temporary
+        EventUnregister(EVENT_DEBUG0, StatePtr, EventOnDebugEvent);
+        // NOTE: End temporary
+
         StatePtr->Backend.Shutdown(&StatePtr->Backend);
     }
+    
+
     StatePtr = 0;
 }
 
@@ -136,9 +143,28 @@ Bool8 CrystalDrawFrame(RenderPacket* Packet)
         // Quaternion Rotation = QuaternionFromAxisAngle(Vec3Forward(), Angle, false);
         // Mat4 Model = QuaternionToRotationMatrix(Rotation, Vec3Zero());
         GeometryRenderData Data = {0};
-        Data.ObjectID = 0; // TODO: Actual Object ID
         Data.Model = Model;
-        Data.Textures[0] = &StatePtr->DefaultTexture;
+
+        // TODO: Temporary
+        // Grab default if it aint real
+        if (!StatePtr->TestMaterial)
+        {
+            // Auto Config
+            StatePtr->TestMaterial = MaterialSystemAcquire("TestMaterial");
+            if (!StatePtr->TestMaterial)
+            {
+                FLWARN("Auto material load failed, falling back to default texture");
+
+                MaterialConfig Config = {0};
+                StringNcopy(Config.Name, "TestMaterial", MaterialNameMaxLength);
+                Config.AutoRelease = false;
+                Config.BaseColor = Vec4One();
+                StringNcopy(Config.BaseColorMapName, DefaultTextureName, TextureNameMaxLength);
+                StatePtr->TestMaterial = MaterialSystemAcquireFromConfig(Config);
+            }
+        }
+
+        Data.Material = StatePtr->TestMaterial;
         StatePtr->Backend.UpdateObject(&Data);
 
         Bool8 Result = CrystalEndFrame(Packet->DeltaTime);
@@ -157,19 +183,22 @@ void CrystalSetView(Mat4 View)
     StatePtr->View = View;
 }
 
-void CrystalCreateTexture(
-        const char* Name,
-        Bool8 AutoRelease,
-        Int32 Width,
-        Int32 Height,
-        Int32 ChannelCount,
-        const UInt8* Pixels,
-        Bool8 HasTransparency,
-        struct Texture* Texture) {
-            StatePtr->Backend.CreateTexture(Name, AutoRelease, Width, Height, ChannelCount, Pixels, HasTransparency, Texture);
-        }
+void CrystalCreateTexture(const UInt8* Pixels, struct Texture* Texture)
+{
+    StatePtr->Backend.CreateTexture(Pixels, Texture);
+}
         
 void CrystalDestroyTexture(struct Texture* Texture)
 {
     StatePtr->Backend.DestroyTexture(Texture);
+}
+
+Bool8 CrystalCreateMaterial(struct Material* Material) 
+{
+    return StatePtr->Backend.CreateMaterial(Material);
+}
+
+void CrystalDestroyMaterial(struct Material* Material) 
+{
+    StatePtr->Backend.DestroyMaterial(Material);
 }

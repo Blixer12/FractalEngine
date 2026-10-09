@@ -13,6 +13,10 @@
 
 #include "Renderer/CrystalFrontend.h"
 
+// Systems
+#include "Systems/TextureSystem.h"
+#include "Systems/MaterialSystem.h"
+
 // Application configuration.
 typedef struct AppState {
     Game* Instance;
@@ -24,6 +28,7 @@ typedef struct AppState {
     Float64 PreviousTime;
     LinearAllocator SystemAllocator;
 
+    // Core
     UInt64 EventSystemMemoryRequirement;
     void* EventState;
 
@@ -42,6 +47,13 @@ typedef struct AppState {
     // Renderer
     UInt64 CrystalSystemMemoryRequirement;
     void* CrystalState;
+
+    // Systems
+    UInt64 TextureSystemMemoryRequirement;
+    void* TextureState;
+
+    UInt64 MaterialSystemMemoryRequirement;
+    void* MaterialState;
 } AppState;
 
 static AppState* State;
@@ -136,6 +148,30 @@ Bool8 AppCreate(Game* Instance)
     if (!CrystalInitialize(&State->CrystalSystemMemoryRequirement, State->CrystalState, Instance->Config.Name))
     {
         FLFATAL("Failed to Initialize Renderer! Aborting Application");
+    }
+
+    // Texture system.
+    TextureSystemConfig TextureSysConfig;
+    TextureSysConfig.MaxTextureCount = 65536;
+
+    TextureSystemInitialize(&State->TextureSystemMemoryRequirement, 0, TextureSysConfig);
+    State->TextureState = LinearAllocatorAllocate(&State->SystemAllocator, State->TextureSystemMemoryRequirement);
+
+    if (!TextureSystemInitialize(&State->TextureSystemMemoryRequirement, State->TextureState, TextureSysConfig)) {
+        FLFATAL("Failed to initialize texture system. Application cannot continue.");
+        return false;
+    }
+
+    // Material system
+    MaterialSystemConfig MaterialSysConfig;
+    MaterialSysConfig.MaxMaterialCount = 4096;
+
+    MaterialSystemInitialize(&State->MaterialSystemMemoryRequirement, 0, MaterialSysConfig);
+    State->MaterialState = LinearAllocatorAllocate(&State->SystemAllocator, State->MaterialSystemMemoryRequirement);
+
+    if (!MaterialSystemInitialize(&State->MaterialSystemMemoryRequirement, State->MaterialState, MaterialSysConfig)) {
+        FLFATAL("Failed to initialize material system. Application cannot continue.");
+        return false;
     }
 
     if (!State->Instance->Initialize(State->Instance))
@@ -239,14 +275,19 @@ Bool8 AppRun()
 
     EventUnregister(EVENT_RESIZED, 0, AppOnWindowResize);
 
-    EventSystemShutdown(State->EventState);
     InputSystemShutdown(State->InputState);
+
+    MaterialSystemShutdown(State->MaterialState);
+
+    TextureSystemShutdown(State->TextureState);
 
     CrystalShutdown();
 
     PlatformSystemShutdown(&State->PlatformState);
 
     MemorySystemShutdown(State->MemoryState);
+
+    EventSystemShutdown(State->EventState);
 
     return true;
 }

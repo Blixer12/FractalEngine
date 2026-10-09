@@ -40,12 +40,14 @@ FAPI Bool8 FilesystemOpen(const char* Path, FileModes Mode, Bool8 Binary, FileHa
 FAPI void FilesystemClose(FileHandle* Handle);
 
 /** 
- * Reads up to a newline or EOF. Allocates *LineBuffer, which must be freed by the caller.
+ * Reads up to a newline or EOF
  * @param Handle A pointer to a FileHandle structure.
+ * @param MaxLength the maximum length to be read from the line
  * @param LineBuffer A pointer to a character array which will be allocated and populated by this method.
+ * @param LineLength a Pointer to hold the line length read from the file
  * @returns True if successful; otherwise false.
  */
-FAPI Bool8 FilesystemReadLine(FileHandle* Handle, char** LineBuffer);
+FAPI Bool8 FilesystemReadLine(FileHandle* Handle, UInt64 MaxLength, char** LineBuffer, UInt64* LineLength);
 
 /** 
  * Writes text to the provided file, appending a '\n' afterward.

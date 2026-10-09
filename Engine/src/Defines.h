@@ -45,6 +45,17 @@ typedef unsigned int Bool32;
     #define MaybeUnused
 #endif
 
+// C23 standard version macro is 202311L (or > 201710L during draft phases)
+#if !defined(__STDC_VERSION__) || __STDC_VERSION__ <= 201710L
+    #if defined(_MSC_VER) && !defined(__clang__)
+        // For MSVC in older C modes, static const works best for internal linkage constants
+        #define constexpr static const
+    #else
+        // For Clang / GCC in standard C pre-C23
+        #define constexpr static const
+    #endif
+#endif
+
 // Ensure all types are of the correct size
 STATIC_ASSERT(sizeof(UInt8)  == 1, "Expected UInt8 to be 1 byte.");
 STATIC_ASSERT(sizeof(UInt16) == 2, "Expected UInt16 to be 2 bytes.");
@@ -64,9 +75,9 @@ STATIC_ASSERT(sizeof(Bool32) == 4, "Expected Bool32 to be 4 bytes");
 
 /**
  * @brief Any ID set to this should be considered Invalid
- * and not actually pointing to a real Object (UInt64 limit, (UInt64)-1)
+ * and not actually pointing to a real Object (UInt32 limit, (UInt32)-1)
  */
-constexpr UInt64 InvalidID = 0xFFFFFFFFFFFFFFFFULL;
+constexpr UInt32 InvalidID = 0xFFFFFFFFU;
 
 // Platform detection
 #if defined(_WIN32)

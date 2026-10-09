@@ -50,5 +50,11 @@ typedef enum SystemEventCode {
     EVENT_MOUSE_SCROLL = 0x07,
     EVENT_RESIZED      = 0x08,
 
+    EVENT_DEBUG0       = 0x10,
+    EVENT_DEBUG1       = 0x11,
+    EVENT_DEBUG2       = 0x12,
+    EVENT_DEBUG3       = 0x13,
+    EVENT_DEBUG4       = 0x14,
+
     MAX_EVENT_CODE     = 0xFF
 } SystemEventCode;

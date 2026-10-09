@@ -14,14 +14,8 @@ Bool8 VulkanRendererEndFrame(CrystalBackend* Backend, Float32 DeltaTime);
 
 void VulkanRendererUpdateObject(GeometryRenderData* Data);
 
-void VulkanRendererCreateTexture(
-    const char* Name,
-    Bool8 AutoRelease,
-    Int32 Width,
-    Int32 Height,
-    Int32 ChannelCount,
-    const UInt8* Pixels,
-    Bool8 HasTransparency,
-    Texture* Texture);
-
+void VulkanRendererCreateTexture(const UInt8* Pixels, Texture* Texture);
 void VulkanRendererDestroyTexture(Texture* Texture);
+
+Bool8 VulkanRendererCreateMaterial(struct Material* Material);
+void VulkanRendererDestroyMaterial(struct Material* Material);

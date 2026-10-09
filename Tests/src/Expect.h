@@ -40,7 +40,7 @@
 /**
  * @brief Expects Actual to be false.
  */
-#define ExpectToBbeFalse(Actual)                                                        \
+#define ExpectToBeFalse(Actual)                                                         \
     if (Actual != false) {                                                              \
         FLERROR("--> Expected false, but got: true. File: %s:%d.", __FILE__, __LINE__); \
         return false;                                                                   \

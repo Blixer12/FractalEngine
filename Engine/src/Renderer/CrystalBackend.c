@@ -20,6 +20,9 @@ Bool8 CrystalBackendCreate(CrystalBackendType Type, CrystalBackend* Backend)
         Backend->CreateTexture = VulkanRendererCreateTexture;
         Backend->DestroyTexture = VulkanRendererDestroyTexture;
 
+        Backend->CreateMaterial = VulkanRendererCreateMaterial;
+        Backend->DestroyMaterial = VulkanRendererDestroyMaterial;
+
         return true;
      }
 
@@ -41,4 +44,7 @@ void CrystalBackendDestroy(CrystalBackend* Backend)
 
     Backend->CreateTexture = 0;
     Backend->DestroyTexture = 0;
+
+    Backend->CreateMaterial = 0;
+    Backend->DestroyMaterial = 0;
 }
