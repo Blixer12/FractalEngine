@@ -8,6 +8,8 @@
 
 #include "Systems/ResourceSystem.h"
 
+#include "LoaderUtils.h"
+
 #include "Math/FMath.h"
 
 #include "Platform/Filesystem.h"
@@ -24,7 +26,6 @@ Bool8 TextLoaderLoad(struct ResourceLoader* Self, const char* Name, Resource* Re
     char FullFilePath[4096];
 
     StringFormat(FullFilePath, FormatString, ResourceSystemBasePath(), Self->TypePath, Name, "");
-    Resource->FullPath = StringDuplicate(FullFilePath);
 
     FileHandle File;
     if (!FilesystemOpen(FullFilePath, FILE_MODE_READ, false, &File))
@@ -32,6 +33,8 @@ Bool8 TextLoaderLoad(struct ResourceLoader* Self, const char* Name, Resource* Re
         FLERROR("TextLoaderLoad - unable to open text file for reading: '%s'", FullFilePath);
         return false;
     }
+
+    Resource->FullPath = StringDuplicate(FullFilePath);
 
     UInt64 FileSize = 0;
     if (!FilesystemSize(&File, &FileSize))
@@ -61,24 +64,9 @@ Bool8 TextLoaderLoad(struct ResourceLoader* Self, const char* Name, Resource* Re
 
 void TextLoaderUnload(struct ResourceLoader* Self, Resource* Resource)
 {
-    if (!Self || !Resource)
+    if (!ResourceUnload(Self, Resource, MEMORY_TAG_ARRAY))
     {
-        FLWARN("TextLoaderUnload called with a nullptr for self or resource");
-        return;
-    }
-
-    UInt32 PathLength = StringLength(Resource->FullPath);
-    if (PathLength)
-    {
-        FMFree(Resource->FullPath, sizeof(char) * PathLength + 1, MEMORY_TAG_STRING);
-    }
-
-    if (Resource->Data)
-    {
-        FMFree(Resource->Data, Resource->DataSize, MEMORY_TAG_ARRAY);
-        Resource->Data = 0;
-        Resource->DataSize = 0;
-        Resource->LoaderID = InvalidID;
+        FLWARN("MaterialLoaderUnload called w/ nullptr for self or resource");
     }
 }
 

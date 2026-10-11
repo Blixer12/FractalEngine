@@ -357,12 +357,14 @@ void VulkanRendererShutdown(CrystalBackend* Backend)
         Context.Surface = 0;
     }
 
+    #ifdef _DEBUG
     FLDEBUG("Destroying Debugger...");
-    if (Context.DebugMessenger)
-    {
-        PFN_vkDestroyDebugUtilsMessengerEXT Function = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(Context.Instance, "vkDestroyDebugUtilsMessengerEXT");
-        Function(Context.Instance, Context.DebugMessenger, Context.Allocator);
-    }
+        if (Context.DebugMessenger)
+        {
+            PFN_vkDestroyDebugUtilsMessengerEXT Function = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(Context.Instance, "vkDestroyDebugUtilsMessengerEXT");
+            Function(Context.Instance, Context.DebugMessenger, Context.Allocator);
+        }
+    #endif
 
     FLDEBUG("Destroying Instance...");
     vkDestroyInstance(Context.Instance, Context.Allocator);
@@ -732,10 +734,27 @@ Bool8 VulkanRendererCreateMaterial(struct Material* Material)
 {
     if (Material)
     {
-        if (!VulkanMaterialShaderAcquireResources(&Context, &Context.MaterialShader, Material))
+        switch (Material->Type)
         {
-            FLERROR("VulkanRendererCreateMaterial - failed to acquire shader resources");
-            return false;
+            case MATERIAL_TYPE_WORLD:
+                if (!VulkanMaterialShaderAcquireResources(&Context, &Context.MaterialShader, Material))
+                {
+                    FLERROR("VulkanRendererCreateMaterial - failed to acquire world shader resources");
+                    return false;
+                }
+                break;
+
+            case MATERIAL_TYPE_UI:
+                if (!VulkanUIShaderAcquireResources(&Context, &Context.UIShader, Material))
+                {
+                    FLERROR("VulkanRendererCreateMaterial - failed to acquire UI shader resources");
+                    return false;
+                }
+                break;
+
+            default:
+                FLERROR("VulkanRendererCreateMaterial - Unknown Material Type");
+                return false;
         }
 
         FLTRACE("Crystal: Material Created");
@@ -750,7 +769,21 @@ void VulkanRendererDestroyMaterial(struct Material* Material)
 {
     if (Material) {
         if (Material->InternalID != InvalidID) {
-            VulkanMaterialShaderReleaseResources(&Context, &Context.MaterialShader, Material);
+            switch (Material->Type)
+            {
+                case MATERIAL_TYPE_WORLD:
+                    VulkanMaterialShaderReleaseResources(&Context, &Context.MaterialShader, Material);
+                    break;
+
+                case MATERIAL_TYPE_UI:
+                    VulkanUIShaderReleaseResources(&Context, &Context.UIShader, Material);
+                    break;
+
+                default:
+                    FLERROR("VulkanRendererDestroyMaterial - Unknown Material Type");
+                    return;
+                
+            }
         } else {
             FLWARN("VulkanRendererDestroyMaterial called with InternalID = InvalidId. Nothing was done");
         }
@@ -760,7 +793,7 @@ void VulkanRendererDestroyMaterial(struct Material* Material)
 
 }
 
-Bool8 VulkanRendererCreateGeometry(struct Geometry* Geometry, UInt32 VertexCount, const Vertex3D* Vertices, UInt32 IndexCount, const UInt32* Indices)
+Bool8 VulkanRendererCreateGeometry(struct Geometry* Geometry, UInt32 VertexSize, UInt32 VertexCount, const void* Vertices, UInt32 IndexSize, UInt32 IndexCount, const void* Indices)
 {
     if (!VertexCount || !Vertices)
     {
@@ -778,17 +811,20 @@ Bool8 VulkanRendererCreateGeometry(struct Geometry* Geometry, UInt32 VertexCount
 
         OldRange.IndexBufferOffset = InternalData->IndexBufferOffset;
         OldRange.IndexCount = InternalData->IndexCount;
-        OldRange.IndexSize = InternalData->IndexSize;
+        OldRange.IndexElementSize = InternalData->IndexElementSize;
         OldRange.VertexBufferOffset = InternalData->VertexBufferOffset;
         OldRange.VertexCount = InternalData->VertexCount;
-        OldRange.VertexSize = InternalData->VertexSize;
+        OldRange.VertexElementSize = InternalData->VertexElementSize;
     } else {
         for (UInt32 i = 0; i < VulkanMaxGeometryCount; ++i)
         {
-            Geometry->InternalID = i;
-            Context.Geometries[i].ID = i;
-            InternalData = &Context.Geometries[i];
-            break;
+            if (Context.Geometries[i].ID == InvalidID)
+            {
+                Geometry->InternalID = i;
+                Context.Geometries[i].ID = i;
+                InternalData = &Context.Geometries[i];
+                break;
+            }
         }
     }
 
@@ -803,17 +839,19 @@ Bool8 VulkanRendererCreateGeometry(struct Geometry* Geometry, UInt32 VertexCount
 
     InternalData->VertexBufferOffset = Context.GeometryVertexOffset;
     InternalData->VertexCount = VertexCount;
-    InternalData->VertexSize = sizeof(Vertex3D) * VertexCount;
-    UploadDataRange(&Context, Pool, 0, Queue, &Context.ObjectVertexBuffer, InternalData->VertexBufferOffset, InternalData->VertexSize, Vertices);
-    Context.GeometryIndexOffset += InternalData->VertexSize;
+    InternalData->VertexElementSize = VertexSize;
+    UInt32 VertexTotalSize = VertexCount * VertexSize;
+    UploadDataRange(&Context, Pool, 0, Queue, &Context.ObjectVertexBuffer, InternalData->VertexBufferOffset, VertexTotalSize, Vertices);
+    Context.GeometryVertexOffset += VertexTotalSize;
 
     if (IndexCount && Indices)
     {
         InternalData->IndexBufferOffset = Context.GeometryIndexOffset;
         InternalData->IndexCount = IndexCount;
-        InternalData->IndexSize = sizeof(UInt32) * IndexCount;
-        UploadDataRange(&Context, Pool, 0, Queue, &Context.ObjectIndexBuffer, InternalData->IndexBufferOffset, InternalData->IndexSize, Indices);
-        Context.GeometryIndexOffset += InternalData->VertexSize;
+        InternalData->IndexElementSize = IndexSize;
+        UInt32 IndexTotalSize = IndexCount * IndexSize;
+        UploadDataRange(&Context, Pool, 0, Queue, &Context.ObjectIndexBuffer, InternalData->IndexBufferOffset, IndexTotalSize, Indices);
+        Context.GeometryIndexOffset += IndexTotalSize;
     }
 
     if (InternalData->Generation == InvalidID) {
@@ -824,11 +862,11 @@ Bool8 VulkanRendererCreateGeometry(struct Geometry* Geometry, UInt32 VertexCount
 
     if (IsReupload)
     {
-        FreeDataRange(&Context.ObjectVertexBuffer, OldRange.VertexBufferOffset, OldRange.VertexSize);
+        FreeDataRange(&Context.ObjectVertexBuffer, OldRange.VertexBufferOffset, OldRange.VertexElementSize * OldRange.VertexCount);
 
-        if (OldRange.IndexSize > 0)
+        if (OldRange.IndexElementSize > 0)
         {
-            FreeDataRange(&Context.ObjectIndexBuffer, OldRange.IndexBufferOffset, OldRange.IndexSize);
+            FreeDataRange(&Context.ObjectIndexBuffer, OldRange.IndexBufferOffset, OldRange.IndexElementSize * OldRange.IndexCount);
         }
     }
 
@@ -842,11 +880,11 @@ void VulkanRendererDestroyGeometry(struct Geometry* Geometry)
         vkDeviceWaitIdle(Context.Device.LogicalDevice);
         VulkanGeometryData* InternalData = &Context.Geometries[Geometry->InternalID];
 
-        FreeDataRange(&Context.ObjectVertexBuffer, InternalData->VertexBufferOffset, InternalData->VertexSize);
+        FreeDataRange(&Context.ObjectVertexBuffer, InternalData->VertexBufferOffset, InternalData->VertexElementSize * InternalData->VertexCount);
 
-        if (InternalData->IndexSize > 0)
+        if (InternalData->IndexElementSize > 0)
         {
-            FreeDataRange(&Context.ObjectIndexBuffer, InternalData->IndexBufferOffset, InternalData->IndexSize);
+            FreeDataRange(&Context.ObjectIndexBuffer, InternalData->IndexBufferOffset, InternalData->IndexElementSize * InternalData->IndexCount);
         }
 
         FMZeroMemory(InternalData, sizeof(VulkanGeometryData));
@@ -862,18 +900,32 @@ void VulkanRendererDrawGeometry(GeometryRenderData Data)
     VulkanGeometryData* BufferData = &Context.Geometries[Data.Geometry->InternalID];
     VulkanCommandBuffer* CommandBuffer = &Context.GraphicsCommandBuffers[Context.ImageIndex];
 
-    // Needs check
-    VulkanMaterialShaderUse(&Context, &Context.MaterialShader);
-
-    VulkanMaterialShaderSetModel(&Context, &Context.MaterialShader, Data.Model);
     Material* M = 0;
     if (Data.Geometry->Material) {
         M = Data.Geometry->Material;
     } else {
         M = MaterialSystemGetDefault();
     }
-    VulkanMaterialShaderApplyMaterial(&Context, &Context.MaterialShader, M);
 
+    switch (M->Type)
+    {
+        case MATERIAL_TYPE_WORLD:
+            VulkanMaterialShaderSetModel(&Context, &Context.MaterialShader, Data.Model);
+            VulkanMaterialShaderApplyMaterial(&Context, &Context.MaterialShader, M);
+            VulkanMaterialShaderUse(&Context, &Context.MaterialShader);
+            break;
+        case MATERIAL_TYPE_UI:
+            VulkanUIShaderSetModel(&Context, &Context.UIShader, Data.Model);
+            VulkanUIShaderApplyMaterial(&Context, &Context.UIShader, M);
+            VulkanUIShaderUse(&Context, &Context.UIShader);
+            break;
+
+        default:
+            FLERROR("VulkanRendererDrawGeometry - Unknown Material Type");
+            return;
+    }
+    
+    // Needs check
     VkDeviceSize Offsets[1] = {BufferData->VertexBufferOffset};
     vkCmdBindVertexBuffers(CommandBuffer->Handle, 0, 1, &Context.ObjectVertexBuffer.Handle, (VkDeviceSize*)Offsets);
 

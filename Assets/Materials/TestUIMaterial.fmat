@@ -1,0 +1,9 @@
+# Material file example? looks like TOML
+
+# Material file example i guess
+
+Version=0.1
+Name=TestUIMaterial
+MaterialType=UI
+BaseColor=1.0 1.0 1.0 1.0
+BaseColorMapName=OrangeLines512

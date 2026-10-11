@@ -25,5 +25,5 @@ void VulkanRendererDestroyTexture(Texture* Texture);
 Bool8 VulkanRendererCreateMaterial(struct Material* Material);
 void VulkanRendererDestroyMaterial(struct Material* Material);
 
-Bool8 VulkanRendererCreateGeometry(struct Geometry* Geometry, UInt32 VertexCount, const Vertex3D* Vertices, UInt32 IndexCount, const UInt32* Indices);
+Bool8 VulkanRendererCreateGeometry(struct Geometry* Geometry, UInt32 VertexSize, UInt32 VertexCount, const void* Vertices, UInt32 IndexSize, UInt32 IndexCount, const void* Indices);
 void VulkanRendererDestroyGeometry(struct Geometry* Geometry);

@@ -12,6 +12,8 @@
 
 #include "Platform/Filesystem.h"
 
+#include "LoaderUtils.h"
+
 Bool8 BinaryLoaderLoad(struct ResourceLoader* Self, const char* Name, Resource* Resource)
 {
     if (!Self || !Name || !Resource)
@@ -24,7 +26,6 @@ Bool8 BinaryLoaderLoad(struct ResourceLoader* Self, const char* Name, Resource* 
     char FullFilePath[4096];
 
     StringFormat(FullFilePath, FormatString, ResourceSystemBasePath(), Self->TypePath, Name, "");
-    Resource->FullPath = StringDuplicate(FullFilePath);
 
     FileHandle File;
     if (!FilesystemOpen(FullFilePath, FILE_MODE_READ, true, &File))
@@ -32,6 +33,8 @@ Bool8 BinaryLoaderLoad(struct ResourceLoader* Self, const char* Name, Resource* 
         FLERROR("BinaryLoaderLoad - unable to open file for binary reading: '%s'", FullFilePath);
         return false;
     }
+
+    Resource->FullPath = StringDuplicate(FullFilePath);
 
     UInt64 FileSize = 0;
     if (!FilesystemSize(&File, &FileSize))
@@ -61,24 +64,9 @@ Bool8 BinaryLoaderLoad(struct ResourceLoader* Self, const char* Name, Resource* 
 
 void BinaryLoaderUnload(struct ResourceLoader* Self, Resource* Resource)
 {
-    if (!Self || !Resource)
+    if (!ResourceUnload(Self, Resource, MEMORY_TAG_ARRAY))
     {
-        FLWARN("BinaryLoaderUnload called with a nullptr for self or resource");
-        return;
-    }
-
-    UInt32 PathLength = StringLength(Resource->FullPath);
-    if (PathLength)
-    {
-        FMFree(Resource->FullPath, sizeof(char) * PathLength + 1, MEMORY_TAG_STRING);
-    }
-
-    if (Resource->Data)
-    {
-        FMFree(Resource->Data, Resource->DataSize, MEMORY_TAG_ARRAY);
-        Resource->Data = 0;
-        Resource->DataSize = 0;
-        Resource->LoaderID = InvalidID;
+        FLWARN("BinaryLoaderUnload called w/ nullptr for self or resource");
     }
 }
 

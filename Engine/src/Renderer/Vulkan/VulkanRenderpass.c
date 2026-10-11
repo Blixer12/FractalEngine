@@ -158,14 +158,13 @@ void VulkanRenderpassBegin(
     Bool8 DoClearColor = (Renderpass->ClearFlags & RENDERPASS_CLEAR_COLOR_BUFFER_FLAG) != 0;
     if (DoClearColor)
     {
-        FMCopyMemory(ClearValues[BeginInfo.clearValueCount].color.float32, Renderpass->ClearColor.Elements, sizeof(Float32) * 4);\
+        FMCopyMemory(ClearValues[BeginInfo.clearValueCount].color.float32, Renderpass->ClearColor.Elements, sizeof(Float32) * 4);
         BeginInfo.clearValueCount++;
     }
 
     Bool8 DoClearDepth = (Renderpass->ClearFlags & RENDERPASS_CLEAR_DEPTH_BUFFER_FLAG) != 0;
     if (DoClearDepth)
     {
-        FMCopyMemory(ClearValues[BeginInfo.clearValueCount].color.float32, Renderpass->ClearColor.Elements, sizeof(Float32) * 4);
         ClearValues[BeginInfo.clearValueCount].depthStencil.depth = Renderpass->Depth;
 
         Bool8 DoClearStencil = (Renderpass->ClearFlags & RENDERPASS_CLEAR_STENCIL_BUFFER_FLAG) != 0;

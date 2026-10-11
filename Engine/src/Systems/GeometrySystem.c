@@ -17,6 +17,7 @@ typedef struct GeometryReference {
 typedef struct GeometrySystemState {
     GeometrySystemConfig Config;
     Geometry DefaultGeometry;
+    Geometry Default2DGeometry;
 
     // Array of registered Meshes.
     GeometryReference* RegisteredGeometries;
@@ -24,7 +25,7 @@ typedef struct GeometrySystemState {
 
 static GeometrySystemState* StatePtr = 0;
 
-Bool8 CreateDefaultGeometry(GeometrySystemState* State);
+Bool8 CreateDefaultGeometries(GeometrySystemState* State);
 Bool8 CreateGeometry(GeometrySystemState* State, GeometryConfig Config, Geometry* G);
 void DestroyGeometry(GeometrySystemState* State, Geometry* G);
 
@@ -37,7 +38,7 @@ Bool8 GeometrySystemInitialize(UInt64* MemoryRequirement, void* State, GeometryS
 
     // Block of memory will contain state structure, then block for array, then block for hashtable.
     UInt64 StructRequirement = sizeof(GeometrySystemState);
-    UInt64 ArrayRequirement = sizeof(Geometry) * Config.MaxGeometryCount;
+    UInt64 ArrayRequirement = sizeof(GeometryReference) * Config.MaxGeometryCount;
     *MemoryRequirement = StructRequirement + ArrayRequirement;
 
     if (!State) {
@@ -60,9 +61,9 @@ Bool8 GeometrySystemInitialize(UInt64* MemoryRequirement, void* State, GeometryS
     }
 
     // Create default Geometry for use in the system.
-    if (!CreateDefaultGeometry(StatePtr))
+    if (!CreateDefaultGeometries(StatePtr))
     {
-        FLFATAL("Failed to create default Geometry, Application cannot run!");
+        FLFATAL("Failed to create default Geometries, Application cannot run!");
         return false;
     }
 
@@ -101,7 +102,7 @@ Geometry* GeometrySystemAcquireFromConfig(GeometryConfig Config, Bool8 AutoRelea
             StatePtr->RegisteredGeometries[i].AutoRelease = AutoRelease;
             StatePtr->RegisteredGeometries[i].ReferneceCount = 1;
             G = &StatePtr->RegisteredGeometries[i].Geometry;
-            G->ID = 1;
+            G->ID = i;
             break;
         }
     }
@@ -163,9 +164,20 @@ Geometry* GeometrySystemGetDefault()
     return 0;
 }
 
+Geometry* GeometrySystemGetDefault2D()
+{
+    if (StatePtr)
+    {
+        return &StatePtr->Default2DGeometry;
+    }
+
+    FLFATAL("GeometrySystemGetDefault2D called before system init!");
+    return 0;
+}
+
 Bool8 CreateGeometry(GeometrySystemState* State, GeometryConfig Config, Geometry* G)
 {
-    if (!CrystalCreateGeometry(G, Config.VertexCount, Config.Vertices, Config.IndexCount, Config.Indices))
+    if (!CrystalCreateGeometry(G, Config.VertexSize, Config.VertexCount, Config.Vertices, Config.IndexSize, Config.IndexCount, Config.Indices))
     {
         State->RegisteredGeometries[G->ID].ReferneceCount = 0;
         State->RegisteredGeometries[G->ID].AutoRelease = false;
@@ -205,7 +217,7 @@ void DestroyGeometry(GeometrySystemState* State, Geometry* G)
     }
 }
 
-Bool8 CreateDefaultGeometry(GeometrySystemState* State)
+Bool8 CreateDefaultGeometries(GeometrySystemState* State)
 {
     Vertex3D Vertices[4];
     FMZeroMemory(Vertices, sizeof(Vertex3D) * 4);
@@ -234,13 +246,47 @@ Bool8 CreateDefaultGeometry(GeometrySystemState* State)
 
     UInt32 Indices[6] = {0, 1, 2, 0, 3, 1};
 
-    if (!CrystalCreateGeometry(&State->DefaultGeometry, 4, Vertices, 6, Indices))
+    if (!CrystalCreateGeometry(&State->DefaultGeometry, sizeof(Vertex3D), 4, Vertices, sizeof(UInt32), 6,Indices))
     {
-        FLFATAL("Failed to create geometry. Application cannot continue");
+        FLFATAL("Failed to create default 3D geometry. Application cannot continue");
         return false;
     }
 
     State->DefaultGeometry.Material = MaterialSystemGetDefault();
+    
+    Vertex2D Vertices2D[4];
+    FMZeroMemory(Vertices2D, sizeof(Vertex2D) * 4);
+
+    Vertices2D[0].Position.x = -0.5 * Factor;
+    Vertices2D[0].Position.y = -0.5 * Factor;
+    Vertices2D[0].TextureCoordinates.u = 0.0f;
+    Vertices2D[0].TextureCoordinates.v = 0.0f;
+
+    Vertices2D[1].Position.x = 0.5 * Factor;
+    Vertices2D[1].Position.y = 0.5 * Factor;
+    Vertices2D[1].TextureCoordinates.u = 1.0f;
+    Vertices2D[1].TextureCoordinates.v = 1.0f;
+
+    Vertices2D[2].Position.x = -0.5 * Factor;
+    Vertices2D[2].Position.y = 0.5 * Factor;
+    Vertices2D[2].TextureCoordinates.u = 0.0f;
+    Vertices2D[2].TextureCoordinates.v = 1.0f;
+
+    Vertices2D[3].Position.x = 0.5 * Factor;
+    Vertices2D[3].Position.y = -0.5 * Factor;
+    Vertices2D[3].TextureCoordinates.u = 1.0f;
+    Vertices2D[3].TextureCoordinates.v = 0.0f;
+
+    UInt32 Indices2D[6] = {2, 1, 0, 3, 0, 1};
+
+    if (!CrystalCreateGeometry(&State->Default2DGeometry, sizeof(Vertex2D), 4, Vertices2D, sizeof(UInt32), 6, Indices2D))
+    {
+        FLFATAL("Failed to create default 2D geometry. Application cannot continue");
+        return false;
+    }
+
+    State->Default2DGeometry.Material = MaterialSystemGetDefault();
+
     return true;
 }
 
@@ -285,6 +331,9 @@ GeometryConfig GeometrySystemGeneratePlaneConfig(Float32 Width, Float32 Height, 
     // Assuming GeometryConfig holds fixed-size strings or you use a string copy function here
     StringCopy(Config.Name, Name);
     StringCopy(Config.MaterialName, MaterialName);
+
+    Config.VertexSize = sizeof(Vertex3D);
+    Config.IndexSize = sizeof(UInt32);
     
     Config.VertexCount = (XSegmentCount + 1) * (YSegmentCount + 1);
     Config.IndexCount = XSegmentCount * YSegmentCount * 6;
@@ -304,12 +353,14 @@ GeometryConfig GeometrySystemGeneratePlaneConfig(Float32 Width, Float32 Height, 
         {
             UInt32 Index = y * (XSegmentCount + 1) + x;
             
-            Config.Vertices[Index].Position.x = (x * SegmentWidth) - HalfWidth;
-            Config.Vertices[Index].Position.y = (y * SegmentHeight) - HalfHeight;
-            Config.Vertices[Index].Position.z = 0.0f;
+            Vertex3D* Vertices = (Vertex3D*)Config.Vertices;
 
-            Config.Vertices[Index].TextureCoordinates.u = ((Float32)x / XSegmentCount) * TileX;
-            Config.Vertices[Index].TextureCoordinates.v = ((Float32)y / YSegmentCount) * TileY;
+            Vertices[Index].Position.x = (x * SegmentWidth) - HalfWidth;
+            Vertices[Index].Position.y = (y * SegmentHeight) - HalfHeight;
+            Vertices[Index].Position.z = 0.0f;
+
+            Vertices[Index].TextureCoordinates.u = ((Float32)x / XSegmentCount) * TileX;
+            Vertices[Index].TextureCoordinates.v = ((Float32)y / YSegmentCount) * TileY;
         }
     }
 
@@ -321,15 +372,17 @@ GeometryConfig GeometrySystemGeneratePlaneConfig(Float32 Width, Float32 Height, 
         {
             UInt32 Index = y * (XSegmentCount + 1) + x;
 
+            UInt32* Indices = (UInt32*)Config.Indices;
+
             // Triangle 1
-            Config.Indices[IndexOffset++] = Index;
-            Config.Indices[IndexOffset++] = Index + 1;
-            Config.Indices[IndexOffset++] = Index + XSegmentCount + 1;
+            Indices[IndexOffset++] = Index;
+            Indices[IndexOffset++] = Index + 1;
+            Indices[IndexOffset++] = Index + XSegmentCount + 1;
 
             // Triangle 2
-            Config.Indices[IndexOffset++] = Index + XSegmentCount + 1;
-            Config.Indices[IndexOffset++] = Index + 1;
-            Config.Indices[IndexOffset++] = Index + XSegmentCount + 2;
+            Indices[IndexOffset++] = Index + XSegmentCount + 1;
+            Indices[IndexOffset++] = Index + 1;
+            Indices[IndexOffset++] = Index + XSegmentCount + 2;
         }
     }
 

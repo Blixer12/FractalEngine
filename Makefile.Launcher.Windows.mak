@@ -9,7 +9,9 @@ COMPILER_FLAGS := /Z7 /W4 /WX /TC -Werror=vla /std:clatest /clang:-MMD /clang:-M
 INCLUDE_FLAGS := /ILauncher\src /IEngine\src /I"$(VULKAN_SDK)\Include"
 
 LINKER_FLAGS := /link /DEBUG /PDB:"$(BUILD_DIR)\$(ASSEMBLY).pdb" /LIBPATH:"$(BUILD_DIR)" Fractal.lib user32.lib /OUT:"$(BUILD_DIR)\$(ASSEMBLY)$(EXTENSION)"
-DEFINES := /D_DEBUG /DFIMPORT /D_CRT_SECURE_NO_WARNINGS
+DEFINES := /DFRELEASE /DFIMPORT /D_CRT_SECURE_NO_WARNINGS
+
+# /D_DEBUG
 
 Wildcard = $(wildcard $1$2) $(foreach d,$(wildcard $1*),$(call Wildcard,$d/,$2))
 

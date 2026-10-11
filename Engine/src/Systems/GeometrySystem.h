@@ -12,10 +12,12 @@ typedef struct GeometrySystemConfig {
 constexpr char DefaultGeometryName[] = "Default";
 
 typedef struct GeometryConfig {
+    UInt32 VertexSize;
     UInt32 VertexCount;
-    Vertex3D* Vertices;
+    void* Vertices;
+    UInt32 IndexSize;
     UInt32 IndexCount;
-    UInt32* Indices;
+    void* Indices;
     char Name[GeometryNameMaxLength];
     char MaterialName[MaterialNameMaxLength];
 } GeometryConfig;
@@ -29,5 +31,7 @@ Geometry* GeometrySystemAcquireFromConfig(GeometryConfig Config, Bool8 AutoRelea
 void GeometrySystemReleasevoid (Geometry* Geometry);
 
 Geometry* GeometrySystemGetDefault();
+
+Geometry* GeometrySystemGetDefault2D();
 
 GeometryConfig GeometrySystemGeneratePlaneConfig(Float32 Width, Float32 Height, UInt32 XSegmentCount, UInt32 YSegmentCount, Float32 TileX, Float32 TileY, const char* Name, const char* MaterialName);

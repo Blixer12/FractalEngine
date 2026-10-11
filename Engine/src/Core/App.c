@@ -68,6 +68,7 @@ typedef struct AppState {
     void* GeometryState;
 
     Geometry* TestGeometry;
+    Geometry* TestUIGeometry;
 } AppState;
 
 static AppState* State;
@@ -252,6 +253,46 @@ Bool8 AppCreate(Game* Instance)
     FMFree(GConfig.Vertices, sizeof(Vertex3D) * GConfig.VertexCount, MEMORY_TAG_ARRAY);
     FMFree(GConfig.Indices, sizeof(UInt32) * GConfig.IndexCount, MEMORY_TAG_ARRAY);
 
+    GeometryConfig UIConfig;
+    UIConfig.VertexSize = sizeof(Vertex2D);
+    UIConfig.VertexCount = 4;
+    UIConfig.IndexSize = sizeof(UInt32);
+    UIConfig.IndexCount = 6;
+    StringNcopy(UIConfig.MaterialName, "TestUIMaterial", MaterialNameMaxLength);
+    StringNcopy(UIConfig.Name, "TestUIGeometry", GeometryNameMaxLength);    
+
+
+    Vertex2D Vertices2D[4];
+    FMZeroMemory(Vertices2D, sizeof(Vertex2D) * 4);
+
+    const Float32 F = 512.0f;
+
+    Vertices2D[0].Position.x = 0.0f;
+    Vertices2D[0].Position.y = 0.0f;
+    Vertices2D[0].TextureCoordinates.u = 0.0f;
+    Vertices2D[0].TextureCoordinates.v = 0.0f;
+
+    Vertices2D[1].Position.x = F;
+    Vertices2D[1].Position.y = F;
+    Vertices2D[1].TextureCoordinates.u = 1.0f;
+    Vertices2D[1].TextureCoordinates.v = 1.0f;
+
+    Vertices2D[2].Position.x = 0.0f;
+    Vertices2D[2].Position.y = F;
+    Vertices2D[2].TextureCoordinates.u = 0.0f;
+    Vertices2D[2].TextureCoordinates.v = 1.0f;
+
+    Vertices2D[3].Position.x = F;
+    Vertices2D[3].Position.y = 0.0f;
+    Vertices2D[3].TextureCoordinates.u = 1.0f;
+    Vertices2D[3].TextureCoordinates.v = 0.0f;
+
+    UInt32 Indices2D[6] = {2, 1, 0, 3, 0, 1};
+    UIConfig.Indices = Indices2D;
+    UIConfig.Vertices = Vertices2D;
+
+    State->TestUIGeometry = GeometrySystemAcquireFromConfig(UIConfig, true);
+
     // State->TestGeometry = GeometrySystemGetDefault();
 
     if (!State->Instance->Initialize(State->Instance))
@@ -318,8 +359,13 @@ Bool8 AppRun()
                 Packet.GeometryCount = 1;
                 Packet.Geometries = &TestRender;
 
-                Packet.UIGeometryCount = 0;
-                Packet.UIGeometries = 0;
+                GeometryRenderData TestUIRender;
+                TestUIRender.Geometry = State->TestUIGeometry;
+                Mat4Identity(&TestUIRender.Model);
+                Mat4Translation((Vec3){.x = 0, .y = 0, .z = 0}, &TestUIRender.Model);
+
+                Packet.UIGeometryCount = 1;
+                Packet.UIGeometries = &TestUIRender;
 
                 Packet.DeltaTime = (Float32)DeltaTime;
                 

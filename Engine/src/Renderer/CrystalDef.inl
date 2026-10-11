@@ -50,7 +50,7 @@ typedef struct CrystalBackend {
     Bool8 (*CreateMaterial)(struct Material* Material);
     void (*DestroyMaterial)(struct Material* Material);
 
-    Bool8 (*CreateGeometry)(struct Geometry* Geometry, UInt32 VertexCount, const Vertex3D* Vertices, UInt32 IndexCount, const UInt32* Indices);
+    Bool8 (*CreateGeometry)(struct Geometry* Geometry, UInt32 VertexSize, UInt32 VertexCount, const void* Vertices, UInt32 IndexSize, UInt32 IndexCount, const void* Indices);
     void (*DestroyGeometry)(struct Geometry* Geometry);
 } CrystalBackend;
 

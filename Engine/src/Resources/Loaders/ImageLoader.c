@@ -8,6 +8,8 @@
 
 #include "Systems/ResourceSystem.h"
 
+#include "LoaderUtils.h"
+
 #define STB_IMAGE_IMPLEMENTATION
 #include "Vendor/StbImage.h"
 
@@ -73,24 +75,9 @@ Bool8 ImageLoaderLoad(struct ResourceLoader* Self, const char* Name, Resource* R
 
 void ImageLoaderUnload(struct ResourceLoader* Self, Resource* Resource)
 {
-    if (!Self || !Resource)
+    if (!ResourceUnload(Self, Resource, MEMORY_TAG_TEXTURE))
     {
-        FLWARN("ImageLoaderUnload called with a nullptr for self or resource");
-        return;
-    }
-
-    UInt32 PathLength = StringLength(Resource->FullPath);
-    if (PathLength)
-    {
-        FMFree(Resource->FullPath, sizeof(char) * PathLength + 1, MEMORY_TAG_STRING);
-    }
-
-    if (Resource->Data)
-    {
-        FMFree(Resource->Data, Resource->DataSize, MEMORY_TAG_TEXTURE);
-        Resource->Data = 0;
-        Resource->DataSize = 0;
-        Resource->LoaderID = InvalidID;
+        FLWARN("ImageLoaderUnload called w/ nullptr for self or resource");
     }
 }
 

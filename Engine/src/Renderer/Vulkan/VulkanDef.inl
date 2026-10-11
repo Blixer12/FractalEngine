@@ -208,10 +208,10 @@ typedef struct VulkanGeometryData {
     UInt32 ID;
     UInt32 Generation;
     UInt32 VertexCount;
-    UInt32 VertexSize;
+    UInt32 VertexElementSize;
     UInt32 VertexBufferOffset;
     UInt32 IndexCount;
-    UInt32 IndexSize;
+    UInt32 IndexElementSize;
     UInt32 IndexBufferOffset;
 } VulkanGeometryData;
 

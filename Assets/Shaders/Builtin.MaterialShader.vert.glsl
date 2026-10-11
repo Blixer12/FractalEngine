@@ -10,7 +10,7 @@ layout(set = 0, binding = 0) uniform GlobalUniformObject
 } GlobalUBO;
 
 layout(push_constant) uniform PushConstants
-{   // Guaranteed 128 but i am defaulting to 256, checks in device creation.
+{   // Guaranteed 128
     mat4 Model; // 64 Bytes
 } PushConstant;
 

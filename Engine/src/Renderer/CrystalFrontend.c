@@ -165,9 +165,9 @@ void CrystalDestroyMaterial(struct Material* Material)
     StatePtr->Backend.DestroyMaterial(Material);
 }
 
-Bool8 CrystalCreateGeometry(struct Geometry* Geometry, UInt32 VertexCount, const Vertex3D* Vertices, UInt32 IndexCount, const UInt32* Indices) 
+Bool8 CrystalCreateGeometry(struct Geometry* Geometry, UInt32 VertexSize, UInt32 VertexCount, const void* Vertices, UInt32 IndexSize, UInt32 IndexCount, const void* Indices) 
 {
-    return StatePtr->Backend.CreateGeometry(Geometry, VertexCount, Vertices, IndexCount, Indices);
+    return StatePtr->Backend.CreateGeometry(Geometry, VertexSize, VertexCount, Vertices, IndexSize, IndexCount, Indices);
 }
 
 void CrystalDestroyGeometry(struct Geometry* Geometry) 

@@ -698,251 +698,7 @@ FINLINE Float32 Vec4DotFloat32(
 }
 
 // ------------------------------------------
-// Quaternion
-// ------------------------------------------
-
-/**
- * @brief Creates and returns an identity quaternion.
- * 
- * @return A new identity quaternion.
- */
-FINLINE Quaternion QuaternionIdentity() {
-    return (Quaternion){.x = 0.0f, .y = 0.0f, .z = 0.0f, .w = 1.0f};
-}
-
-/**
- * @brief Returns the normal (length) of the provided quaternion[cite: 7].
- * 
- * @param Q The quaternion.
- * @return The normal/length value.
- */
-FINLINE Float32 QuaternionNormal(Quaternion Q) {
-    return Fsqrt(
-        Q.x * Q.x +
-        Q.y * Q.y +
-        Q.z * Q.z +
-        Q.w * Q.w);
-}
-
-/**
- * @brief Returns a normalized copy of the supplied quaternion[cite: 7].
- * 
- * @param Q The quaternion to normalize.
- * @return A normalized quaternion.
- */
-FINLINE Quaternion QuaternionNormalize(Quaternion Q) {
-    Float32 Normal = QuaternionNormal(Q);
-    if (Normal > 0.0f) {
-        return (Quaternion){
-            .x = Q.x / Normal,
-            .y = Q.y / Normal,
-            .z = Q.z / Normal,
-            .w = Q.w / Normal};
-    }
-    return QuaternionIdentity();
-}
-
-/**
- * @brief Returns the conjugate of the provided quaternion[cite: 7].
- * 
- * @param Q The quaternion.
- * @return The conjugate quaternion.
- */
-FINLINE Quaternion QuaternionConjugate(Quaternion Q) {
-    return (Quaternion){
-        .x = -Q.x,
-        .y = -Q.y,
-        .z = -Q.z,
-        .w = Q.w};
-}
-
-/**
- * @brief Returns the inverse of the provided quaternion[cite: 7].
- * 
- * @param Q The quaternion.
- * @return The inverse quaternion.
- */
-FINLINE Quaternion QuaternionInverse(Quaternion Q) {
-    return QuaternionNormalize(QuaternionConjugate(Q));
-}
-
-/**
- * @brief Multiplies Q0 by Q1 and returns the resulting quaternion[cite: 7].
- * 
- * @param Q0 The first quaternion.
- * @param Q1 The second quaternion.
- * @return The product quaternion.
- */
-FINLINE Quaternion QuaternionMul(Quaternion Q0, Quaternion Q1) {
-    Quaternion OutQuaternion;
-
-    OutQuaternion.x = Q0.x * Q1.w +
-                       Q0.y * Q1.z -
-                       Q0.z * Q1.y +
-                       Q0.w * Q1.x;
-
-    OutQuaternion.y = -Q0.x * Q1.z +
-                       Q0.y * Q1.w +
-                       Q0.z * Q1.x +
-                       Q0.w * Q1.y;
-
-    OutQuaternion.z = Q0.x * Q1.y -
-                      Q0.y * Q1.x +
-                      Q0.z * Q1.w +
-                      Q0.w * Q1.z;
-
-    OutQuaternion.w = -Q0.x * Q1.x -
-                       Q0.y * Q1.y -
-                       Q0.z * Q1.z +
-                       Q0.w * Q1.w;
-
-    return OutQuaternion;
-}
-
-/**
- * @brief Returns the dot product between two quaternions[cite: 7].
- * 
- * @param Q0 The first quaternion.
- * @param Q1 The second quaternion.
- * @return The dot product value.
- */
-FINLINE Float32 QuaternionDot(Quaternion Q0, Quaternion Q1) {
-    return Q0.x * Q1.x +
-           Q0.y * Q1.y +
-           Q0.z * Q1.z +
-           Q0.w * Q1.w;
-}
-
-/**
- * @brief Converts a quaternion to a 4x4 rotation matrix ( safely using an out-pointer )[cite: 7].
- * 
- * @param Q The quaternion.
- * @param OutMatrix A pointer to the destination matrix.
- * @return A pointer to the resulting matrix.
- */
-FINLINE Mat4* QuaternionToMat4(Quaternion Q, Mat4* OutMatrix) {
-    Mat4Identity(OutMatrix);
-    Quaternion N = QuaternionNormalize(Q);
-
-    OutMatrix->Data[0] = 1.0f - 2.0f * N.y * N.y - 2.0f * N.z * N.z;
-    OutMatrix->Data[1] = 2.0f * N.x * N.y - 2.0f * N.z * N.w;
-    OutMatrix->Data[2] = 2.0f * N.x * N.z + 2.0f * N.y * N.w;
-
-    OutMatrix->Data[4] = 2.0f * N.x * N.y + 2.0f * N.z * N.w;
-    OutMatrix->Data[5] = 1.0f - 2.0f * N.x * N.x - 2.0f * N.z * N.z;
-    OutMatrix->Data[6] = 2.0f * N.y * N.z - 2.0f * N.x * N.w;
-
-    OutMatrix->Data[8] = 2.0f * N.x * N.z - 2.0f * N.y * N.w;
-    OutMatrix->Data[9] = 2.0f * N.y * N.z + 2.0f * N.x * N.w;
-    OutMatrix->Data[10] = 1.0f - 2.0f * N.x * N.x - 2.0f * N.y * N.y;
-
-    return OutMatrix;
-}
-
-/**
- * @brief Calculates a rotation matrix based on the quaternion and center point ( out-pointer version )[cite: 7].
- * 
- * @param Q The quaternion.
- * @param Center The center point vector.
- * @param OutMatrix A pointer to the destination matrix.
- * @return A pointer to the resulting rotation matrix.
- */
-FINLINE Mat4* QuaternionToRotationMatrix(Quaternion Q, Vec3 Center, Mat4* OutMatrix) {
-    Float32* O = OutMatrix->Data;
-    O[0] = (Q.x * Q.x) - (Q.y * Q.y) - (Q.z * Q.z) + (Q.w * Q.w);
-    O[1] = 2.0f * ((Q.x * Q.y) + (Q.z * Q.w));
-    O[2] = 2.0f * ((Q.x * Q.z) - (Q.y * Q.w));
-    O[3] = Center.x - Center.x * O[0] - Center.y * O[1] - Center.z * O[2];
-
-    O[4] = 2.0f * ((Q.x * Q.y) - (Q.z * Q.w));
-    O[5] = -(Q.x * Q.x) + (Q.y * Q.y) - (Q.z * Q.z) + (Q.w * Q.w);
-    O[6] = 2.0f * ((Q.y * Q.z) + (Q.x * Q.w));
-    O[7] = Center.y - Center.x * O[4] - Center.y * O[5] - Center.z * O[6];
-
-    O[8] = 2.0f * ((Q.x * Q.z) + (Q.y * Q.w));
-    O[9] = 2.0f * ((Q.y * Q.z) - (Q.x * Q.w));
-    O[10] = -(Q.x * Q.x) - (Q.y * Q.y) + (Q.z * Q.z) + (Q.w * Q.w);
-    O[11] = Center.z - Center.x * O[8] - Center.y * O[9] - Center.z * O[10];
-
-    O[12] = 0.0f;
-    O[13] = 0.0f;
-    O[14] = 0.0f;
-    O[15] = 1.0f;
-    
-    return OutMatrix;
-}
-
-/**
- * @brief Creates a quaternion from an axis and an angle[cite: 7].
- * 
- * @param Axis The axis vector.
- * @param Angle The angle in radians.
- * @param Normalize Whether to normalize the result.
- * @return The new quaternion.
- */
-FINLINE Quaternion QuaternionFromAxisAngle(Vec3 Axis, Float32 Angle, Bool8 Normalize) {
-    const Float32 HalfAngle = 0.5f * Angle;
-    Float32 S = Fsin(HalfAngle);
-    Float32 C = Fcos(HalfAngle);
-
-    Quaternion Q = (Quaternion){.x = S * Axis.x, .y = S * Axis.y, .z = S * Axis.z, .w = C};
-    if (Normalize) {
-        return QuaternionNormalize(Q);
-    }
-    return Q;
-}
-
-/**
- * @brief Performs spherical linear interpolation between two quaternions[cite: 7].
- * 
- * @param Q0 The starting quaternion.
- * @param Q1 The ending quaternion.
- * @param Percentage The interpolation percentage (0.0 to 1.0).
- * @return The interpolated quaternion.
- */
-FINLINE Quaternion QuaternionSlerp(Quaternion Q0, Quaternion Q1, Float32 Percentage) {
-    Quaternion OutQuaternion;
-    Quaternion V0 = QuaternionNormalize(Q0);
-    Quaternion V1 = QuaternionNormalize(Q1);
-
-    Float32 Dot = QuaternionDot(V0, V1);
-
-    if (Dot < 0.0f) {
-        V1.x = -V1.x;
-        V1.y = -V1.y;
-        V1.z = -V1.z;
-        V1.w = -V1.w;
-        Dot = -Dot;
-    }
-
-    const Float32 DotThreshold = 0.9995f;
-    if (Dot > DotThreshold) {
-        OutQuaternion = (Quaternion){
-            .x = V0.x + ((V1.x - V0.x) * Percentage),
-            .y = V0.y + ((V1.y - V0.y) * Percentage),
-            .z = V0.z + ((V1.z - V0.z) * Percentage),
-            .w = V0.w + ((V1.w - V0.w) * Percentage)};
-
-        return QuaternionNormalize(OutQuaternion);
-    }
-
-    Float32 Theta0 = Facos(Dot);
-    Float32 Theta = Theta0 * Percentage;
-    Float32 SinTheta = Fsin(Theta);
-    Float32 SinTheta0 = Fsin(Theta0);
-
-    Float32 S0 = Fcos(Theta) - Dot * SinTheta / SinTheta0;
-    Float32 S1 = SinTheta / SinTheta0;
-
-    return (Quaternion){
-        .x = (V0.x * S0) + (V1.x * S1),
-        .y = (V0.y * S0) + (V1.y * S1),
-        .z = (V0.z * S0) + (V1.z * S1),
-        .w = (V0.w * S0) + (V1.w * S1)};
-}
-
-// ------------------------------------------
-// Matrix 4x4 (Out-Pointer & PascalCase Refactor)
+// Matrix 4x4
 // ------------------------------------------
 
 /**
@@ -1327,6 +1083,250 @@ FINLINE Mat4* Mat4Transposed(const Mat4* Matrix, Mat4* OutMatrix) {
     OutMatrix->Data[14] = Matrix->Data[11];
     OutMatrix->Data[15] = Matrix->Data[15];
     return OutMatrix;
+}
+
+// ------------------------------------------
+// Quaternion
+// ------------------------------------------
+
+/**
+ * @brief Creates and returns an identity quaternion.
+ * 
+ * @return A new identity quaternion.
+ */
+FINLINE Quaternion QuaternionIdentity() {
+    return (Quaternion){.x = 0.0f, .y = 0.0f, .z = 0.0f, .w = 1.0f};
+}
+
+/**
+ * @brief Returns the normal (length) of the provided quaternion[cite: 7].
+ * 
+ * @param Q The quaternion.
+ * @return The normal/length value.
+ */
+FINLINE Float32 QuaternionNormal(Quaternion Q) {
+    return Fsqrt(
+        Q.x * Q.x +
+        Q.y * Q.y +
+        Q.z * Q.z +
+        Q.w * Q.w);
+}
+
+/**
+ * @brief Returns a normalized copy of the supplied quaternion[cite: 7].
+ * 
+ * @param Q The quaternion to normalize.
+ * @return A normalized quaternion.
+ */
+FINLINE Quaternion QuaternionNormalize(Quaternion Q) {
+    Float32 Normal = QuaternionNormal(Q);
+    if (Normal > 0.0f) {
+        return (Quaternion){
+            .x = Q.x / Normal,
+            .y = Q.y / Normal,
+            .z = Q.z / Normal,
+            .w = Q.w / Normal};
+    }
+    return QuaternionIdentity();
+}
+
+/**
+ * @brief Returns the conjugate of the provided quaternion[cite: 7].
+ * 
+ * @param Q The quaternion.
+ * @return The conjugate quaternion.
+ */
+FINLINE Quaternion QuaternionConjugate(Quaternion Q) {
+    return (Quaternion){
+        .x = -Q.x,
+        .y = -Q.y,
+        .z = -Q.z,
+        .w = Q.w};
+}
+
+/**
+ * @brief Returns the inverse of the provided quaternion[cite: 7].
+ * 
+ * @param Q The quaternion.
+ * @return The inverse quaternion.
+ */
+FINLINE Quaternion QuaternionInverse(Quaternion Q) {
+    return QuaternionNormalize(QuaternionConjugate(Q));
+}
+
+/**
+ * @brief Multiplies Q0 by Q1 and returns the resulting quaternion[cite: 7].
+ * 
+ * @param Q0 The first quaternion.
+ * @param Q1 The second quaternion.
+ * @return The product quaternion.
+ */
+FINLINE Quaternion QuaternionMul(Quaternion Q0, Quaternion Q1) {
+    Quaternion OutQuaternion;
+
+    OutQuaternion.x = Q0.x * Q1.w +
+                       Q0.y * Q1.z -
+                       Q0.z * Q1.y +
+                       Q0.w * Q1.x;
+
+    OutQuaternion.y = -Q0.x * Q1.z +
+                       Q0.y * Q1.w +
+                       Q0.z * Q1.x +
+                       Q0.w * Q1.y;
+
+    OutQuaternion.z = Q0.x * Q1.y -
+                      Q0.y * Q1.x +
+                      Q0.z * Q1.w +
+                      Q0.w * Q1.z;
+
+    OutQuaternion.w = -Q0.x * Q1.x -
+                       Q0.y * Q1.y -
+                       Q0.z * Q1.z +
+                       Q0.w * Q1.w;
+
+    return OutQuaternion;
+}
+
+/**
+ * @brief Returns the dot product between two quaternions[cite: 7].
+ * 
+ * @param Q0 The first quaternion.
+ * @param Q1 The second quaternion.
+ * @return The dot product value.
+ */
+FINLINE Float32 QuaternionDot(Quaternion Q0, Quaternion Q1) {
+    return Q0.x * Q1.x +
+           Q0.y * Q1.y +
+           Q0.z * Q1.z +
+           Q0.w * Q1.w;
+}
+
+/**
+ * @brief Converts a quaternion to a 4x4 rotation matrix ( safely using an out-pointer )[cite: 7].
+ * 
+ * @param Q The quaternion.
+ * @param OutMatrix A pointer to the destination matrix.
+ * @return A pointer to the resulting matrix.
+ */
+FINLINE Mat4* QuaternionToMat4(Quaternion Q, Mat4* OutMatrix) {
+    Mat4Identity(OutMatrix);
+    Quaternion N = QuaternionNormalize(Q);
+
+    OutMatrix->Data[0] = 1.0f - 2.0f * N.y * N.y - 2.0f * N.z * N.z;
+    OutMatrix->Data[1] = 2.0f * N.x * N.y - 2.0f * N.z * N.w;
+    OutMatrix->Data[2] = 2.0f * N.x * N.z + 2.0f * N.y * N.w;
+
+    OutMatrix->Data[4] = 2.0f * N.x * N.y + 2.0f * N.z * N.w;
+    OutMatrix->Data[5] = 1.0f - 2.0f * N.x * N.x - 2.0f * N.z * N.z;
+    OutMatrix->Data[6] = 2.0f * N.y * N.z - 2.0f * N.x * N.w;
+
+    OutMatrix->Data[8] = 2.0f * N.x * N.z - 2.0f * N.y * N.w;
+    OutMatrix->Data[9] = 2.0f * N.y * N.z + 2.0f * N.x * N.w;
+    OutMatrix->Data[10] = 1.0f - 2.0f * N.x * N.x - 2.0f * N.y * N.y;
+
+    return OutMatrix;
+}
+
+/**
+ * @brief Calculates a rotation matrix based on the quaternion and center point ( out-pointer version )[cite: 7].
+ * 
+ * @param Q The quaternion.
+ * @param Center The center point vector.
+ * @param OutMatrix A pointer to the destination matrix.
+ * @return A pointer to the resulting rotation matrix.
+ */
+FINLINE Mat4* QuaternionToRotationMatrix(Quaternion Q, Vec3 Center, Mat4* OutMatrix) {
+    Float32* O = OutMatrix->Data;
+    O[0] = (Q.x * Q.x) - (Q.y * Q.y) - (Q.z * Q.z) + (Q.w * Q.w);
+    O[1] = 2.0f * ((Q.x * Q.y) + (Q.z * Q.w));
+    O[2] = 2.0f * ((Q.x * Q.z) - (Q.y * Q.w));
+    O[3] = Center.x - Center.x * O[0] - Center.y * O[1] - Center.z * O[2];
+
+    O[4] = 2.0f * ((Q.x * Q.y) - (Q.z * Q.w));
+    O[5] = -(Q.x * Q.x) + (Q.y * Q.y) - (Q.z * Q.z) + (Q.w * Q.w);
+    O[6] = 2.0f * ((Q.y * Q.z) + (Q.x * Q.w));
+    O[7] = Center.y - Center.x * O[4] - Center.y * O[5] - Center.z * O[6];
+
+    O[8] = 2.0f * ((Q.x * Q.z) + (Q.y * Q.w));
+    O[9] = 2.0f * ((Q.y * Q.z) - (Q.x * Q.w));
+    O[10] = -(Q.x * Q.x) - (Q.y * Q.y) + (Q.z * Q.z) + (Q.w * Q.w);
+    O[11] = Center.z - Center.x * O[8] - Center.y * O[9] - Center.z * O[10];
+
+    O[12] = 0.0f;
+    O[13] = 0.0f;
+    O[14] = 0.0f;
+    O[15] = 1.0f;
+    
+    return OutMatrix;
+}
+
+/**
+ * @brief Creates a quaternion from an axis and an angle[cite: 7].
+ * 
+ * @param Axis The axis vector.
+ * @param Angle The angle in radians.
+ * @param Normalize Whether to normalize the result.
+ * @return The new quaternion.
+ */
+FINLINE Quaternion QuaternionFromAxisAngle(Vec3 Axis, Float32 Angle, Bool8 Normalize) {
+    const Float32 HalfAngle = 0.5f * Angle;
+    Float32 S = Fsin(HalfAngle);
+    Float32 C = Fcos(HalfAngle);
+
+    Quaternion Q = (Quaternion){.x = S * Axis.x, .y = S * Axis.y, .z = S * Axis.z, .w = C};
+    if (Normalize) {
+        return QuaternionNormalize(Q);
+    }
+    return Q;
+}
+
+/**
+ * @brief Performs spherical linear interpolation between two quaternions[cite: 7].
+ * 
+ * @param Q0 The starting quaternion.
+ * @param Q1 The ending quaternion.
+ * @param Percentage The interpolation percentage (0.0 to 1.0).
+ * @return The interpolated quaternion.
+ */
+FINLINE Quaternion QuaternionSlerp(Quaternion Q0, Quaternion Q1, Float32 Percentage) {
+    Quaternion OutQuaternion;
+    Quaternion V0 = QuaternionNormalize(Q0);
+    Quaternion V1 = QuaternionNormalize(Q1);
+
+    Float32 Dot = QuaternionDot(V0, V1);
+
+    if (Dot < 0.0f) {
+        V1.x = -V1.x;
+        V1.y = -V1.y;
+        V1.z = -V1.z;
+        V1.w = -V1.w;
+        Dot = -Dot;
+    }
+
+    const Float32 DotThreshold = 0.9995f;
+    if (Dot > DotThreshold) {
+        OutQuaternion = (Quaternion){
+            .x = V0.x + ((V1.x - V0.x) * Percentage),
+            .y = V0.y + ((V1.y - V0.y) * Percentage),
+            .z = V0.z + ((V1.z - V0.z) * Percentage),
+            .w = V0.w + ((V1.w - V0.w) * Percentage)};
+
+        return QuaternionNormalize(OutQuaternion);
+    }
+
+    Float32 Theta0 = Facos(Dot);
+    Float32 Theta = Theta0 * Percentage;
+    Float32 SinTheta = Fsin(Theta);
+    Float32 SinTheta0 = Fsin(Theta0);
+
+    Float32 S0 = Fcos(Theta) - Dot * SinTheta / SinTheta0;
+    Float32 S1 = SinTheta / SinTheta0;
+
+    return (Quaternion){
+        .x = (V0.x * S0) + (V1.x * S1),
+        .y = (V0.y * S0) + (V1.y * S1),
+        .z = (V0.z * S0) + (V1.z * S1),
+        .w = (V0.w * S0) + (V1.w * S1)};
 }
 
 /**

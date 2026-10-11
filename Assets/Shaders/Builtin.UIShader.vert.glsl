@@ -10,7 +10,7 @@ layout(set = 0, binding = 0) uniform GlobalUniformObject
 } GlobalUBO;
 
 layout(push_constant) uniform PushConstants
-{   // Guaranteed 128 but i am defaulting to 256, checks in device creation.
+{   // Guaranteed 128
     mat4 Model; // 64 Bytes
 } PushConstant;
 
@@ -23,5 +23,5 @@ layout(location = 1) out struct DataTransferObject {
 void main()
 {
     OutDTO.TextureCoordinates = vec2(TextureCoordinates.x, 1.0 - TextureCoordinates.y);
-    gl_Position = GlobalUBO.Projection * GlobalUBO.View * PushConstant.Model * vec4(InPosition, 1.0, 1.0);
+    gl_Position = GlobalUBO.Projection * GlobalUBO.View * PushConstant.Model * vec4(InPosition, 0.0, 1.0);
 }

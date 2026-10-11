@@ -8,6 +8,8 @@
 
 #include "Systems/ResourceSystem.h"
 
+#include "LoaderUtils.h"
+
 #include "Math/FMath.h"
 
 #include "Platform/Filesystem.h"
@@ -24,7 +26,6 @@ Bool8 MaterialLoaderLoad(struct ResourceLoader* Self, const char* Name, Resource
     char FullFilePath[4096];
 
     StringFormat(FullFilePath, FormatString, ResourceSystemBasePath(), Self->TypePath, Name, ".fmat");
-    Resource->FullPath = StringDuplicate(FullFilePath);
 
     FileHandle File;
     if (!FilesystemOpen(FullFilePath, FILE_MODE_READ, false, &File))
@@ -33,7 +34,10 @@ Bool8 MaterialLoaderLoad(struct ResourceLoader* Self, const char* Name, Resource
         return false;
     }
 
+    Resource->FullPath = StringDuplicate(FullFilePath);
+
     MaterialConfig* ResourceData = FMAllocate(sizeof(MaterialConfig), MEMORY_TAG_MATERIAL_INSTANCE);
+    ResourceData->Type = MATERIAL_TYPE_WORLD;
     ResourceData->AutoRelease = true;
     ResourceData->BaseColor = Vec4One();
     ResourceData->BaseColorMapName[0] = 0;
@@ -87,6 +91,16 @@ Bool8 MaterialLoaderLoad(struct ResourceLoader* Self, const char* Name, Resource
             }
         } else if (StringsEqualI(TrimmedVariableName, "AutoRelease")) {
             ResourceData->AutoRelease = StringToBool(TrimmedValue, &ResourceData->AutoRelease);
+        } else if (StringsEqualI(TrimmedVariableName, "MaterialType")) {
+            if (StringsEqualI(TrimmedValue, "World"))
+            {
+                ResourceData->Type = MATERIAL_TYPE_WORLD;
+            }
+
+            if (StringsEqualI(TrimmedValue, "UI"))
+            {
+                ResourceData->Type = MATERIAL_TYPE_UI;
+            }
         } 
 
         // More fields
@@ -107,24 +121,9 @@ Bool8 MaterialLoaderLoad(struct ResourceLoader* Self, const char* Name, Resource
 
 void MaterialLoaderUnload(struct ResourceLoader* Self, Resource* Resource)
 {
-    if (!Self || !Resource)
+    if (!ResourceUnload(Self, Resource, MEMORY_TAG_MATERIAL_INSTANCE))
     {
-        FLWARN("MaterialLoaderUnload called with a nullptr for self or resource");
-        return;
-    }
-
-    UInt32 PathLength = StringLength(Resource->FullPath);
-    if (PathLength)
-    {
-        FMFree(Resource->FullPath, sizeof(char) * PathLength + 1, MEMORY_TAG_STRING);
-    }
-
-    if (Resource->Data)
-    {
-        FMFree(Resource->Data, Resource->DataSize, MEMORY_TAG_MATERIAL_INSTANCE);
-        Resource->Data = 0;
-        Resource->DataSize = 0;
-        Resource->LoaderID = InvalidID;
+        FLWARN("MaterialLoaderUnload called w/ nullptr for self or resource");
     }
 }
 

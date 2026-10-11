@@ -245,6 +245,9 @@ Bool8 LoadMaterial(MaterialConfig Config, Material* M)
     // Name
     StringNcopy(M->Name, Config.Name, MaterialNameMaxLength);
 
+    // Type
+    M->Type = Config.Type;
+
     // Base color
     M->BaseColor = Config.BaseColor;
 

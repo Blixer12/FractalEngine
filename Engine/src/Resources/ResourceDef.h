@@ -60,8 +60,14 @@ typedef struct TextureMap {
 
 constexpr UInt32 MaterialNameMaxLength = 256;
 
+typedef enum MaterialType {
+    MATERIAL_TYPE_WORLD,
+    MATERIAL_TYPE_UI
+} MaterialType;
+
 typedef struct MaterialConfig {
     char Name[MaterialNameMaxLength];
+    MaterialType Type;
     Bool8 AutoRelease;
     Vec4 BaseColor;
     char BaseColorMapName[TextureNameMaxLength];
@@ -71,6 +77,7 @@ typedef struct Material {
     UInt32 ID;
     UInt32 InternalID;
     UInt32 Generation;
+    MaterialType Type;
     char Name[MaterialNameMaxLength];
     Vec4 BaseColor;
     TextureMap BaseColorMap;
