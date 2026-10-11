@@ -11,9 +11,7 @@
 
 #include "Systems/TextureSystem.h"
 
-// TODO: Resource system
-#include "Platform/Filesystem.h"
-// TODO: End temporary
+#include "Systems/ResourceSystem.h"
 
 typedef struct MaterialSystemState {
     MaterialSystemConfig Config;
@@ -37,7 +35,6 @@ static MaterialSystemState* StatePtr = 0;
 Bool8 CreateDefaultMaterial(MaterialSystemState* State);
 Bool8 LoadMaterial(MaterialConfig Config, Material* M);
 void DestroyMaterial(Material* M);
-Bool8 LoadConfigurationFile(const char* Path, MaterialConfig* Config);
 
 Bool8 MaterialSystemInitialize(UInt64* MemoryRequirement, void* State, MaterialSystemConfig Config)
 {
@@ -106,23 +103,28 @@ void MaterialSystemShutdown(void* State)
 
 Material* MaterialSystemAcquire(const char* Name)
 {
-    // Load given material config from disk
-    MaterialConfig Config = {0};
-
-    // Load the file from disk
-    // TODO: should be located anywhere (once again, no organization)
-    char* FormatString = "Assets/Materials/%s.%s";
-    char FullFilePath[4096];
-
-    // TODO: try different extensions, again...
-    StringFormat(FullFilePath, FormatString, Name, "fmat");
-    if (!LoadConfigurationFile(FullFilePath, &Config))
+    Resource MaterialResource;
+    if (!ResourceSystemLoad(Name, RESOURCE_TYPE_MATERIAL, &MaterialResource))
     {
-        FLERROR("Failed to load material file: '%s' Null pointer will be returned", FullFilePath);
+        FLERROR("Failed to load material resource, returning nullptr");
         return 0;
     }
 
-    return MaterialSystemAcquireFromConfig(Config);
+    Material* M = 0;
+    if (MaterialResource.Data)
+    {
+        M = MaterialSystemAcquireFromConfig(*(MaterialConfig*)MaterialResource.Data);
+    }
+
+    ResourceSystemUnload(&MaterialResource);
+
+    if (!M)
+    {
+        FLERROR("Failed to load material resource, returning nullptr");
+        return 0;
+    }
+
+    return M;
 }
 
 Material* MaterialSystemAcquireFromConfig(MaterialConfig Config)
@@ -225,6 +227,17 @@ void MaterialSystemRelease(const char* Name)
     }
 }
 
+Material* MaterialSystemGetDefault()
+{
+    if (StatePtr)
+    {
+        return &StatePtr->DefaultMaterial;
+    }
+
+    FLFATAL("MaterialSystemGetDefault called before system init!");
+    return 0;
+}
+
 Bool8 LoadMaterial(MaterialConfig Config, Material* M)
 {
     FMZeroMemory(M, sizeof(Material));
@@ -243,7 +256,7 @@ Bool8 LoadMaterial(MaterialConfig Config, Material* M)
         if (!M->BaseColorMap.Texture)
         {
             FLWARN("Unable to load texture '%s' for material '%s', using default", Config.BaseColorMapName, M->Name);
-            M->BaseColorMap.Texture = TextureSystemGetDefaultTexture();
+            M->BaseColorMap.Texture = TextureSystemGetDefault();
         }
     } else {
         // NOTE: Sets for clarity
@@ -288,83 +301,13 @@ Bool8 CreateDefaultMaterial(MaterialSystemState* State)
     StringNcopy(State->DefaultMaterial.Name, DefaultMaterialName, MaterialNameMaxLength);
     State->DefaultMaterial.BaseColor = Vec4One(); // White
     State->DefaultMaterial.BaseColorMap.Use = TEXTURE_USE_MAP_DIFFUSE;
-    State->DefaultMaterial.BaseColorMap.Texture = TextureSystemGetDefaultTexture();
+    State->DefaultMaterial.BaseColorMap.Texture = TextureSystemGetDefault();
 
     if (!CrystalCreateMaterial(&State->DefaultMaterial))
     {
         FLFATAL("Failed to acquire crystal's resources for default material. Application cannot continue");
         return false;
     }
-
-    return true;
-}
-
-Bool8 LoadConfigurationFile(const char* Path, MaterialConfig* Config)
-{
-    FileHandle File;
-    if (!FilesystemOpen(Path, FILE_MODE_READ, false, &File))
-    {
-        FLERROR("LoadConfigurationFile - Unable to open material for reading: '%s", Path);
-        return false;
-    }
-    char LineBuffer[1538] = "";
-    char* Pointer = &LineBuffer[0];
-    UInt64 LineLength = 0;
-    UInt32 LineNumber = 1;
-    while (FilesystemReadLine(&File, 1537, &Pointer, &LineLength))
-    {
-        char* Trimmed = StringTrim(LineBuffer);
-
-        LineLength = StringLength(Trimmed);
-
-        if (LineLength < 1 || Trimmed[0] == '#')
-        {
-            LineNumber++;
-            continue;
-        }
-
-        Int32 EqualIndex = StringIndexOf(Trimmed, '=');
-        if (EqualIndex == -1)
-        {
-            FLWARN("Potential formattinmg issue in file '%s': '=' token not found, skipping line %ui.", Path, LineNumber);
-            LineNumber++;
-            continue;
-        }
-
-        char RawVariableName[512];
-        FMZeroMemory(RawVariableName, sizeof(char) * 512);
-        StringMid(RawVariableName, Trimmed, 0, EqualIndex);
-        char* TrimmedVariableName = StringTrim(RawVariableName);
-
-        char RawValue[1024];
-        FMZeroMemory(RawValue, sizeof(char) * 1024);
-        StringMid(RawValue, Trimmed, EqualIndex + 1, -1);
-        char* TrimmedValue = StringTrim(RawValue);
-
-        if (StringsEqualI(TrimmedVariableName, "Version")) {
-            // TODO: Version
-        } else if (StringsEqualI(TrimmedVariableName, "Name")) {
-            StringNcopy(Config->Name, TrimmedValue, MaterialNameMaxLength);
-        } else if (StringsEqualI(TrimmedVariableName, "BaseColorMapName")) {
-            StringNcopy(Config->BaseColorMapName, TrimmedValue, TextureNameMaxLength);
-        } else if (StringsEqualI(TrimmedVariableName, "BaseColor")) {
-            // Parse the color
-            if (!StringToVec4(TrimmedValue, &Config->BaseColor))
-            {
-                FLWARN("Error parsing BaseColor in file '%s'. Using default of white instead.", Path);
-                Config->BaseColor = Vec4One();
-            }
-        } else if (StringsEqualI(TrimmedVariableName, "AutoRelease")) {
-            Config->AutoRelease = StringToBool(TrimmedValue, &Config->AutoRelease);
-        } 
-
-        // More fields
-
-        FMZeroMemory(LineBuffer, sizeof(char) * 1538);
-        LineNumber++;
-    }
-
-    FilesystemClose(&File);
 
     return true;
 }

@@ -5,45 +5,47 @@
 void VulkanRenderpassCreate(
     VulkanContext* Context, 
     VulkanRenderpass* Renderpass,
-    Float32 X, Float32 Y, Float32 W, Float32 H,
-    Float32 R, Float32 G, Float32 B, Float32 A,
+    Vec4 RenderArea,
+    Vec4 ClearColor,
     Float32 Depth,
-    UInt32 Stencil) {
+    UInt32 Stencil,
+    UInt8 ClearFlags,
+    Bool8 HasPreviousPass,
+    Bool8 HasNextPass) {
     
-    Renderpass->X = X;
-    Renderpass->Y = Y;
-    Renderpass->W = W;
-    Renderpass->H = H;
-
-    Renderpass->R = R;
-    Renderpass->G = G;
-    Renderpass->B = B;
-    Renderpass->A = A;
+    Renderpass->RenderArea = RenderArea;
+    Renderpass->ClearColor = ClearColor;
 
     Renderpass->Depth = Depth;
     Renderpass->Stencil = Stencil;
+
+    Renderpass->ClearFlags = ClearFlags;
+    Renderpass->HasPreviousPass = HasPreviousPass;
+    Renderpass->HasNextPass = HasNextPass;
 
     // Main subpass
     VkSubpassDescription Subpass = {0};
     Subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 
     // Attachments TODO: make this configurable.
-    constexpr UInt32 AttachmentDescriptionCount = 2;
-    VkAttachmentDescription AttachmentDescriptions[AttachmentDescriptionCount];
+    UInt32 AttachmentDescriptionCount = 0;
+    VkAttachmentDescription AttachmentDescriptions[2];
 
     // Color attachment
+    Bool8 DoClearColor = (Renderpass->ClearFlags & RENDERPASS_CLEAR_COLOR_BUFFER_FLAG) != 0;
     VkAttachmentDescription ColorAttachment = {0};
     ColorAttachment.format = Context->Swapchain.ImageFormat.format; // TODO: configurable
     ColorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    ColorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    ColorAttachment.loadOp = DoClearColor ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
     ColorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     ColorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     ColorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    ColorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;      // Do not expect any particular layout before render pass starts.
-    ColorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;  // Transitioned to after the render pass
+    ColorAttachment.initialLayout = HasPreviousPass ? VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_UNDEFINED;
+    ColorAttachment.finalLayout = HasNextPass ? VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;  // Transitioned to after the render pass
     ColorAttachment.flags = 0;
 
     AttachmentDescriptions[0] = ColorAttachment;
+    AttachmentDescriptionCount++;
 
     VkAttachmentReference ColorAttachmentReference;
     ColorAttachmentReference.attachment = 0;  // Attachment description array index
@@ -54,17 +56,24 @@ void VulkanRenderpassCreate(
 
     // Depth attachment, if there is one
     // Might want to make configurable? however it is a 3D engine, maybe for 2D, but againg probably still needed
+    Bool8 DoClearDepth = (Renderpass->ClearFlags & RENDERPASS_CLEAR_DEPTH_BUFFER_FLAG) != 0;
+
+    if (DoClearDepth)
+    {
+
+    
     VkAttachmentDescription DepthAttachment = {0};
     DepthAttachment.format = Context->Device.DepthFormat;
     DepthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    DepthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    DepthAttachment.loadOp = DoClearDepth ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
     DepthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     DepthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     DepthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     DepthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     DepthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-    AttachmentDescriptions[1] = DepthAttachment;
+    AttachmentDescriptions[AttachmentDescriptionCount] = DepthAttachment;
+    AttachmentDescriptionCount++;
 
     // Depth attachment reference
     VkAttachmentReference DepthAttachmentReference;
@@ -75,6 +84,10 @@ void VulkanRenderpassCreate(
 
     // Depth stencil data.
     Subpass.pDepthStencilAttachment = &DepthAttachmentReference;
+    } else {
+        FMZeroMemory(&AttachmentDescriptions[AttachmentDescriptionCount], sizeof(VkAttachmentDescription));
+        Subpass.pDepthStencilAttachment = 0;
+    }
 
     // Input from a shader
     Subpass.inputAttachmentCount = 0;
@@ -132,22 +145,35 @@ void VulkanRenderpassBegin(
     BeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     BeginInfo.renderPass = Renderpass->Handle;
     BeginInfo.framebuffer = Framebuffer;
-    BeginInfo.renderArea.offset.x = Renderpass->X;
-    BeginInfo.renderArea.offset.y = Renderpass->Y;
-    BeginInfo.renderArea.extent.width = Renderpass->W;
-    BeginInfo.renderArea.extent.height = Renderpass->H;
+    BeginInfo.renderArea.offset.x = Renderpass->RenderArea.x;
+    BeginInfo.renderArea.offset.y = Renderpass->RenderArea.y;
+    BeginInfo.renderArea.extent.width = Renderpass->RenderArea.z;
+    BeginInfo.renderArea.extent.height = Renderpass->RenderArea.w;
+
+    BeginInfo.clearValueCount = 0;
+    BeginInfo.pClearValues = 0;
 
     VkClearValue ClearValues[2];
     FMZeroMemory(ClearValues, sizeof(VkClearValue) * 2);
-    ClearValues[0].color.float32[0] = Renderpass->R;
-    ClearValues[0].color.float32[1] = Renderpass->G;
-    ClearValues[0].color.float32[2] = Renderpass->B;
-    ClearValues[0].color.float32[3] = Renderpass->A;
-    ClearValues[1].depthStencil.depth = Renderpass->Depth;
-    ClearValues[1].depthStencil.stencil = Renderpass->Stencil;
+    Bool8 DoClearColor = (Renderpass->ClearFlags & RENDERPASS_CLEAR_COLOR_BUFFER_FLAG) != 0;
+    if (DoClearColor)
+    {
+        FMCopyMemory(ClearValues[BeginInfo.clearValueCount].color.float32, Renderpass->ClearColor.Elements, sizeof(Float32) * 4);\
+        BeginInfo.clearValueCount++;
+    }
 
-    BeginInfo.clearValueCount = 2;
-    BeginInfo.pClearValues = ClearValues;
+    Bool8 DoClearDepth = (Renderpass->ClearFlags & RENDERPASS_CLEAR_DEPTH_BUFFER_FLAG) != 0;
+    if (DoClearDepth)
+    {
+        FMCopyMemory(ClearValues[BeginInfo.clearValueCount].color.float32, Renderpass->ClearColor.Elements, sizeof(Float32) * 4);
+        ClearValues[BeginInfo.clearValueCount].depthStencil.depth = Renderpass->Depth;
+
+        Bool8 DoClearStencil = (Renderpass->ClearFlags & RENDERPASS_CLEAR_STENCIL_BUFFER_FLAG) != 0;
+        ClearValues[BeginInfo.clearValueCount].depthStencil.stencil = DoClearStencil ? Renderpass->Stencil : 0;
+        BeginInfo.clearValueCount++;
+    }
+
+    BeginInfo.pClearValues = BeginInfo.clearValueCount > 0 ? ClearValues : 0;
 
     vkCmdBeginRenderPass(CommandBuffer->Handle, &BeginInfo, VK_SUBPASS_CONTENTS_INLINE);
     CommandBuffer->State = VULKAN_COMMAND_BUFFER_STATE_IN_RENDER_PASS;

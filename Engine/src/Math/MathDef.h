@@ -74,3 +74,8 @@ typedef struct Vertex3D {
     Vec3 Position;
     Vec2 TextureCoordinates;
 } Vertex3D;
+
+typedef struct Vertex2D {
+    Vec2 Position;
+    Vec2 TextureCoordinates;
+} Vertex2D;

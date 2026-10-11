@@ -11,7 +11,8 @@ void VulkanMaterialShaderUse(VulkanContext* Context, struct VulkanMaterialShader
 
 void VulkanMaterialShaderUpdateGlobalState(VulkanContext* Context, struct VulkanMaterialShader* Shader, Float32 DeltaTime);
 
-void VulkanMaterialShaderUpdateObject(VulkanContext* Context, struct VulkanMaterialShader* Shader, GeometryRenderData Data);
+void VulkanMaterialShaderSetModel(VulkanContext* Context, struct VulkanMaterialShader* Shader, Mat4 Model);
+void VulkanMaterialShaderApplyMaterial(VulkanContext* Context, struct VulkanMaterialShader* Shader, Material* Material);
 
 Bool8 VulkanMaterialShaderAcquireResources(VulkanContext* Context, struct VulkanMaterialShader* Shader, Material* Material);
 void VulkanMaterialShaderReleaseResources(VulkanContext* Context, struct VulkanMaterialShader* Shader, Material* Material);

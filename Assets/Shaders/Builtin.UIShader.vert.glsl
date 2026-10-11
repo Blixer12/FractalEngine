@@ -1,6 +1,6 @@
 #version 460
 
-layout(location = 0) in vec3 InPosition;
+layout(location = 0) in vec2 InPosition;
 layout(location = 1) in vec2 TextureCoordinates;
 
 layout(set = 0, binding = 0) uniform GlobalUniformObject
@@ -22,6 +22,6 @@ layout(location = 1) out struct DataTransferObject {
 
 void main()
 {
-    OutDTO.TextureCoordinates = TextureCoordinates;
-    gl_Position = GlobalUBO.Projection * GlobalUBO.View * PushConstant.Model * vec4(InPosition, 1.0);
+    OutDTO.TextureCoordinates = vec2(TextureCoordinates.x, 1.0 - TextureCoordinates.y);
+    gl_Position = GlobalUBO.Projection * GlobalUBO.View * PushConstant.Model * vec4(InPosition, 1.0, 1.0);
 }

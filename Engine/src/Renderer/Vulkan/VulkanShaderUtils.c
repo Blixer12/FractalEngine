@@ -4,7 +4,7 @@
 #include "Core/Logger.h"
 #include "Core/Memory.h"
 
-#include "Platform/Filesystem.h"
+#include "Systems/ResourceSystem.h"
 
 Bool8 CreateShaderModule(
     VulkanContext* Context,
@@ -14,32 +14,22 @@ Bool8 CreateShaderModule(
     UInt32 StageIndex,
     VulkanShaderStage* ShaderStages)
 {
-    // Build file name.
+    // Build file name for the resource name
     char FileName[4096];
-    StringFormat(FileName, "Assets/Shaders/%s.%s.spv", Name, TypeString);
+    StringFormat(FileName, "Shaders/%s.%s.spv", Name, TypeString);
+
+    Resource BinaryResource;
+    if (!ResourceSystemLoad(FileName, RESOURCE_TYPE_BINARY, &BinaryResource))
+    {
+        FLERROR("Unable to read shader module: '%s'", FileName);
+        return false;
+    }
 
     FMZeroMemory(&ShaderStages[StageIndex].CreateInfo, sizeof(VkShaderModuleCreateInfo));
     ShaderStages[StageIndex].CreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 
-    // Obtain file handle.
-    FileHandle Handle;
-    if (!FilesystemOpen(FileName, FILE_MODE_READ, true, &Handle)) {
-        FLERROR("Unable to read shader module: %s.", FileName);
-        return false;
-    }
-
-    // Read the entire file as binary.
-    UInt64 Size = 0;
-    UInt8* FileBuffer = 0;
-    if (!FilesystemReadAllBytes(&Handle, &FileBuffer, &Size)) {
-        FLERROR("Unable to binary read shader module: %s.", FileName);
-        return false;
-    }
-    ShaderStages[StageIndex].CreateInfo.codeSize = Size;
-    ShaderStages[StageIndex].CreateInfo.pCode = (UInt32*)FileBuffer;
-
-    // Close the file.
-    FilesystemClose(&Handle);
+    ShaderStages[StageIndex].CreateInfo.codeSize = BinaryResource.DataSize;
+    ShaderStages[StageIndex].CreateInfo.pCode    = (UInt32*)BinaryResource.Data;
 
     VK_CHECK(vkCreateShaderModule(
         Context->Device.LogicalDevice,
@@ -47,17 +37,14 @@ Bool8 CreateShaderModule(
         Context->Allocator,
         &ShaderStages[StageIndex].Handle));
 
+    ResourceSystemUnload(&BinaryResource);
+
     // Shader stage info
     FMZeroMemory(&ShaderStages[StageIndex].ShaderStageCreateInfo, sizeof(VkPipelineShaderStageCreateInfo));
     ShaderStages[StageIndex].ShaderStageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     ShaderStages[StageIndex].ShaderStageCreateInfo.stage = ShaderStageFlags;
     ShaderStages[StageIndex].ShaderStageCreateInfo.module = ShaderStages[StageIndex].Handle;
     ShaderStages[StageIndex].ShaderStageCreateInfo.pName = "main";
-
-    if (FileBuffer) {
-        FMFree(FileBuffer, sizeof(UInt8) * Size, MEMORY_TAG_STRING);
-        FileBuffer = 0;
-    }
 
     return true;
 }

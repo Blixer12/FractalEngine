@@ -80,6 +80,19 @@ void FilesystemClose(FileHandle* Handle) {
     }
 }
 
+Bool8 FilesystemSize(FileHandle* Handle, UInt64* Size)
+{
+    if (Handle->Handle)
+    {
+        fseek((FILE*)Handle->Handle, 0, SEEK_END);
+        *Size = ftell((FILE*)Handle->Handle);
+        rewind((FILE*)Handle->Handle);
+        return true;
+    }
+
+    return false;
+}
+
 Bool8 FilesystemReadLine(FileHandle* Handle, UInt64 MaxLength, char** LineBuffer, UInt64* LineLength)
 {
     if (Handle->Handle && LineBuffer && LineLength && MaxLength > 0)
@@ -120,19 +133,32 @@ Bool8 FilesystemRead(FileHandle* Handle, UInt64 DataSize, void* Data, UInt64* By
     return false;
 }
 
-Bool8 FilesystemReadAllBytes(FileHandle* Handle, UInt8** Bytes, UInt64* BytesRead) {
-    if (Handle->Handle) {
+Bool8 FilesystemReadAllBytes(FileHandle* Handle, UInt8* Bytes, UInt64* BytesRead) {
+    if (Handle->Handle && Bytes && BytesRead) {
         // File size
-        fseek((FILE*)Handle->Handle, 0, SEEK_END);
-        UInt64 size = ftell((FILE*)Handle->Handle);
-        rewind((FILE*)Handle->Handle);
-
-        *Bytes = FMAllocate(sizeof(UInt8) * size, MEMORY_TAG_STRING);
-        *BytesRead = fread(*Bytes, 1, size, (FILE*)Handle->Handle);
-        if (*BytesRead != size) {
+        UInt64 Size = 0;
+        if (!FilesystemSize(Handle, &Size))
+        {
             return false;
         }
-        return true;
+
+        *BytesRead = fread(Bytes, 1, Size, (FILE*)Handle->Handle);
+        return *BytesRead == Size;
+    }
+    return false;
+}
+
+Bool8 FilesystemReadAllText(FileHandle* Handle, char* Text, UInt64* BytesRead) {
+    if (Handle->Handle && Text && BytesRead) {
+        // File size
+        UInt64 Size = 0;
+        if (!FilesystemSize(Handle, &Size))
+        {
+            return false;
+        }
+
+        *BytesRead = fread(Text, 1, Size, (FILE*)Handle->Handle);
+        return *BytesRead == Size;
     }
     return false;
 }

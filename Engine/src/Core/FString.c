@@ -64,6 +64,16 @@ Int32 StringFormatV(char* Dest, const char* Format, void* VaListp) {
     return -1;
 }
 
+char* StringEmpty(char* String)
+{
+    if (String)
+    {
+        String[0] = '\0';
+    }
+
+    return String;
+}
+
 char* StringCopy(char* Dest, const char* Source)
 {
     return strcpy(Dest, Source);

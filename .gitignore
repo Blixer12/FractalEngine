@@ -5,6 +5,8 @@
 *.bin
 *.exp
 *.lib
+*.spv
+*.log
 
 # =========================
 #       File Paths
@@ -12,3 +14,4 @@
 
 .vscode/
 Object/
+Engine/src/Deprecated

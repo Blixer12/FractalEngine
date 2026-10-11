@@ -14,11 +14,14 @@ void RecalculateViewMatrix(GameState* State)
 {
     if (State->CameraViewUpdated)
     {
-        Mat4 Rotation = Mat4EulerXYZ(State->CameraEuler.x, State->CameraEuler.y, State->CameraEuler.z);
-        Mat4 Translation = Mat4Translation(State->CameraPosition);
+        Mat4 Rotation;
+        Mat4 Translation;
 
-        State->View = Mat4Mul(Rotation, Translation);
-        State->View = Mat4Inverse(State->View);
+        Mat4EulerXYZ(State->CameraEuler.x, State->CameraEuler.y, State->CameraEuler.z, &Rotation);
+        Mat4Translation(State->CameraPosition, &Translation);
+
+        Mat4Mul(&Rotation, &Translation, &State->View);
+        Mat4Inverse(&State->View);
 
         State->CameraViewUpdated = false;
     }
@@ -50,7 +53,7 @@ Bool8 GameInitialize(Game* Instance)
     State->CameraPosition = (Vec3){.x = 0.0f, .y = 0.0f, .z = 30.0f};
     State->CameraEuler = Vec3Zero();
 
-    State->View = Mat4Translation(State->CameraPosition);
+    Mat4Translation(State->CameraPosition, &State->View);
     State->CameraViewUpdated = true;
 
     return true;
@@ -74,25 +77,25 @@ Bool8 GameUpdate(Game* Instance, Float32 DeltaTime)
 
     if (InputIsKeyDown(WKey))
     {
-        Vec3 Forward = Mat4Forward(State->View);
+        Vec3 Forward = Mat4Forward(&State->View);
         Velocity = Vec3Add(Velocity, Forward);
     }
 
     if (InputIsKeyDown(AKey))
     {
-        Vec3 Left = Mat4Left(State->View);
+        Vec3 Left = Mat4Left(&State->View);
         Velocity = Vec3Add(Velocity, Left);
     }
 
     if (InputIsKeyDown(SKey))
     {
-        Vec3 Backwards = Mat4Backward(State->View);
+        Vec3 Backwards = Mat4Backward(&State->View);
         Velocity = Vec3Add(Velocity, Backwards);
     }
 
     if (InputIsKeyDown(DKey))
     {
-        Vec3 Right = Mat4Right(State->View);
+        Vec3 Right = Mat4Right(&State->View);
         Velocity = Vec3Add(Velocity, Right);
     }
 

@@ -39,6 +39,15 @@ FAPI Bool8 FilesystemOpen(const char* Path, FileModes Mode, Bool8 Binary, FileHa
  */
 FAPI void FilesystemClose(FileHandle* Handle);
 
+/**
+ * @brief Attempts to read size of the file to which handle is attached
+ * 
+ * @param Handle The file handle
+ * @param Size a pointer to hold the file size
+ * @returns True on success
+ */
+FAPI Bool8 FilesystemSize(FileHandle* Handle, UInt64* Size);
+
 /** 
  * Reads up to a newline or EOF
  * @param Handle A pointer to a FileHandle structure.
@@ -72,11 +81,21 @@ FAPI Bool8 FilesystemRead(FileHandle* Handle, UInt64 DataSize, void* Data, UInt6
  * Reads up to DataSize bytes of data into Bytes_read. 
  * Allocates *Bytes, which must be freed by the caller.
  * @param handle A pointer to a FileHandle structure.
- * @param Bytes A pointer to a byte array which will be allocated and populated by this method.
+ * @param Bytes A byte array which will be populated by this method.
  * @param BytesRead A pointer to a number which will be populated with the number of bytes actually read from the file.
  * @returns True if successful; otherwise false.
  */
-FAPI Bool8 FilesystemReadAllBytes(FileHandle* Handle, UInt8** Bytes, UInt64* BytesRead);
+FAPI Bool8 FilesystemReadAllBytes(FileHandle* Handle, UInt8* Bytes, UInt64* BytesRead);
+
+/** 
+ * Reads up to DataSize bytes of data into Bytes_read. 
+ * Allocates *Bytes, which must be freed by the caller.
+ * @param handle A pointer to a FileHandle structure.
+ * @param Text A character array which will be populated by this method.
+ * @param BytesRead A pointer to a number which will be populated with the number of bytes actually read from the file.
+ * @returns True if successful; otherwise false.
+ */
+FAPI Bool8 FilesystemReadAllText(FileHandle* Handle, char* Text, UInt64* BytesRead);
 
 /** 
  * Writes provided data to the file.

@@ -11,57 +11,17 @@
 #include "Systems/TextureSystem.h"
 #include "Systems/MaterialSystem.h"
 
-// NOTE: Temporary
-#include "Core/FString.h"
-#include "Core/Event.h"
-// NOTE: End temporary
-
 typedef struct CrystalState {
     CrystalBackend Backend;
     Mat4 Projection;
     Mat4 View;
+    Mat4 UIProjection;
+    Mat4 UIView;
     Float32 NearClip;
     Float32 FarClip;
-
-    // NOTE: Temporary
-    Material* TestMaterial;
-    // NOTE: End temporary
 } CrystalState;
 
 static CrystalState* StatePtr;
-
-Bool8 EventOnDebugEvent(UInt16 Code, void* Sender, void* Reciever, EventContext Data)
-{
-    (void)Code;
-    (void)Sender;
-    (void)Reciever;
-    (void)Data;
-
-    const char* Names[4] = {
-        "Cobblestone",
-        "Paving",
-        "Paving2",
-        "WhiteStone"};
-    static Int8 Choice = 3;
-
-    const char* OldName = Names[Choice];
-
-    Choice++;
-    Choice %= 4;
-
-    // Acquire the new texture
-    StatePtr->TestMaterial->BaseColorMap.Texture = TextureSystemAcquire(Names[Choice], true);
-    if (!StatePtr->TestMaterial->BaseColorMap.Texture)
-    {
-        FLWARN("EventOnDebugEvent - No Texture! using default!");
-        StatePtr->TestMaterial->BaseColorMap.Texture = TextureSystemGetDefaultTexture();
-    }
-
-    TextureSystemRelease(OldName);
-    return true;
-}
-
-// NOTE: End temporary
 
 Bool8 CrystalInitialize(UInt64* MemoryRequirement, void* State, const char* AppName)
 {
@@ -70,10 +30,6 @@ Bool8 CrystalInitialize(UInt64* MemoryRequirement, void* State, const char* AppN
         return true;
     }
     StatePtr = State;
-
-    // NOTE: Temporary
-    EventRegister(EVENT_DEBUG0, StatePtr, EventOnDebugEvent);
-    // NOTE: End temporary
 
     //TODO: Make this Configurable
     CrystalBackendCreate(CRYSTAL_BACKEND_TYPE_VULKAN, &StatePtr->Backend);
@@ -85,22 +41,25 @@ Bool8 CrystalInitialize(UInt64* MemoryRequirement, void* State, const char* AppN
         return false;
     }
 
+    // World projection/view
     StatePtr->NearClip = 0.001f;
     StatePtr->FarClip = 1000.0f;
-    StatePtr->Projection = Mat4Perspective(DegreesToRadians(45.0f), 1280/720.0f, StatePtr->NearClip, StatePtr->FarClip);
+    Mat4Perspective(DegreesToRadians(45.0f), 1280/720.0f, StatePtr->NearClip, StatePtr->FarClip, &StatePtr->Projection);
 
+    // configurable camera starting position maybe
     Vec3 Position = {.x = 0.0f, .y =0.0f, .z = 30.0f}; // 30.0f
-    StatePtr->View = Mat4Translation(Position);
-    StatePtr->View = Mat4Inverse(StatePtr->View);
+    Mat4Translation(Position, &StatePtr->View);
+    Mat4Inverse(&StatePtr->View);
+
+    // UI Projection
+    Mat4Orthographic(0, 1280.0f, 720.0f, 0, -100.0f, 100.0f, &StatePtr->UIProjection);
+    Mat4Inverse(Mat4Identity(&StatePtr->UIView));
 
     return true;
 }
 void CrystalShutdown()
 {
     if (StatePtr) {
-        // NOTE: Temporary
-        EventUnregister(EVENT_DEBUG0, StatePtr, EventOnDebugEvent);
-        // NOTE: End temporary
 
         StatePtr->Backend.Shutdown(&StatePtr->Backend);
     }
@@ -109,22 +68,15 @@ void CrystalShutdown()
     StatePtr = 0;
 }
 
-Bool8 CrystalBeginFrame(Float32 DeltaTime)
-{
-    return StatePtr->Backend.BeginFrame(&StatePtr->Backend, DeltaTime);
-}
-
-Bool8 CrystalEndFrame(Float32 DeltaTime)
-{
-    Bool8 Result = StatePtr->Backend.EndFrame(&StatePtr->Backend, DeltaTime);
-    StatePtr->Backend.FrameNumber++;
-    return Result;
-}
-
 void CrystalOnResize(UInt16 Width, UInt16 Height)
 {
+    if (Width == 0 || Height == 0) {
+        return;
+    }
+
     if (StatePtr) {
-        StatePtr->Projection = Mat4Perspective(DegreesToRadians(70.0f), Width/(Float32)Height, StatePtr->NearClip, StatePtr->FarClip);
+        Mat4Perspective(DegreesToRadians(45.0f), Width/(Float32)Height, StatePtr->NearClip, StatePtr->FarClip, &StatePtr->Projection);
+        Mat4Orthographic(0, (Float32)Width, (Float32)Height, 0, -100.0f, 100.0f, &StatePtr->UIProjection);
         StatePtr->Backend.Resized(&StatePtr->Backend, Width, Height);
     } else {
         FLERROR("The Crystal backend does not exist to accept resize: %i, %i", Width, Height);
@@ -133,41 +85,51 @@ void CrystalOnResize(UInt16 Width, UInt16 Height)
 
 Bool8 CrystalDrawFrame(RenderPacket* Packet)
 {
-    if (CrystalBeginFrame(Packet->DeltaTime))
+    if (StatePtr->Backend.BeginFrame(&StatePtr->Backend, Packet->DeltaTime))
     {
-        StatePtr->Backend.UpdateGlobalState(StatePtr->Projection, StatePtr->View, Vec3Zero(), Vec4One(), 0);
-
-        Mat4 Model = Mat4Translation((Vec3){.x = 0.0f, .y = 0.0f, .z = 0.0f});
-        // static Float32 Angle = 0.0f;
-        // Angle += 0.03f;
-        // Quaternion Rotation = QuaternionFromAxisAngle(Vec3Forward(), Angle, false);
-        // Mat4 Model = QuaternionToRotationMatrix(Rotation, Vec3Zero());
-        GeometryRenderData Data = {0};
-        Data.Model = Model;
-
-        // TODO: Temporary
-        // Grab default if it aint real
-        if (!StatePtr->TestMaterial)
+        if (!StatePtr->Backend.BeginRenderpass(&StatePtr->Backend, BUILTIN_RENDERPASS_WORLD))
         {
-            // Auto Config
-            StatePtr->TestMaterial = MaterialSystemAcquire("TestMaterial");
-            if (!StatePtr->TestMaterial)
-            {
-                FLWARN("Auto material load failed, falling back to default texture");
-
-                MaterialConfig Config = {0};
-                StringNcopy(Config.Name, "TestMaterial", MaterialNameMaxLength);
-                Config.AutoRelease = false;
-                Config.BaseColor = Vec4One();
-                StringNcopy(Config.BaseColorMapName, DefaultTextureName, TextureNameMaxLength);
-                StatePtr->TestMaterial = MaterialSystemAcquireFromConfig(Config);
-            }
+            FLERROR("Backend.BeginRenderpass -> BUILTIN_RENDERPASS_WORLD failed. app shutting down");
+            return false;
         }
 
-        Data.Material = StatePtr->TestMaterial;
-        StatePtr->Backend.UpdateObject(&Data);
+        StatePtr->Backend.UpdateGlobalWorldState(StatePtr->Projection, StatePtr->View, Vec3Zero(), Vec4One(), 0);
 
-        Bool8 Result = CrystalEndFrame(Packet->DeltaTime);
+        UInt32 Count = Packet->GeometryCount;
+        for (UInt32 i = 0; i < Count; ++i)
+        {
+            StatePtr->Backend.DrawGeometry(Packet->Geometries[i]);
+        }
+
+        if (!StatePtr->Backend.EndRenderpass(&StatePtr->Backend, BUILTIN_RENDERPASS_WORLD))
+        {
+            FLERROR("Backend.BeginRenderpass -> BUILTIN_RENDERPASS_WORLD failed. app shutting down");
+            return false;
+        }
+
+
+        
+        if (!StatePtr->Backend.BeginRenderpass(&StatePtr->Backend, BUILTIN_RENDERPASS_UI))
+        {
+            FLERROR("Backend.BeginRenderpass -> BUILTIN_RENDERPASS_UI failed. app shutting down");
+            return false;
+        }
+
+        StatePtr->Backend.UpdateGlobalUIState(StatePtr->UIProjection, StatePtr->UIView, 0);
+
+        Count = Packet->UIGeometryCount;
+        for (UInt32 i = 0; i < Count; ++i)
+        {
+            StatePtr->Backend.DrawGeometry(Packet->UIGeometries[i]);
+        }
+
+        if (!StatePtr->Backend.EndRenderpass(&StatePtr->Backend, BUILTIN_RENDERPASS_UI))
+        {
+            FLERROR("Backend.BeginRenderpass -> BUILTIN_RENDERPASS_UI failed. app shutting down");
+            return false;
+        }
+
+        Bool8 Result = StatePtr->Backend.EndFrame(&StatePtr->Backend, Packet->DeltaTime);
 
         if (!Result)
         {
@@ -185,7 +147,7 @@ void CrystalSetView(Mat4 View)
 
 void CrystalCreateTexture(const UInt8* Pixels, struct Texture* Texture)
 {
-    StatePtr->Backend.CreateTexture(Pixels, Texture);
+    StatePtr->Backend.CreateTexture(Texture, Pixels);
 }
         
 void CrystalDestroyTexture(struct Texture* Texture)
@@ -201,4 +163,14 @@ Bool8 CrystalCreateMaterial(struct Material* Material)
 void CrystalDestroyMaterial(struct Material* Material) 
 {
     StatePtr->Backend.DestroyMaterial(Material);
+}
+
+Bool8 CrystalCreateGeometry(struct Geometry* Geometry, UInt32 VertexCount, const Vertex3D* Vertices, UInt32 IndexCount, const UInt32* Indices) 
+{
+    return StatePtr->Backend.CreateGeometry(Geometry, VertexCount, Vertices, IndexCount, Indices);
+}
+
+void CrystalDestroyGeometry(struct Geometry* Geometry) 
+{
+    StatePtr->Backend.DestroyGeometry(Geometry);
 }

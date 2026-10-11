@@ -5,6 +5,7 @@
 Bool8 VulkanGraphicsPipelineCreate(
     VulkanContext* Context,
     VulkanRenderpass* Renderpass,
+    UInt32 Stride,
     UInt32 AttributeCount,
     VkVertexInputAttributeDescription* Attributes,
     UInt32 DescriptorSetLayoutCount,
@@ -14,8 +15,8 @@ Bool8 VulkanGraphicsPipelineCreate(
     VkViewport Viewport,
     VkRect2D Scissor,
     Bool8 IsWireframe,
-    VulkanPipeline* Pipeline
-);
+    Bool8 DepthTestEnable,
+    VulkanPipeline* Pipeline);
 
 void VulkanPipelineDestroy(VulkanContext* Context, VulkanPipeline* Pipeline);
 

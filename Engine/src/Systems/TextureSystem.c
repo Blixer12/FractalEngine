@@ -7,9 +7,7 @@
 
 #include "Renderer/CrystalFrontend.h"
 
-// TODO: resource loader.
-#define STB_IMAGE_IMPLEMENTATION
-#include "Vendor/StbImage.h"
+#include "Systems/ResourceSystem.h"
 
 typedef struct TextureSystemState {
     TextureSystemConfig Config;
@@ -110,7 +108,7 @@ void TextureSystemShutdown(void* State)
 Texture* TextureSystemAcquire(const char* Name, Bool8 AutoRelease)
 {
     if (StringsEqualI(Name, DefaultTextureName)) {
-        FLWARN("TextureSystemAcquire called for default texture. Use TextureSystemGetDefaultTexture for texture 'Default'.");
+        FLWARN("TextureSystemAcquire called for default texture. Use TextureSystemGetDefault for texture 'Default'.");
         return &StatePtr->DefaultTexture;
     }
 
@@ -207,13 +205,13 @@ void TextureSystemRelease(const char* Name)
     }
 }
 
-Texture* TextureSystemGetDefaultTexture() 
+Texture* TextureSystemGetDefault() 
 {
     if (StatePtr) {
         return &StatePtr->DefaultTexture;
     }
 
-    FLERROR("TextureSystemGetDefaultTexture called before texture system initialization! Null pointer returned.");
+    FLERROR("TextureSystemGetDefault called before texture system initialization! Null pointer returned.");
     return 0;
 }
 
@@ -282,80 +280,55 @@ void CreateTexture(Texture* T)
 
 Bool8 LoadTexture(const char* TextureName, Texture* T)
 {
-    // TODO: Should be located anywhere...
-    char* FormatString = "Assets/Textures/%s.%s"; // This will hopefully be more robust so people can organize better! but for now, it has to go into textures, and NO SUB FOLDERS :(
-    const Int32 RequiredChannelCount = 4; // Standard RGBA, practically used everywhere!
-    stbi_set_flip_vertically_on_load(true); // The memory of a image is fliped in memory by default (idk why, but it is a fun fact!)
-    char FullFilePath[4096]; // Probably wont overflow (unless you SERIOUSLY use a BUNCH of subfolders! but not implemented for now!)
+    Resource ImageResource;
+    if (!ResourceSystemLoad(TextureName, RESOURCE_TYPE_IMAGE, &ImageResource))
+    {
+        FLERROR("Failed to load image resources for texture '%s'", TextureName);
+    }
 
-    // TODO: Try different extensions, because not EVERY IMAGE IS PNG!!!!
-    StringFormat(FullFilePath, FormatString, TextureName, "png");
+    ImageResourceData* ResourceData = ImageResource.Data;
 
     Texture TemporaryTexture;
+    TemporaryTexture.Width = ResourceData->Width;
+    TemporaryTexture.Height = ResourceData->Height;
+    TemporaryTexture.ChannelCount = ResourceData->ChannelCount;
 
-    UInt8* Data = stbi_load(
-        FullFilePath,
-        (Int32*)&TemporaryTexture.Width,
-        (Int32*)&TemporaryTexture.Height,
-        (Int32*)&TemporaryTexture.ChannelCount,
-        RequiredChannelCount);
+    UInt32 CurrentGeneration = T->Generation;
+    T->Generation = InvalidID;
 
-    TemporaryTexture.ChannelCount = RequiredChannelCount;
+    UInt64 TotalSize = TemporaryTexture.Width * TemporaryTexture.Height * TemporaryTexture.ChannelCount;
+    Bool8 HasTransparency = false;
 
-    if (Data)
+    for (UInt64 i = 0; i < TotalSize; i += TemporaryTexture.ChannelCount)
     {
-        UInt32 CurrentGeneration = T->Generation;
-        T->Generation = InvalidID;
-
-        UInt64 TotalSize = TemporaryTexture.Width * TemporaryTexture.Height * RequiredChannelCount;
-
-        Bool8 HasTransparency = false;
-
-        for (UInt64 i = 0; i < TotalSize; i += RequiredChannelCount)
+        UInt8 a = ResourceData->Pixels[i + 3];
+        if (a < 255)
         {
-            UInt8 a = Data[i + 3];
-            if (a < 255)
-            {
-                HasTransparency = true;
-                break;
-            }
+            HasTransparency = true;
+            break;
         }
-
-        if (stbi_failure_reason())
-        {
-            FLWARN("LoadTexture() failed to load file '%s' : %s", FullFilePath, stbi_failure_reason());
-            // Clear the error so the next load does not fail (because it CANNOT CLEAN ITSELF DAMN IT)
-            stbi__err(0, 0);
-            return false;
-        }
-
-        StringNcopy(TemporaryTexture.Name, TextureName, TextureNameMaxLength);
-        TemporaryTexture.Generation = InvalidID;
-        TemporaryTexture.HasTransparency = HasTransparency;
-
-        CrystalCreateTexture(Data, &TemporaryTexture);
-
-        Texture Old = *T;
-
-        *T = TemporaryTexture;
-
-        CrystalDestroyTexture(&Old);
-
-        if (CurrentGeneration == InvalidID) {
-            T->Generation = 0;
-        } else {
-            T->Generation = CurrentGeneration + 1;
-        }
-
-        stbi_image_free(Data);
-        return true;
-    } else {
-        if (stbi_failure_reason()) {
-            FLWARN("LoadTexture() failed to load file '%s' : %s", FullFilePath, stbi_failure_reason());
-            stbi__err(0, 0);
-        }
-        return false;
     }
+
+    StringNcopy(TemporaryTexture.Name, TextureName, TextureNameMaxLength);
+    TemporaryTexture.Generation = InvalidID;
+    TemporaryTexture.HasTransparency = HasTransparency;
+
+    CrystalCreateTexture(ResourceData->Pixels, &TemporaryTexture);
+
+    Texture Old = *T;
+
+    *T = TemporaryTexture;
+
+    CrystalDestroyTexture(&Old);
+
+    if (CurrentGeneration == InvalidID) {
+        T->Generation = 0;
+    } else {
+        T->Generation = CurrentGeneration + 1;
+    }
+
+    ResourceSystemUnload(&ImageResource);
+    return true;
 }
 
 void DestroyTexture(Texture* T)

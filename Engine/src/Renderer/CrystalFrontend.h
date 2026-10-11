@@ -21,3 +21,6 @@ void CrystalDestroyTexture(struct Texture* Texture);
 
 Bool8 CrystalCreateMaterial(struct Material* Material);
 void CrystalDestroyMaterial(struct Material* Material);
+
+Bool8 CrystalCreateGeometry(struct Geometry* Geometry, UInt32 VertexCount, const Vertex3D* Vertices, UInt32 IndexCount, const UInt32* Indices);
+void CrystalDestroyGeometry(struct Geometry* Geometry);

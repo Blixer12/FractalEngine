@@ -9,6 +9,7 @@
 Bool8 VulkanGraphicsPipelineCreate(
     VulkanContext* Context,
     VulkanRenderpass* Renderpass,
+    UInt32 Stride,
     UInt32 AttributeCount,
     VkVertexInputAttributeDescription* Attributes,
     UInt32 DescriptorSetLayoutCount,
@@ -18,6 +19,7 @@ Bool8 VulkanGraphicsPipelineCreate(
     VkViewport Viewport,
     VkRect2D Scissor,
     Bool8 IsWireframe,
+    Bool8 DepthTestEnable,
     VulkanPipeline* Pipeline) {
 
     VkPipelineViewportStateCreateInfo ViewportState = {0};
@@ -49,12 +51,15 @@ Bool8 VulkanGraphicsPipelineCreate(
     MultisamplingCreateInfo.alphaToOneEnable = VK_FALSE;
 
     VkPipelineDepthStencilStateCreateInfo DepthStencil = {0};
-    DepthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-    DepthStencil.depthTestEnable = VK_TRUE;
-    DepthStencil.depthWriteEnable = VK_TRUE;
-    DepthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
-    DepthStencil.depthBoundsTestEnable = VK_FALSE;
-    DepthStencil.stencilTestEnable = VK_FALSE;
+    if (DepthTestEnable)
+    {
+        DepthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+        DepthStencil.depthTestEnable = VK_TRUE;
+        DepthStencil.depthWriteEnable = VK_TRUE;
+        DepthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
+        DepthStencil.depthBoundsTestEnable = VK_FALSE;
+        DepthStencil.stencilTestEnable = VK_FALSE;
+    }
 
     VkPipelineColorBlendAttachmentState ColorBlendAttachmentState;
     FMZeroMemory(&ColorBlendAttachmentState, sizeof(VkPipelineColorBlendAttachmentState));
@@ -88,7 +93,7 @@ Bool8 VulkanGraphicsPipelineCreate(
 
     VkVertexInputBindingDescription BindingDescription;
     BindingDescription.binding = 0;
-    BindingDescription.stride = sizeof(Vertex3D);
+    BindingDescription.stride = Stride;
     BindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
     VkPipelineVertexInputStateCreateInfo VertexInputInfo = {0};
@@ -134,7 +139,7 @@ Bool8 VulkanGraphicsPipelineCreate(
     PipelineCreateInfo.pViewportState = &ViewportState;
     PipelineCreateInfo.pRasterizationState = &RasterizerCreateInfo;
     PipelineCreateInfo.pMultisampleState = &MultisamplingCreateInfo;
-    PipelineCreateInfo.pDepthStencilState = &DepthStencil;
+    PipelineCreateInfo.pDepthStencilState = DepthTestEnable ? &DepthStencil : 0;
     PipelineCreateInfo.pColorBlendState = &ColorBlendStateInfo;
     PipelineCreateInfo.pDynamicState = &DynamicStateCreateInfo;
     PipelineCreateInfo.pTessellationState = 0;

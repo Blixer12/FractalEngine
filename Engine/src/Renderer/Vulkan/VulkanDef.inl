@@ -125,21 +125,18 @@ typedef enum VulkanRenderPassState {
 // from the kohi game engine series, i am trying to get this to work
 typedef struct VulkanRenderpass {
     VkRenderPass Handle;
-    Float32 X, Y, W, H;
-    Float32 R, G, B, A;
+    Vec4 RenderArea;
+    Vec4 ClearColor;
+
+    UInt8 ClearFlags;
+    Bool8 HasPreviousPass;
+    Bool8 HasNextPass;
 
     Float32 Depth;
     UInt32 Stencil;
 
     VulkanRenderPassState State;
 } VulkanRenderpass;
-
-typedef struct VulkanFramebuffer {
-    VkFramebuffer Handle;
-    UInt32 AttachmentCount;
-    VkImageView* Attachments;
-    VulkanRenderpass* Renderpass;
-} VulkanFramebuffer;
 
 typedef struct VulkanSwapchain {
     VkSurfaceFormatKHR ImageFormat;
@@ -150,7 +147,7 @@ typedef struct VulkanSwapchain {
     VkImage* Images;
     VkImageView* Views;
 
-    VulkanFramebuffer* Framebuffers;
+    VkFramebuffer Framebuffers[3];
 
     VulkanImage DepthAttachment;
 } VulkanSwapchain;
@@ -169,11 +166,6 @@ typedef struct VulkanCommandBuffer {
     VulkanCommandBufferState State;
 } VulkanCommandBuffer;
 
-typedef struct VulkanFence {
-    VkFence Handle;
-    Bool8 IsSignaled;
-} VulkanFence;
-
 typedef struct VulkanShaderStage {
     VkShaderModuleCreateInfo CreateInfo;
     VkShaderModule Handle;
@@ -185,7 +177,7 @@ typedef struct VulkanPipeline {
     VkPipelineLayout PipelineLayout;
 } VulkanPipeline;
 
-constexpr UInt32 MaterialShaderStageCount =  2;
+constexpr UInt32 MaterialShaderStageCount = 2;
 
 typedef struct VulkanDescriptorState{
     UInt32 Generations[3];
@@ -200,7 +192,42 @@ typedef struct VulkanMaterialShaderInstanceState {
     VulkanDescriptorState DescriptorStates[VulkanMaterialShaderDescriptorCount];
 } VulkanMaterialShaderInstanceState;
 
+// Max number of material instances
+// TODO: Configurable
+// probably by taking from context? idk
 constexpr UInt32 VulkanMaxMaterialCount = 1024;
+
+// Max number of simulaneous geometry
+// TODO: Configurable
+constexpr UInt32 VulkanMaxGeometryCount = 4096;
+
+/**
+ * @brief Internal buffer data for geometry
+ */
+typedef struct VulkanGeometryData {
+    UInt32 ID;
+    UInt32 Generation;
+    UInt32 VertexCount;
+    UInt32 VertexSize;
+    UInt32 VertexBufferOffset;
+    UInt32 IndexCount;
+    UInt32 IndexSize;
+    UInt32 IndexBufferOffset;
+} VulkanGeometryData;
+
+typedef struct VulkanMaterialShaderGlobalUBO {
+    Mat4 Projection;
+    Mat4 View;
+    Mat4 MatrixReserved0;
+    Mat4 MatrixReserved1;
+} VulkanMaterialShaderGlobalUBO;
+
+typedef struct VulkanMaterialShaderInstanceUBO {
+    Vec4 BaseColor;
+    Vec4 Reserved0;
+    Vec4 Reserved1;
+    Vec4 Reserved2;
+} VulkanMaterialShaderInstanceUBO;
 
 typedef struct VulkanMaterialShader {
     // vertex, fragment
@@ -215,7 +242,7 @@ typedef struct VulkanMaterialShader {
     VkDescriptorSet GlobalDescriptorSets[3];
 
     // Global Uniform Object
-    GlobalUniformObject GlobalUBO;
+    VulkanMaterialShaderGlobalUBO GlobalUBO;
 
     // Global Uniform Buffer
     VulkanBuffer GlobalUniformBuffer;
@@ -234,6 +261,64 @@ typedef struct VulkanMaterialShader {
 
 } VulkanMaterialShader;
 
+constexpr UInt32 UIShaderStageCount = 2;
+
+constexpr UInt32 VulkanUIShaderDescriptorCount = 2;
+constexpr UInt32 VulkanUIShaderSamplerCount = 1;
+
+constexpr UInt32 VulkanMaxUICount = 1024;
+typedef struct VulkanUIShaderInstanceState {
+    VkDescriptorSet DescriptorSets[3];
+
+    VulkanDescriptorState DescriptorStates[VulkanUIShaderDescriptorCount];
+} VulkanUIShaderInstanceState;
+
+typedef struct VulkanUIShaderGlobalUBO {
+    Mat4 Projection;
+    Mat4 View;
+    Mat4 MatrixReserved0;
+    Mat4 MatrixReserved1;
+} VulkanUIShaderGlobalUBO;
+
+typedef struct VulkanUIShaderInstanceUBO {
+    Vec4 BaseColor;
+    Vec4 Reserved0;
+    Vec4 Reserved1;
+    Vec4 Reserved2;
+} VulkanUIShaderInstanceUBO;
+
+typedef struct VulkanUIShader {
+    // vertex, fragment
+    VulkanShaderStage Stages[UIShaderStageCount];
+
+    VulkanPipeline Pipeline;
+
+    VkDescriptorPool GlobalDescriptorPool;
+    VkDescriptorSetLayout GlobalDescriptorSetLayout;
+
+    // One pe-frame, we are triple buffering so 3
+    VkDescriptorSet GlobalDescriptorSets[3];
+
+    // Global Uniform Object
+    VulkanUIShaderGlobalUBO GlobalUBO;
+
+    // Global Uniform SBuffer
+    VulkanBuffer GlobalUniformBuffer;
+
+    VkDescriptorPool ObjectDescriptorPool;
+    VkDescriptorSetLayout ObjectDescriptorSetLayout;
+
+    VulkanBuffer ObjectUniformBuffer;
+    // TODO: Manage a free list
+    UInt32 ObjectUniformBufferIndex;
+
+    TextureUse SamplerUses[VulkanUIShaderSamplerCount];
+
+    // TODO: Dynamic
+    VulkanUIShaderInstanceState InstanceStates[VulkanMaxUICount];
+
+} VulkanUIShader;
+
 
 typedef struct VulkanContext {
     Float32 FrameDeltaTime;
@@ -246,6 +331,7 @@ typedef struct VulkanContext {
 
     VulkanSwapchain Swapchain;
     VulkanRenderpass MainRenderpass;
+    VulkanRenderpass UIRenderpass;
 
     VulkanBuffer ObjectVertexBuffer;
     VulkanBuffer ObjectIndexBuffer;
@@ -260,10 +346,10 @@ typedef struct VulkanContext {
     VkSemaphore* QueueCompleteSemaphores;
 
     UInt32 InFlightFenceCount;
-    VulkanFence* InFlightFences;
+    VkFence InFlightFences[2];
 
-    // A Vector tracking pointers to fences currently in use by an active swapchain image index
-    VulkanFence** ImagesInFlight;
+    // Holds pointers to fences which exist and owned elsewhere, one per frame
+    VkFence* ImagesInFlight[3];
 
     UInt32 ImageIndex;
     UInt32 CurrentFrame;
@@ -277,9 +363,16 @@ typedef struct VulkanContext {
     UInt32 FramebufferLastGeneration;
 
     VulkanMaterialShader MaterialShader;
+    VulkanUIShader UIShader;
 
     UInt64 GeometryVertexOffset;
     UInt64 GeometryIndexOffset;
+
+    // TODO: make dynamic
+    VulkanGeometryData Geometries[VulkanMaxGeometryCount];
+
+    // One per frame
+    VkFramebuffer WorldFramebuffers[3];
 
     Int32 (*FindMemoryIndex)(UInt32 TypeFilter, UInt32 PropertyFlags);
     

@@ -698,177 +698,555 @@ FINLINE Float32 Vec4DotFloat32(
 }
 
 // ------------------------------------------
-// Matrix 4x4
+// Quaternion
 // ------------------------------------------
 
 /**
- * @brief Creates and returns an identity matrix.
+ * @brief Creates and returns an identity quaternion.
  * 
- * @return A new identity matrix 
+ * @return A new identity quaternion.
  */
-FINLINE Mat4 Mat4Identity() {
-    Mat4 Matrix;
-    FMZeroMemory(Matrix.Data, sizeof(Float32) * 16);
-    Matrix.Data[0] = 1.0f;
-    Matrix.Data[5] = 1.0f;
-    Matrix.Data[10] = 1.0f;
-    Matrix.Data[15] = 1.0f;
-    return Matrix;
+FINLINE Quaternion QuaternionIdentity() {
+    return (Quaternion){.x = 0.0f, .y = 0.0f, .z = 0.0f, .w = 1.0f};
 }
 
 /**
- * @brief Returns the result of multiplying matrix_0 and matrix_1.
+ * @brief Returns the normal (length) of the provided quaternion[cite: 7].
  * 
- * @param matrix_0 The first matrix to be multiplied.
- * @param matrix_1 The second matrix to be multiplied.
- * @return The result of the matrix multiplication.
+ * @param Q The quaternion.
+ * @return The normal/length value.
  */
-FINLINE Mat4 Mat4Mul(Mat4 matrix_0, Mat4 matrix_1) {
-    Mat4 Matrix = Mat4Identity();
+FINLINE Float32 QuaternionNormal(Quaternion Q) {
+    return Fsqrt(
+        Q.x * Q.x +
+        Q.y * Q.y +
+        Q.z * Q.z +
+        Q.w * Q.w);
+}
 
-    const Float32* m1_ptr = matrix_0.Data;
-    const Float32* m2_ptr = matrix_1.Data;
-    Float32* dst_ptr = Matrix.Data;
+/**
+ * @brief Returns a normalized copy of the supplied quaternion[cite: 7].
+ * 
+ * @param Q The quaternion to normalize.
+ * @return A normalized quaternion.
+ */
+FINLINE Quaternion QuaternionNormalize(Quaternion Q) {
+    Float32 Normal = QuaternionNormal(Q);
+    if (Normal > 0.0f) {
+        return (Quaternion){
+            .x = Q.x / Normal,
+            .y = Q.y / Normal,
+            .z = Q.z / Normal,
+            .w = Q.w / Normal};
+    }
+    return QuaternionIdentity();
+}
+
+/**
+ * @brief Returns the conjugate of the provided quaternion[cite: 7].
+ * 
+ * @param Q The quaternion.
+ * @return The conjugate quaternion.
+ */
+FINLINE Quaternion QuaternionConjugate(Quaternion Q) {
+    return (Quaternion){
+        .x = -Q.x,
+        .y = -Q.y,
+        .z = -Q.z,
+        .w = Q.w};
+}
+
+/**
+ * @brief Returns the inverse of the provided quaternion[cite: 7].
+ * 
+ * @param Q The quaternion.
+ * @return The inverse quaternion.
+ */
+FINLINE Quaternion QuaternionInverse(Quaternion Q) {
+    return QuaternionNormalize(QuaternionConjugate(Q));
+}
+
+/**
+ * @brief Multiplies Q0 by Q1 and returns the resulting quaternion[cite: 7].
+ * 
+ * @param Q0 The first quaternion.
+ * @param Q1 The second quaternion.
+ * @return The product quaternion.
+ */
+FINLINE Quaternion QuaternionMul(Quaternion Q0, Quaternion Q1) {
+    Quaternion OutQuaternion;
+
+    OutQuaternion.x = Q0.x * Q1.w +
+                       Q0.y * Q1.z -
+                       Q0.z * Q1.y +
+                       Q0.w * Q1.x;
+
+    OutQuaternion.y = -Q0.x * Q1.z +
+                       Q0.y * Q1.w +
+                       Q0.z * Q1.x +
+                       Q0.w * Q1.y;
+
+    OutQuaternion.z = Q0.x * Q1.y -
+                      Q0.y * Q1.x +
+                      Q0.z * Q1.w +
+                      Q0.w * Q1.z;
+
+    OutQuaternion.w = -Q0.x * Q1.x -
+                       Q0.y * Q1.y -
+                       Q0.z * Q1.z +
+                       Q0.w * Q1.w;
+
+    return OutQuaternion;
+}
+
+/**
+ * @brief Returns the dot product between two quaternions[cite: 7].
+ * 
+ * @param Q0 The first quaternion.
+ * @param Q1 The second quaternion.
+ * @return The dot product value.
+ */
+FINLINE Float32 QuaternionDot(Quaternion Q0, Quaternion Q1) {
+    return Q0.x * Q1.x +
+           Q0.y * Q1.y +
+           Q0.z * Q1.z +
+           Q0.w * Q1.w;
+}
+
+/**
+ * @brief Converts a quaternion to a 4x4 rotation matrix ( safely using an out-pointer )[cite: 7].
+ * 
+ * @param Q The quaternion.
+ * @param OutMatrix A pointer to the destination matrix.
+ * @return A pointer to the resulting matrix.
+ */
+FINLINE Mat4* QuaternionToMat4(Quaternion Q, Mat4* OutMatrix) {
+    Mat4Identity(OutMatrix);
+    Quaternion N = QuaternionNormalize(Q);
+
+    OutMatrix->Data[0] = 1.0f - 2.0f * N.y * N.y - 2.0f * N.z * N.z;
+    OutMatrix->Data[1] = 2.0f * N.x * N.y - 2.0f * N.z * N.w;
+    OutMatrix->Data[2] = 2.0f * N.x * N.z + 2.0f * N.y * N.w;
+
+    OutMatrix->Data[4] = 2.0f * N.x * N.y + 2.0f * N.z * N.w;
+    OutMatrix->Data[5] = 1.0f - 2.0f * N.x * N.x - 2.0f * N.z * N.z;
+    OutMatrix->Data[6] = 2.0f * N.y * N.z - 2.0f * N.x * N.w;
+
+    OutMatrix->Data[8] = 2.0f * N.x * N.z - 2.0f * N.y * N.w;
+    OutMatrix->Data[9] = 2.0f * N.y * N.z + 2.0f * N.x * N.w;
+    OutMatrix->Data[10] = 1.0f - 2.0f * N.x * N.x - 2.0f * N.y * N.y;
+
+    return OutMatrix;
+}
+
+/**
+ * @brief Calculates a rotation matrix based on the quaternion and center point ( out-pointer version )[cite: 7].
+ * 
+ * @param Q The quaternion.
+ * @param Center The center point vector.
+ * @param OutMatrix A pointer to the destination matrix.
+ * @return A pointer to the resulting rotation matrix.
+ */
+FINLINE Mat4* QuaternionToRotationMatrix(Quaternion Q, Vec3 Center, Mat4* OutMatrix) {
+    Float32* O = OutMatrix->Data;
+    O[0] = (Q.x * Q.x) - (Q.y * Q.y) - (Q.z * Q.z) + (Q.w * Q.w);
+    O[1] = 2.0f * ((Q.x * Q.y) + (Q.z * Q.w));
+    O[2] = 2.0f * ((Q.x * Q.z) - (Q.y * Q.w));
+    O[3] = Center.x - Center.x * O[0] - Center.y * O[1] - Center.z * O[2];
+
+    O[4] = 2.0f * ((Q.x * Q.y) - (Q.z * Q.w));
+    O[5] = -(Q.x * Q.x) + (Q.y * Q.y) - (Q.z * Q.z) + (Q.w * Q.w);
+    O[6] = 2.0f * ((Q.y * Q.z) + (Q.x * Q.w));
+    O[7] = Center.y - Center.x * O[4] - Center.y * O[5] - Center.z * O[6];
+
+    O[8] = 2.0f * ((Q.x * Q.z) + (Q.y * Q.w));
+    O[9] = 2.0f * ((Q.y * Q.z) - (Q.x * Q.w));
+    O[10] = -(Q.x * Q.x) - (Q.y * Q.y) + (Q.z * Q.z) + (Q.w * Q.w);
+    O[11] = Center.z - Center.x * O[8] - Center.y * O[9] - Center.z * O[10];
+
+    O[12] = 0.0f;
+    O[13] = 0.0f;
+    O[14] = 0.0f;
+    O[15] = 1.0f;
+    
+    return OutMatrix;
+}
+
+/**
+ * @brief Creates a quaternion from an axis and an angle[cite: 7].
+ * 
+ * @param Axis The axis vector.
+ * @param Angle The angle in radians.
+ * @param Normalize Whether to normalize the result.
+ * @return The new quaternion.
+ */
+FINLINE Quaternion QuaternionFromAxisAngle(Vec3 Axis, Float32 Angle, Bool8 Normalize) {
+    const Float32 HalfAngle = 0.5f * Angle;
+    Float32 S = Fsin(HalfAngle);
+    Float32 C = Fcos(HalfAngle);
+
+    Quaternion Q = (Quaternion){.x = S * Axis.x, .y = S * Axis.y, .z = S * Axis.z, .w = C};
+    if (Normalize) {
+        return QuaternionNormalize(Q);
+    }
+    return Q;
+}
+
+/**
+ * @brief Performs spherical linear interpolation between two quaternions[cite: 7].
+ * 
+ * @param Q0 The starting quaternion.
+ * @param Q1 The ending quaternion.
+ * @param Percentage The interpolation percentage (0.0 to 1.0).
+ * @return The interpolated quaternion.
+ */
+FINLINE Quaternion QuaternionSlerp(Quaternion Q0, Quaternion Q1, Float32 Percentage) {
+    Quaternion OutQuaternion;
+    Quaternion V0 = QuaternionNormalize(Q0);
+    Quaternion V1 = QuaternionNormalize(Q1);
+
+    Float32 Dot = QuaternionDot(V0, V1);
+
+    if (Dot < 0.0f) {
+        V1.x = -V1.x;
+        V1.y = -V1.y;
+        V1.z = -V1.z;
+        V1.w = -V1.w;
+        Dot = -Dot;
+    }
+
+    const Float32 DotThreshold = 0.9995f;
+    if (Dot > DotThreshold) {
+        OutQuaternion = (Quaternion){
+            .x = V0.x + ((V1.x - V0.x) * Percentage),
+            .y = V0.y + ((V1.y - V0.y) * Percentage),
+            .z = V0.z + ((V1.z - V0.z) * Percentage),
+            .w = V0.w + ((V1.w - V0.w) * Percentage)};
+
+        return QuaternionNormalize(OutQuaternion);
+    }
+
+    Float32 Theta0 = Facos(Dot);
+    Float32 Theta = Theta0 * Percentage;
+    Float32 SinTheta = Fsin(Theta);
+    Float32 SinTheta0 = Fsin(Theta0);
+
+    Float32 S0 = Fcos(Theta) - Dot * SinTheta / SinTheta0;
+    Float32 S1 = SinTheta / SinTheta0;
+
+    return (Quaternion){
+        .x = (V0.x * S0) + (V1.x * S1),
+        .y = (V0.y * S0) + (V1.y * S1),
+        .z = (V0.z * S0) + (V1.z * S1),
+        .w = (V0.w * S0) + (V1.w * S1)};
+}
+
+// ------------------------------------------
+// Matrix 4x4 (Out-Pointer & PascalCase Refactor)
+// ------------------------------------------
+
+/**
+ * @brief Creates and populates an identity matrix.
+ * 
+ * @param OutMatrix A pointer to the matrix to be filled.
+ * @return A pointer to the populated identity matrix.
+ */
+FINLINE Mat4* Mat4Identity(Mat4* OutMatrix) {
+    FMZeroMemory(OutMatrix->Data, sizeof(Float32) * 16);
+    OutMatrix->Data[0] = 1.0f;
+    OutMatrix->Data[5] = 1.0f;
+    OutMatrix->Data[10] = 1.0f;
+    OutMatrix->Data[15] = 1.0f;
+    return OutMatrix;
+}
+
+/**
+ * @brief Multiplies Matrix0 and Matrix1 and stores the result in OutMatrix.
+ * 
+ * @param Matrix0 The first matrix.
+ * @param Matrix1 The second matrix.
+ * @param OutMatrix A pointer to the destination matrix.
+ * @return A pointer to the resulting matrix.
+ */
+FINLINE Mat4* Mat4Mul(Mat4* Matrix0, Mat4* Matrix1, Mat4* OutMatrix) {
+    Mat4 Temp;
+    Mat4Identity(&Temp);
+
+    const Float32* M1Ptr = Matrix0->Data;
+    const Float32* M2Ptr = Matrix1->Data;
+    Float32* DstPtr = Temp.Data;
 
     for (Int32 i = 0; i < 4; ++i) {
         for (Int32 j = 0; j < 4; ++j) {
-            *dst_ptr =
-                m1_ptr[0] * m2_ptr[0 + j] +
-                m1_ptr[1] * m2_ptr[4 + j] +
-                m1_ptr[2] * m2_ptr[8 + j] +
-                m1_ptr[3] * m2_ptr[12 + j];
-            dst_ptr++;
+            *DstPtr =
+                M1Ptr[0] * M2Ptr[0 + j] +
+                M1Ptr[1] * M2Ptr[4 + j] +
+                M1Ptr[2] * M2Ptr[8 + j] +
+                M1Ptr[3] * M2Ptr[12 + j];
+            DstPtr++;
         }
-        m1_ptr += 4;
+        M1Ptr += 4;
     }
-    return Matrix;
+    
+    FMCopyMemory(OutMatrix->Data, Temp.Data, sizeof(Float32) * 16);
+    return OutMatrix;
 }
 
 /**
- * @brief Creates and returns an orthographic projection matrix. Typically used to
- * render flat or 2D scenes.
+ * @brief Creates an orthographic projection matrix.
  * 
- * @param left The left side of the view frustum.
- * @param right The right side of the view frustum.
- * @param bottom The bottom side of the view frustum.
- * @param top The top side of the view frustum.
- * @param near_clip The near clipping plane distance.
- * @param far_clip The far clipping plane distance.
- * @return A new orthographic projection matrix. 
+ * @param Left The left side of the view frustum.
+ * @param Right The right side of the view frustum.
+ * @param Bottom The bottom side of the view frustum.
+ * @param Top The top side of the view frustum.
+ * @param NearClip The near clipping plane distance.
+ * @param FarClip The far clipping plane distance.
+ * @param OutMatrix A pointer to the matrix to be filled.
+ * @return A pointer to the orthographic matrix. 
  */
-FINLINE Mat4 Mat4Orthographic(Float32 left, Float32 right, Float32 bottom, Float32 top, Float32 near_clip, Float32 far_clip) {
-    Mat4 Matrix = Mat4Identity();
+FINLINE Mat4* Mat4Orthographic(Float32 Left, Float32 Right, Float32 Bottom, Float32 Top, Float32 NearClip, Float32 FarClip, Mat4* OutMatrix) {
+    Mat4Identity(OutMatrix);
 
-    Float32 lr = 1.0f / (left - right);
-    Float32 bt = 1.0f / (bottom - top);
-    Float32 nf = 1.0f / (near_clip - far_clip);
+    Float32 Lr = 1.0f / (Left - Right);
+    Float32 Bt = 1.0f / (Bottom - Top);
+    Float32 Nf = 1.0f / (NearClip - FarClip);
 
-    Matrix.Data[0] = -2.0f * lr;
-    Matrix.Data[5] = -2.0f * bt;
-    Matrix.Data[10] = 2.0f * nf;
+    OutMatrix->Data[0] = -2.0f * Lr;
+    OutMatrix->Data[5] = -2.0f * Bt;
+    OutMatrix->Data[10] = 2.0f * Nf;
 
-    Matrix.Data[12] = (left + right) * lr;
-    Matrix.Data[13] = (top + bottom) * bt;
-    Matrix.Data[14] = (far_clip + near_clip) * nf;
-    return Matrix;
+    OutMatrix->Data[12] = (Left + Right) * Lr;
+    OutMatrix->Data[13] = (Top + Bottom) * Bt;
+    OutMatrix->Data[14] = (FarClip + NearClip) * Nf;
+    
+    return OutMatrix;
 }
 
 /**
- * @brief Creates and returns a perspective matrix. Typically used to render 3d scenes.
+ * @brief Creates a perspective matrix.
  * 
- * @param fov_radians The field of view in radians.
- * @param aspect_ratio The aspect ratio.
- * @param near_clip The near clipping plane distance.
- * @param far_clip The far clipping plane distance.
- * @return A new perspective matrix. 
+ * @param FovRadians The field of view in radians.
+ * @param AspectRatio The aspect ratio.
+ * @param NearClip The near clipping plane distance.
+ * @param FarClip The far clipping plane distance.
+ * @param OutMatrix A pointer to the matrix to be filled.
+ * @return A pointer to the perspective matrix. 
  */
-FINLINE Mat4 Mat4Perspective(Float32 fov_radians, Float32 aspect_ratio, Float32 near_clip, Float32 far_clip) {
-    Float32 half_tan_fov = Ftan(fov_radians * 0.5f);
-    Mat4 Matrix;
-    FMZeroMemory(Matrix.Data, sizeof(Float32) * 16);
-    Matrix.Data[0] = 1.0f / (aspect_ratio * half_tan_fov);
-    Matrix.Data[5] = 1.0f / half_tan_fov;
-    Matrix.Data[10] = -((far_clip + near_clip) / (far_clip - near_clip));
-    Matrix.Data[11] = -1.0f;
-    Matrix.Data[14] = -((2.0f * far_clip * near_clip) / (far_clip - near_clip));
-    return Matrix;
+FINLINE Mat4* Mat4Perspective(Float32 FovRadians, Float32 AspectRatio, Float32 NearClip, Float32 FarClip, Mat4* OutMatrix) {
+    Float32 HalfTanFov = Ftan(FovRadians * 0.5f);
+    FMZeroMemory(OutMatrix->Data, sizeof(Float32) * 16); 
+    OutMatrix->Data[0] = 1.0f / (AspectRatio * HalfTanFov);
+    OutMatrix->Data[5] = 1.0f / HalfTanFov;
+    OutMatrix->Data[10] = -((FarClip + NearClip) / (FarClip - NearClip));
+    OutMatrix->Data[11] = -1.0f;
+    OutMatrix->Data[14] = -((2.0f * FarClip * NearClip) / (FarClip - NearClip));
+
+    return OutMatrix;
 }
 
 /**
- * @brief Creates and returns a look-at matrix, or a matrix looking 
- * at target from the perspective of position.
+ * @brief Creates a look-at matrix.
  * 
- * @param position The position of the matrix.
- * @param target The position to "look at".
- * @param up The up vector.
- * @return A matrix looking at target from the perspective of position. 
+ * @param Position The position of the matrix.
+ * @param Target The position to look at.
+ * @param Up The up vector.
+ * @param OutMatrix A pointer to the matrix to be filled.
+ * @return A pointer to the look-at matrix. 
  */
-FINLINE Mat4 Mat4LookAt(Vec3 position, Vec3 target, Vec3 up) {
-    Mat4 Matrix;
-    Vec3 z_axis;
-    z_axis.x = target.x - position.x;
-    z_axis.y = target.y - position.y;
-    z_axis.z = target.z - position.z;
+FINLINE Mat4* Mat4LookAt(Vec3 Position, Vec3 Target, Vec3 Up, Mat4* OutMatrix) {
+    Vec3 ZAxis;
+    ZAxis.x = Target.x - Position.x;
+    ZAxis.y = Target.y - Position.y;
+    ZAxis.z = Target.z - Position.z;
 
-    z_axis = Vec3Normalized(z_axis);
-    Vec3 x_axis = Vec3Normalized(Vec3Cross(z_axis, up));
-    Vec3 y_axis = Vec3Cross(x_axis, z_axis);
+    ZAxis = Vec3Normalized(ZAxis);
+    Vec3 XAxis = Vec3Normalized(Vec3Cross(ZAxis, Up));
+    Vec3 YAxis = Vec3Cross(XAxis, ZAxis);
 
-    Matrix.Data[0] = x_axis.x;
-    Matrix.Data[1] = y_axis.x;
-    Matrix.Data[2] = -z_axis.x;
-    Matrix.Data[3] = 0.0f;
-    Matrix.Data[4] = x_axis.y;
-    Matrix.Data[5] = y_axis.y;
-    Matrix.Data[6] = -z_axis.y;
-    Matrix.Data[7] = 0.0f;
-    Matrix.Data[8] = x_axis.z;
-    Matrix.Data[9] = y_axis.z;
-    Matrix.Data[10] = -z_axis.z;
-    Matrix.Data[11] = 0.0f;
-    Matrix.Data[12] = -Vec3Dot(x_axis, position);
-    Matrix.Data[13] = -Vec3Dot(y_axis, position);
-    Matrix.Data[14] = Vec3Dot(z_axis, position);
-    Matrix.Data[15] = 1.0f;
+    OutMatrix->Data[0] = XAxis.x;
+    OutMatrix->Data[1] = YAxis.x;
+    OutMatrix->Data[2] = -ZAxis.x;
+    OutMatrix->Data[3] = 0.0f;
+    OutMatrix->Data[4] = XAxis.y;
+    OutMatrix->Data[5] = YAxis.y;
+    OutMatrix->Data[6] = -ZAxis.y;
+    OutMatrix->Data[7] = 0.0f;
+    OutMatrix->Data[8] = XAxis.z;
+    OutMatrix->Data[9] = YAxis.z;
+    OutMatrix->Data[10] = -ZAxis.z;
+    OutMatrix->Data[11] = 0.0f;
+    OutMatrix->Data[12] = -Vec3Dot(XAxis, Position);
+    OutMatrix->Data[13] = -Vec3Dot(YAxis, Position);
+    OutMatrix->Data[14] = Vec3Dot(ZAxis, Position);
+    OutMatrix->Data[15] = 1.0f;
 
-    return Matrix;
+    return OutMatrix;
+}
+
+FINLINE Mat4* Mat4EulerX(Float32 AngleRadians, Mat4* OutMatrix) {
+    Mat4Identity(OutMatrix);
+    Float32 C = Fcos(AngleRadians);
+    Float32 S = Fsin(AngleRadians);
+
+    OutMatrix->Data[5] = C;
+    OutMatrix->Data[6] = S;
+    OutMatrix->Data[9] = -S;
+    OutMatrix->Data[10] = C;
+    return OutMatrix;
+}
+
+FINLINE Mat4* Mat4EulerY(Float32 AngleRadians, Mat4* OutMatrix) {
+    Mat4Identity(OutMatrix);
+    Float32 C = Fcos(AngleRadians);
+    Float32 S = Fsin(AngleRadians);
+
+    OutMatrix->Data[0] = C;
+    OutMatrix->Data[2] = -S;
+    OutMatrix->Data[8] = S;
+    OutMatrix->Data[10] = C;
+    return OutMatrix;
+}
+
+FINLINE Mat4* Mat4EulerZ(Float32 AngleRadians, Mat4* OutMatrix) {
+    Mat4Identity(OutMatrix);
+    Float32 C = Fcos(AngleRadians);
+    Float32 S = Fsin(AngleRadians);
+
+    OutMatrix->Data[0] = C;
+    OutMatrix->Data[1] = S;
+    OutMatrix->Data[4] = -S;
+    OutMatrix->Data[5] = C;
+    return OutMatrix;
+}
+
+FINLINE Mat4* Mat4EulerXYZ(Float32 XRadians, Float32 YRadians, Float32 ZRadians, Mat4* OutMatrix) {
+    Mat4 Rx, Ry, Rz;
+    Mat4EulerX(XRadians, &Rx);
+    Mat4EulerY(YRadians, &Ry);
+    Mat4EulerZ(ZRadians, &Rz);
+
+    Mat4 Temp;
+    Mat4Mul(&Rx, &Ry, &Temp);
+    Mat4Mul(&Temp, &Rz, OutMatrix);
+    return OutMatrix;
 }
 
 /**
- * @brief Returns a transposed copy of the provided matrix (rows->columns)
+ * @brief Returns a forward vector relative to the provided matrix.
  * 
- * @param matrix The matrix to be transposed.
- * @return A transposed copy of the provided matrix.
+ * @param Matrix A pointer to the base matrix.
+ * @return A 3-component directional vector.
  */
-FINLINE Mat4 Mat4Transposed(Mat4 matrix) {
-    Mat4 Matrix = Mat4Identity();
-    Matrix.Data[0] = matrix.Data[0];
-    Matrix.Data[1] = matrix.Data[4];
-    Matrix.Data[2] = matrix.Data[8];
-    Matrix.Data[3] = matrix.Data[12];
-    Matrix.Data[4] = matrix.Data[1];
-    Matrix.Data[5] = matrix.Data[5];
-    Matrix.Data[6] = matrix.Data[9];
-    Matrix.Data[7] = matrix.Data[13];
-    Matrix.Data[8] = matrix.Data[2];
-    Matrix.Data[9] = matrix.Data[6];
-    Matrix.Data[10] = matrix.Data[10];
-    Matrix.Data[11] = matrix.Data[14];
-    Matrix.Data[12] = matrix.Data[3];
-    Matrix.Data[13] = matrix.Data[7];
-    Matrix.Data[14] = matrix.Data[11];
-    Matrix.Data[15] = matrix.Data[15];
-    return Matrix;
+FINLINE Vec3 Mat4Forward(const Mat4* Matrix) {
+    Vec3 Forward;
+    Forward.x = -Matrix->Data[2];
+    Forward.y = -Matrix->Data[6];
+    Forward.z = -Matrix->Data[10];
+    Vec3Normalize(&Forward);
+    return Forward;
 }
 
 /**
- * @brief Creates and returns an inverse of the provided matrix.
+ * @brief Returns a backward vector relative to the provided matrix.
  * 
- * @param matrix The matrix to be inverted.
- * @return An inverted copy of the provided matrix. 
+ * @param Matrix A pointer to the base matrix.
+ * @return A 3-component directional vector.
  */
-FINLINE Mat4 Mat4Inverse(Mat4 matrix) {
-    const Float32* m = matrix.Data;
+FINLINE Vec3 Mat4Backward(const Mat4* Matrix) {
+    Vec3 Backward;
+    Backward.x = Matrix->Data[2];
+    Backward.y = Matrix->Data[6];
+    Backward.z = Matrix->Data[10];
+    Vec3Normalize(&Backward);
+    return Backward;
+}
+
+/**
+ * @brief Returns an upward vector relative to the provided matrix.
+ * 
+ * @param Matrix A pointer to the base matrix.
+ * @return A 3-component directional vector.
+ */
+FINLINE Vec3 Mat4Up(const Mat4* Matrix) {
+    Vec3 Up;
+    Up.x = Matrix->Data[1];
+    Up.y = Matrix->Data[5];
+    Up.z = Matrix->Data[9];
+    Vec3Normalize(&Up);
+    return Up;
+}
+
+/**
+ * @brief Returns a downward vector relative to the provided matrix.
+ * 
+ * @param Matrix A pointer to the base matrix.
+ * @return A 3-component directional vector.
+ */
+FINLINE Vec3 Mat4Down(const Mat4* Matrix) {
+    Vec3 Down;
+    Down.x = -Matrix->Data[1];
+    Down.y = -Matrix->Data[5];
+    Down.z = -Matrix->Data[9];
+    Vec3Normalize(&Down);
+    return Down;
+}
+
+/**
+ * @brief Returns a left vector relative to the provided matrix.
+ * 
+ * @param Matrix A pointer to the base matrix.
+ * @return A 3-component directional vector.
+ */
+FINLINE Vec3 Mat4Left(const Mat4* Matrix) {
+    Vec3 Left;
+    Left.x = -Matrix->Data[0];
+    Left.y = -Matrix->Data[4];
+    Left.z = -Matrix->Data[8];
+    Vec3Normalize(&Left);
+    return Left;
+}
+
+/**
+ * @brief Returns a right vector relative to the provided matrix.
+ * 
+ * @param Matrix A pointer to the base matrix.
+ * @return A 3-component directional vector.
+ */
+FINLINE Vec3 Mat4Right(const Mat4* Matrix) {
+    Vec3 Right;
+    Right.x = Matrix->Data[0];
+    Right.y = Matrix->Data[4];
+    Right.z = Matrix->Data[8];
+    Vec3Normalize(&Right);
+    return Right;
+}
+
+FINLINE Mat4* Mat4Translation(Vec3 Position, Mat4* OutMatrix) {
+    Mat4Identity(OutMatrix);
+    OutMatrix->Data[12] = Position.x;
+    OutMatrix->Data[13] = Position.y;
+    OutMatrix->Data[14] = Position.z;
+    return OutMatrix;
+}
+
+FINLINE Mat4* Mat4Scale(Vec3 Scale, Mat4* OutMatrix) {
+    Mat4Identity(OutMatrix);
+    OutMatrix->Data[0] = Scale.x;
+    OutMatrix->Data[5] = Scale.y;
+    OutMatrix->Data[10] = Scale.z;
+    return OutMatrix;
+}
+
+/**
+ * @brief Inverts the provided matrix in place.
+ * 
+ * @param Matrix A pointer to the matrix to be inverted (modified in place).
+ * @return A pointer to the inverted matrix. 
+ */
+FINLINE Mat4* Mat4Inverse(Mat4* Matrix) {
+    // Copy the input values so we can safely read them while writing back
+    Mat4 Temp = *Matrix;
+    const Float32* m = Temp.Data;
 
     Float32 t0 = m[10] * m[15];
     Float32 t1 = m[14] * m[11];
@@ -895,8 +1273,7 @@ FINLINE Mat4 Mat4Inverse(Mat4 matrix) {
     Float32 t22 = m[0] * m[5];
     Float32 t23 = m[4] * m[1];
 
-    Mat4 Matrix;
-    Float32* o = Matrix.Data;
+    Float32* o = Matrix->Data;
 
     o[0] = (t0 * m[5] + t3 * m[9] + t4 * m[13]) - (t1 * m[5] + t2 * m[9] + t5 * m[13]);
     o[1] = (t1 * m[1] + t6 * m[9] + t9 * m[13]) - (t0 * m[1] + t7 * m[9] + t8 * m[13]);
@@ -905,7 +1282,8 @@ FINLINE Mat4 Mat4Inverse(Mat4 matrix) {
 
     Float32 det = m[0] * o[0] + m[4] * o[1] + m[8] * o[2] + m[12] * o[3];
     if (Fabs(det) < F_FLOAT_EPSILON) {
-        return Mat4Identity();
+        Mat4Identity(Matrix);
+        return Matrix;
     }
 
     Float32 d = 1.0f / det;
@@ -930,336 +1308,25 @@ FINLINE Mat4 Mat4Inverse(Mat4 matrix) {
     return Matrix;
 }
 
-FINLINE Mat4 Mat4Translation(Vec3 position) {
-    Mat4 Matrix = Mat4Identity();
-    Matrix.Data[12] = position.x;
-    Matrix.Data[13] = position.y;
-    Matrix.Data[14] = position.z;
-    return Matrix;
-}
-
-/**
- * @brief Returns a scale matrix using the provided scale.
- * 
- * @param scale The 3-component scale.
- * @return A scale matrix.
- */
-FINLINE Mat4 Mat4Scale(Vec3 scale) {
-    Mat4 Matrix = Mat4Identity();
-    Matrix.Data[0] = scale.x;
-    Matrix.Data[5] = scale.y;
-    Matrix.Data[10] = scale.z;
-    return Matrix;
-}
-
-FINLINE Mat4 Mat4EulerX(Float32 angle_radians) {
-    Mat4 Matrix = Mat4Identity();
-    Float32 c = Fcos(angle_radians);
-    Float32 s = Fsin(angle_radians);
-
-    Matrix.Data[5] = c;
-    Matrix.Data[6] = s;
-    Matrix.Data[9] = -s;
-    Matrix.Data[10] = c;
-    return Matrix;
-}
-
-FINLINE Mat4 Mat4EulerY(Float32 angle_radians) {
-    Mat4 Matrix = Mat4Identity();
-    Float32 c = Fcos(angle_radians);
-    Float32 s = Fsin(angle_radians);
-
-    Matrix.Data[0] = c;
-    Matrix.Data[2] = -s;
-    Matrix.Data[8] = s;
-    Matrix.Data[10] = c;
-    return Matrix;
-}
-
-FINLINE Mat4 Mat4EulerZ(Float32 angle_radians) {
-    Mat4 Matrix = Mat4Identity();
-
-    Float32 c = Fcos(angle_radians);
-    Float32 s = Fsin(angle_radians);
-
-    Matrix.Data[0] = c;
-    Matrix.Data[1] = s;
-    Matrix.Data[4] = -s;
-    Matrix.Data[5] = c;
-    return Matrix;
-}
-
-FINLINE Mat4 Mat4EulerXYZ(Float32 x_radians, Float32 y_radians, Float32 z_radians) {
-    Mat4 rx = Mat4EulerX(x_radians);
-    Mat4 ry = Mat4EulerY(y_radians);
-    Mat4 rz = Mat4EulerZ(z_radians);
-    Mat4 Matrix = Mat4Mul(rx, ry);
-    Matrix = Mat4Mul(Matrix, rz);
-    return Matrix;
-}
-
-/**
- * @brief Returns a forward vector relative to the provided matrix.
- * 
- * @param matrix The matrix from which to base the vector.
- * @return A 3-component directional vector.
- */
-FINLINE Vec3 Mat4Forward(Mat4 matrix) {
-    Vec3 forward;
-    forward.x = -matrix.Data[2];
-    forward.y = -matrix.Data[6];
-    forward.z = -matrix.Data[10];
-    Vec3Normalize(&forward);
-    return forward;
-}
-
-/**
- * @brief Returns a backward vector relative to the provided matrix.
- * 
- * @param matrix The matrix from which to base the vector.
- * @return A 3-component directional vector.
- */
-FINLINE Vec3 Mat4Backward(Mat4 matrix) {
-    Vec3 backward;
-    backward.x = matrix.Data[2];
-    backward.y = matrix.Data[6];
-    backward.z = matrix.Data[10];
-    Vec3Normalize(&backward);
-    return backward;
-}
-
-/**
- * @brief Returns an upward vector relative to the provided matrix.
- * 
- * @param matrix The matrix from which to base the vector.
- * @return A 3-component directional vector.
- */
-FINLINE Vec3 Mat4Up(Mat4 matrix) {
-    Vec3 up;
-    up.x = matrix.Data[1];
-    up.y = matrix.Data[5];
-    up.z = matrix.Data[9];
-    Vec3Normalize(&up);
-    return up;
-}
-
-/**
- * @brief Returns a downward vector relative to the provided matrix.
- * 
- * @param matrix The matrix from which to base the vector.
- * @return A 3-component directional vector.
- */
-FINLINE Vec3 Mat4Down(Mat4 matrix) {
-    Vec3 down;
-    down.x = -matrix.Data[1];
-    down.y = -matrix.Data[5];
-    down.z = -matrix.Data[9];
-    Vec3Normalize(&down);
-    return down;
-}
-
-/**
- * @brief Returns a left vector relative to the provided matrix.
- * 
- * @param matrix The matrix from which to base the vector.
- * @return A 3-component directional vector.
- */
-FINLINE Vec3 Mat4Left(Mat4 matrix) {
-    Vec3 left;
-    left.x = -matrix.Data[0];
-    left.y = -matrix.Data[4];
-    left.z = -matrix.Data[8];
-    Vec3Normalize(&left);
-    return left;
-}
-
-/**
- * @brief Returns a right vector relative to the provided matrix.
- * 
- * @param matrix The matrix from which to base the vector.
- * @return A 3-component directional vector.
- */
-FINLINE Vec3 Mat4Right(Mat4 matrix) {
-    Vec3 right;
-    right.x = matrix.Data[0];
-    right.y = matrix.Data[4];
-    right.z = matrix.Data[8];
-    Vec3Normalize(&right);
-    return right;
-}
-
-// ------------------------------------------
-// Quaternion
-// ------------------------------------------
-
-FINLINE Quaternion QuaternionIdentity() {
-    return (Quaternion){.x = 0.0f, .y = 0.0f, .z = 0.0f, .w = 1.0f};
-}
-
-FINLINE Float32 QuaternionNormal(Quaternion q) {
-    return Fsqrt(
-        q.x * q.x +
-        q.y * q.y +
-        q.z * q.z +
-        q.w * q.w);
-}
-
-FINLINE Quaternion QuaternionNormalize(Quaternion q) {
-    Float32 normal = QuaternionNormal(q);
-    if (normal > 0.0f) {
-        return (Quaternion){
-            .x = q.x / normal,
-            .y = q.y / normal,
-            .z = q.z / normal,
-            .w = q.w / normal};
-    }
-    return QuaternionIdentity();
-}
-
-FINLINE Quaternion QuaternionConjugate(Quaternion q) {
-    return (Quaternion){
-        .x = -q.x,
-        .y = -q.y,
-        .z = -q.z,
-        .w = q.w};
-}
-
-FINLINE Quaternion QuaternionInverse(Quaternion q) {
-    return QuaternionNormalize(QuaternionConjugate(q));
-}
-
-FINLINE Quaternion QuaternionMul(Quaternion q_0, Quaternion q_1) {
-    Quaternion q;
-
-    q.x = q_0.x * q_1.w +
-          q_0.y * q_1.z -
-          q_0.z * q_1.y +
-          q_0.w * q_1.x;
-
-    q.y = -q_0.x * q_1.z +
-           q_0.y * q_1.w +
-           q_0.z * q_1.x +
-           q_0.w * q_1.y;
-
-    q.z = q_0.x * q_1.y -
-          q_0.y * q_1.x +
-          q_0.z * q_1.w +
-          q_0.w * q_1.z;
-
-    q.w = -q_0.x * q_1.x -
-           q_0.y * q_1.y -
-           q_0.z * q_1.z +
-           q_0.w * q_1.w;
-
-    return q;
-}
-
-FINLINE Float32 QuaternionDot(Quaternion q_0, Quaternion q_1) {
-    return q_0.x * q_1.x +
-           q_0.y * q_1.y +
-           q_0.z * q_1.z +
-           q_0.w * q_1.w;
-}
-
-FINLINE Mat4 QuaternionToMat4(Quaternion q) {
-    Mat4 Matrix = Mat4Identity();
-
-    Quaternion n = QuaternionNormalize(q);
-
-    Matrix.Data[0] = 1.0f - 2.0f * n.y * n.y - 2.0f * n.z * n.z;
-    Matrix.Data[1] = 2.0f * n.x * n.y - 2.0f * n.z * n.w;
-    Matrix.Data[2] = 2.0f * n.x * n.z + 2.0f * n.y * n.w;
-
-    Matrix.Data[4] = 2.0f * n.x * n.y + 2.0f * n.z * n.w;
-    Matrix.Data[5] = 1.0f - 2.0f * n.x * n.x - 2.0f * n.z * n.z;
-    Matrix.Data[6] = 2.0f * n.y * n.z - 2.0f * n.x * n.w;
-
-    Matrix.Data[8] = 2.0f * n.x * n.z - 2.0f * n.y * n.w;
-    Matrix.Data[9] = 2.0f * n.y * n.z + 2.0f * n.x * n.w;
-    Matrix.Data[10] = 1.0f - 2.0f * n.x * n.x - 2.0f * n.y * n.y;
-
-    return Matrix;
-}
-
-// Calculates a rotation matrix based on the Quaternion and the passed in center point.
-FINLINE Mat4 QuaternionToRotationMatrix(Quaternion q, Vec3 center) {
-    Mat4 Matrix;
-
-    Float32* o = Matrix.Data;
-    o[0] = (q.x * q.x) - (q.y * q.y) - (q.z * q.z) + (q.w * q.w);
-    o[1] = 2.0f * ((q.x * q.y) + (q.z * q.w));
-    o[2] = 2.0f * ((q.x * q.z) - (q.y * q.w));
-    o[3] = center.x - center.x * o[0] - center.y * o[1] - center.z * o[2];
-
-    o[4] = 2.0f * ((q.x * q.y) - (q.z * q.w));
-    o[5] = -(q.x * q.x) + (q.y * q.y) - (q.z * q.z) + (q.w * q.w);
-    o[6] = 2.0f * ((q.y * q.z) + (q.x * q.w));
-    o[7] = center.y - center.x * o[4] - center.y * o[5] - center.z * o[6];
-
-    o[8] = 2.0f * ((q.x * q.z) + (q.y * q.w));
-    o[9] = 2.0f * ((q.y * q.z) - (q.x * q.w));
-    o[10] = -(q.x * q.x) - (q.y * q.y) + (q.z * q.z) + (q.w * q.w);
-    o[11] = center.z - center.x * o[8] - center.y * o[9] - center.z * o[10];
-
-    o[12] = 0.0f;
-    o[13] = 0.0f;
-    o[14] = 0.0f;
-    o[15] = 1.0f;
-    return Matrix;
-}
-
-FINLINE Quaternion QuaternionFromAxisAngle(Vec3 axis, Float32 angle, Bool8 normalize) {
-    const Float32 HalfAngle = 0.5f * angle;
-    Float32 s = Fsin(HalfAngle);
-    Float32 c = Fcos(HalfAngle);
-
-    Quaternion q = (Quaternion){.x = s * axis.x, .y = s * axis.y, .z = s * axis.z, .w = c};
-    if (normalize) {
-        return QuaternionNormalize(q);
-    }
-    return q;
-}
-
-FINLINE Quaternion QuaternionSlerp(Quaternion q_0, Quaternion q_1, Float32 percentage) {
-    Quaternion q_out;
-
-    Quaternion v0 = QuaternionNormalize(q_0);
-    Quaternion v1 = QuaternionNormalize(q_1);
-
-    Float32 dot = QuaternionDot(v0, v1);
-
-    if (dot < 0.0f) {
-        v1.x = -v1.x;
-        v1.y = -v1.y;
-        v1.z = -v1.z;
-        v1.w = -v1.w;
-        dot = -dot;
-    }
-
-    const Float32 DOT_THRESHOLD = 0.9995f;
-    if (dot > DOT_THRESHOLD) {
-        q_out = (Quaternion){
-            .x = v0.x + ((v1.x - v0.x) * percentage),
-            .y = v0.y + ((v1.y - v0.y) * percentage),
-            .z = v0.z + ((v1.z - v0.z) * percentage),
-            .w = v0.w + ((v1.w - v0.w) * percentage)};
-
-        return QuaternionNormalize(q_out);
-    }
-
-    Float32 theta_0 = Facos(dot);
-    Float32 theta = theta_0 * percentage;
-    Float32 sin_theta = Fsin(theta);
-    Float32 sin_theta_0 = Fsin(theta_0);
-
-    Float32 s0 = Fcos(theta) - dot * sin_theta / sin_theta_0;
-    Float32 s1 = sin_theta / sin_theta_0;
-
-    return (Quaternion){
-        .x = (v0.x * s0) + (v1.x * s1),
-        .y = (v0.y * s0) + (v1.y * s1),
-        .z = (v0.z * s0) + (v1.z * s1),
-        .w = (v0.w * s0) + (v1.w * s1)};
+FINLINE Mat4* Mat4Transposed(const Mat4* Matrix, Mat4* OutMatrix) {
+    Mat4Identity(OutMatrix);
+    OutMatrix->Data[0] = Matrix->Data[0];
+    OutMatrix->Data[1] = Matrix->Data[4];
+    OutMatrix->Data[2] = Matrix->Data[8];
+    OutMatrix->Data[3] = Matrix->Data[12];
+    OutMatrix->Data[4] = Matrix->Data[1];
+    OutMatrix->Data[5] = Matrix->Data[5];
+    OutMatrix->Data[6] = Matrix->Data[9];
+    OutMatrix->Data[7] = Matrix->Data[13];
+    OutMatrix->Data[8] = Matrix->Data[2];
+    OutMatrix->Data[9] = Matrix->Data[6];
+    OutMatrix->Data[10] = Matrix->Data[10];
+    OutMatrix->Data[11] = Matrix->Data[14];
+    OutMatrix->Data[12] = Matrix->Data[3];
+    OutMatrix->Data[13] = Matrix->Data[7];
+    OutMatrix->Data[14] = Matrix->Data[11];
+    OutMatrix->Data[15] = Matrix->Data[15];
+    return OutMatrix;
 }
 
 /**
@@ -1278,6 +1345,6 @@ FINLINE Float32 DegreesToRadians(Float32 Degrees) {
  * @param Radians The radians to be converted.
  * @return The amount in degrees.
  */
-FINLINE Float32 RadianToDegree(Float32 Radians) {
+FINLINE Float32 RadiansToDegrees(Float32 Radians) {
     return Radians * F_RAD2DEG_MULTIPLIER;
 }

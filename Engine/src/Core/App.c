@@ -4,10 +4,12 @@
 #include "Logger.h"
 
 #include "Platform/Platform.h"
-#include "Memory.h"
-#include "Event.h"
-#include "Input.h"
-#include "Clock.h"
+
+#include "Core/Memory.h"
+#include "Core/Event.h"
+#include "Core/Input.h"
+#include "Core/Clock.h"
+#include "Core/FString.h"
 
 #include "Memory/LinearAllocator.h"
 
@@ -16,6 +18,10 @@
 // Systems
 #include "Systems/TextureSystem.h"
 #include "Systems/MaterialSystem.h"
+#include "Systems/GeometrySystem.h"
+#include "Systems/ResourceSystem.h"
+
+#include "Math/FMath.h"
 
 // Application configuration.
 typedef struct AppState {
@@ -44,6 +50,9 @@ typedef struct AppState {
     UInt64 PlatformSystemMemoryRequirement;
     void* PlatformState;
 
+    UInt64 ResourceSystemMemoryRequirement;
+    void* ResourceState;
+
     // Renderer
     UInt64 CrystalSystemMemoryRequirement;
     void* CrystalState;
@@ -54,6 +63,11 @@ typedef struct AppState {
 
     UInt64 MaterialSystemMemoryRequirement;
     void* MaterialState;
+
+    UInt64 GeometrySystemMemoryRequirement;
+    void* GeometryState;
+
+    Geometry* TestGeometry;
 } AppState;
 
 static AppState* State;
@@ -72,6 +86,37 @@ Bool8 AppOnKeyEvent(UInt16 Code, void* Sender, void* Reciever, EventContext Cont
 Bool8 AppOnMouseButtonEvent(UInt16 Code, void* Sender, void* Reciever, EventContext Context);
 
 Bool8 AppOnWindowResize(UInt16 Code, void* Sender, void* Reciever, EventContext Context);
+
+Bool8 EventOnDebugEvent(UInt16 Code, void* Sender, void* Reciever, EventContext Data)
+{
+    (void)Code;
+    (void)Sender;
+    (void)Reciever;
+    (void)Data;
+
+    const char* Names[4] = {
+        "Cobblestone",
+        "Paving",
+        "Paving2",
+        "WhiteStone"};
+    static Int8 Choice = 3;
+
+    const char* OldName = Names[Choice];
+
+    Choice++;
+    Choice %= 4;
+
+    // Acquire the new texture
+    State->TestGeometry->Material->BaseColorMap.Texture = TextureSystemAcquire(Names[Choice], true);
+    if (!State->TestGeometry->Material->BaseColorMap.Texture)
+    {
+        FLWARN("EventOnDebugEvent - No Texture! using default!");
+        State->TestGeometry->Material->BaseColorMap.Texture = TextureSystemGetDefault();
+    }
+
+    TextureSystemRelease(OldName);
+    return true;
+}
 
 Bool8 AppCreate(Game* Instance)
 {
@@ -128,6 +173,8 @@ Bool8 AppCreate(Game* Instance)
 
     EventRegister(EVENT_RESIZED, 0, AppOnWindowResize);
 
+    EventRegister(EVENT_DEBUG0, 0, EventOnDebugEvent);
+
     PlatformSystemStartup(&State->PlatformSystemMemoryRequirement, 0, 0, 0, 0, 0, 0);
     State->PlatformState = LinearAllocatorAllocate(&State->SystemAllocator, State->PlatformSystemMemoryRequirement);
     if (!PlatformSystemStartup(
@@ -139,6 +186,19 @@ Bool8 AppCreate(Game* Instance)
         Instance->Config.StartWidth, 
         Instance->Config.StartHeight))
     {
+        return false;
+    }
+
+    // Resource System
+    ResourceSystemConfig ResourceSysConfig;
+    ResourceSysConfig.AssetBasePath = "../Assets";
+    ResourceSysConfig.MaxLoaderCount = 32;
+
+    ResourceSystemInitialize(&State->ResourceSystemMemoryRequirement, 0, ResourceSysConfig);
+    State->ResourceState = LinearAllocatorAllocate(&State->SystemAllocator, State->ResourceSystemMemoryRequirement);
+
+    if (!ResourceSystemInitialize(&State->ResourceSystemMemoryRequirement, State->ResourceState, ResourceSysConfig)) {
+        FLFATAL("Failed to initialize Resource system. Application cannot continue.");
         return false;
     }
 
@@ -173,6 +233,26 @@ Bool8 AppCreate(Game* Instance)
         FLFATAL("Failed to initialize material system. Application cannot continue.");
         return false;
     }
+
+    // Geometry system
+    GeometrySystemConfig GeometrySysConfig;
+    GeometrySysConfig.MaxGeometryCount = 4096;
+
+    GeometrySystemInitialize(&State->GeometrySystemMemoryRequirement, 0, GeometrySysConfig);
+    State->GeometryState = LinearAllocatorAllocate(&State->SystemAllocator, State->GeometrySystemMemoryRequirement);
+
+    if (!GeometrySystemInitialize(&State->GeometrySystemMemoryRequirement, State->GeometryState, GeometrySysConfig)) {
+        FLFATAL("Failed to initialize geometry system. Application cannot continue.");
+        return false;
+    }
+
+    GeometryConfig GConfig = GeometrySystemGeneratePlaneConfig(10.0f, 10.0f, 5, 5, 2.0f, 2.0f, "Test Geometry", "TestMaterial");
+    State->TestGeometry = GeometrySystemAcquireFromConfig(GConfig, true);
+
+    FMFree(GConfig.Vertices, sizeof(Vertex3D) * GConfig.VertexCount, MEMORY_TAG_ARRAY);
+    FMFree(GConfig.Indices, sizeof(UInt32) * GConfig.IndexCount, MEMORY_TAG_ARRAY);
+
+    // State->TestGeometry = GeometrySystemGetDefault();
 
     if (!State->Instance->Initialize(State->Instance))
     {
@@ -230,7 +310,19 @@ Bool8 AppRun()
 
                 // TODO: Refactor Packet Creation
                 RenderPacket Packet;
+
+                GeometryRenderData TestRender;
+                TestRender.Geometry = State->TestGeometry;
+                Mat4Identity(&TestRender.Model);
+
+                Packet.GeometryCount = 1;
+                Packet.Geometries = &TestRender;
+
+                Packet.UIGeometryCount = 0;
+                Packet.UIGeometries = 0;
+
                 Packet.DeltaTime = (Float32)DeltaTime;
+                
                 CrystalDrawFrame(&Packet);
 
                 Float64 FrameEndTime = PlatformGetAbsoluteTime();
@@ -275,11 +367,17 @@ Bool8 AppRun()
 
     EventUnregister(EVENT_RESIZED, 0, AppOnWindowResize);
 
+    EventUnregister(EVENT_DEBUG0, 0, EventOnDebugEvent);
+
     InputSystemShutdown(State->InputState);
+
+    GeometrySystemShutdown(State->GeometryState);
 
     MaterialSystemShutdown(State->MaterialState);
 
     TextureSystemShutdown(State->TextureState);
+
+    ResourceSystemShutdown(State->ResourceState);
 
     CrystalShutdown();
 

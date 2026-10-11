@@ -24,6 +24,15 @@ FAPI Int32 StringFormat(char* Dest, const char* Format, ...);
  */
 FAPI Int32 StringFormatV(char* Dest, const char* Format, void* VaListp);
 
+/**
+ * @brief Empties provided string
+ *
+ * @param String the String to be emptied
+ * @return A pointer to String
+ */
+
+FAPI char* StringEmpty(char* String);
+
 FAPI char* StringCopy(char* Dest, const char* Source);
 
 FAPI char* StringNcopy(char* Dest, const char* Source, Int64 Length);
@@ -32,7 +41,7 @@ FAPI char* StringTrim(char* String);
 
 FAPI void StringMid(char* Dest, const char* Source, Int32 Start, Int32 Length);
 
-/*
+/**
  * @brief Returns the Index of the first ouccuranc of C in String, otherwise -1
  *
  * @param String the string to be scanned
@@ -41,7 +50,7 @@ FAPI void StringMid(char* Dest, const char* Source, Int32 Start, Int32 Length);
  */
 FAPI Int32 StringIndexOf(char* String, char C);
 
-/*
+/**
  * @brief Attempts to parse a vector from the provided string
  *
  * @param String the string to parse from, should be space-delimited (i.e. "1.0, 2.0, 3.0, 4.0")
@@ -50,7 +59,7 @@ FAPI Int32 StringIndexOf(char* String, char C);
  */
 FAPI Bool8 StringToVec4(char* String, Vec4* Vector);
 
-/*
+/**
  * @brief Attempts to parse a vector from the provided string
  *
  * @param String the string to parse from, should be space-delimited (i.e. "1.0, 2.0, 3.0")
@@ -59,7 +68,7 @@ FAPI Bool8 StringToVec4(char* String, Vec4* Vector);
  */
 FAPI Bool8 StringToVec3(char* String, Vec3* Vector);
 
-/*
+/**
  * @brief Attempts to parse a vector from the provided string
  *
  * @param String the string to parse from, should be space-delimited (i.e. "1.0, 2.0")
@@ -68,7 +77,7 @@ FAPI Bool8 StringToVec3(char* String, Vec3* Vector);
  */
 FAPI Bool8 StringToVec2(char* String, Vec2* Vector);
 
-/*
+/**
  * @brief Attempts to parse a Float32 from the provided string
  *
  * @param String the string to parse from
@@ -77,7 +86,7 @@ FAPI Bool8 StringToVec2(char* String, Vec2* Vector);
  */
 FAPI Bool8 StringToFloat32(char* String, Float32* Float);
 
-/*
+/**
  * @brief Attempts to parse a Float64 from the provided string
  *
  * @param String the string to parse from
@@ -86,7 +95,7 @@ FAPI Bool8 StringToFloat32(char* String, Float32* Float);
  */
 FAPI Bool8 StringToFloat64(char* String, Float64* Float);
 
-/*
+/**
  * @brief Attempts to parse a 8-bit Integer from the provided string
  *
  * @param String the string to parse from
@@ -95,7 +104,7 @@ FAPI Bool8 StringToFloat64(char* String, Float64* Float);
  */
 FAPI Bool8 StringToInt8(char* String, Int8* Integer);
 
-/*
+/**
  * @brief Attempts to parse a 16-bit Integer from the provided string
  *
  * @param String the string to parse from
@@ -104,7 +113,7 @@ FAPI Bool8 StringToInt8(char* String, Int8* Integer);
  */
 FAPI Bool8 StringToInt16(char* String, Int16* Integer);
 
-/*
+/**
  * @brief Attempts to parse a 32-bit Integer from the provided string
  *
  * @param String the string to parse from
@@ -113,7 +122,7 @@ FAPI Bool8 StringToInt16(char* String, Int16* Integer);
  */
 FAPI Bool8 StringToInt32(char* String, Int32* Integer);
 
-/*
+/**
  * @brief Attempts to parse a 64-bit Integer from the provided string
  *
  * @param String the string to parse from
@@ -122,7 +131,7 @@ FAPI Bool8 StringToInt32(char* String, Int32* Integer);
  */
 FAPI Bool8 StringToInt64(char* String, Int64* Integer);
 
-/*
+/**
  * @brief Attempts to parse a 8-bit Unsigned Integer from the provided string
  *
  * @param String the string to parse from
@@ -131,7 +140,7 @@ FAPI Bool8 StringToInt64(char* String, Int64* Integer);
  */
 FAPI Bool8 StringToUInt8(char* String, UInt8* UnsignedInteger);
 
-/*
+/**
  * @brief Attempts to parse a 16-bit Unsigned Integer from the provided string
  *
  * @param String the string to parse from
@@ -140,7 +149,7 @@ FAPI Bool8 StringToUInt8(char* String, UInt8* UnsignedInteger);
  */
 FAPI Bool8 StringToUInt16(char* String, UInt16* UnsignedInteger);
 
-/*
+/**
  * @brief Attempts to parse a 32-bit Unsigned Integer from the provided string
  *
  * @param String the string to parse from
@@ -149,7 +158,7 @@ FAPI Bool8 StringToUInt16(char* String, UInt16* UnsignedInteger);
  */
 FAPI Bool8 StringToUInt32(char* String, UInt32* UnsignedInteger);
 
-/*
+/**
  * @brief Attempts to parse a 64-bit Unsigned Integer from the provided string
  *
  * @param String the string to parse from
@@ -158,7 +167,7 @@ FAPI Bool8 StringToUInt32(char* String, UInt32* UnsignedInteger);
  */
 FAPI Bool8 StringToUInt64(char* String, UInt64* UnsignedInteger);
 
-/*
+/**
  * @brief Attempts to parse a vector from the provided string
  *
  * @param String the string to parse from. "True" or "1" are true; anything false

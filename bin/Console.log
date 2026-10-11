@@ -1,5 +1,10 @@
 [INFO]:  Input subsystem initialized.
 [ERROR]: The Crystal backend does not exist to accept resize: 1280, 720
+[TRACE]: Loader registered
+[TRACE]: Loader registered
+[TRACE]: Loader registered
+[TRACE]: Loader registered
+[INFO]:  Resource system initialized with base path '../Assets'
 [DEBUG]: Required Extensions:
 [DEBUG]: VK_KHR_surface
 [DEBUG]: VK_KHR_win32_surface
@@ -56,23 +61,27 @@
 [DEBUG]: Creating Command Buffers...
 [DEBUG]: Vulkan command buffers created successfully.
 [DEBUG]: Graphics pipeline created
+[DEBUG]: Graphics pipeline created
 [INFO]:  Vulkan renderer initialized successfully
 [DEBUG]: Creating Default Texture
 [TRACE]: Crystal: Material Created
+[TRACE]: Texture 'WhiteStone' does not yet exist. Created, and ReferenceCount is now 1.
+[TRACE]: Crystal: Material Created
+[TRACE]: Material 'TestMaterial' does not yet exist. Created, and ReferenceCount is now 1.
 [DEBUG]: GameInitialized() called!
 [DEBUG]: System memory use (Tagged):
   UNKNOWN         : 0.00 Bytes
   ARRAY           : 0.00 Bytes
-  VECTOR          : 688.00 Bytes
+  VECTOR          : 440.00 Bytes
   DICT            : 0.00 Bytes
   RING_QUEUE      : 0.00 Bytes
   BST             : 0.00 Bytes
   STRING          : 0.00 Bytes
   APPLICATION     : 0.00 Bytes
   JOB             : 0.00 Bytes
-  TEXTURE         : 40.00 Bytes
+  TEXTURE         : 80.00 Bytes
   MAT_INST        : 0.00 Bytes
-  RENDERER        : 176.00 Bytes
+  RENDERER        : 128.00 Bytes
   GAME            : 0.00 Bytes
   TRANSFORM       : 0.00 Bytes
   ENTITY          : 0.00 Bytes
@@ -80,9 +89,18 @@
   SCENE           : 0.00 Bytes
   LINEAR_ALLOCATOR: 0.00 Bytes
 
-[TRACE]: Texture 'WhiteStone' does not yet exist. Created, and ReferenceCount is now 1.
-[TRACE]: Crystal: Material Created
-[TRACE]: Material 'TestMaterial' does not yet exist. Created, and ReferenceCount is now 1.
+[DEBUG]: Elected depth attachment format: 126
+[DEBUG]: Swapchain created successfuly.
+[DEBUG]: Vulkan command buffers created successfully.
+[DEBUG]: Resized, booting...
+[DEBUG]: Elected depth attachment format: 126
+[DEBUG]: Swapchain created successfuly.
+[DEBUG]: Vulkan command buffers created successfully.
+[DEBUG]: Resized, booting...
+[DEBUG]: Elected depth attachment format: 126
+[DEBUG]: Swapchain created successfuly.
+[DEBUG]: Vulkan command buffers created successfully.
+[DEBUG]: Resized, booting...
 [DEBUG]: Event Code APP_QUIT Recieved, Shutting Down.
 [TRACE]: Destroying material 'Default'...
 [DEBUG]: Destroying Vulkan device

@@ -10,18 +10,26 @@ Bool8 CrystalBackendCreate(CrystalBackendType Type, CrystalBackend* Backend)
         Backend->Shutdown = VulkanRendererShutdown;
 
         Backend->BeginFrame = VulkanRendererBeginFrame;
-        Backend->UpdateGlobalState = VullkanRendererUpdateGlobalState;
         Backend->EndFrame = VulkanRendererEndFrame;
+
+        Backend->UpdateGlobalWorldState = VulkanRendererUpdateGlobalWorldState;
+        Backend->UpdateGlobalUIState = VulkanRendererUpdateGlobalUIState;
 
         Backend->Resized = VulkanRendererOnResized;
         
-        Backend->UpdateObject = VulkanRendererUpdateObject;
+        Backend->DrawGeometry = VulkanRendererDrawGeometry;
+
+        Backend->BeginRenderpass = VulkanRendererBeginRenderpass;
+        Backend->EndRenderpass = VulkanRendererEndRenderpass;
 
         Backend->CreateTexture = VulkanRendererCreateTexture;
         Backend->DestroyTexture = VulkanRendererDestroyTexture;
 
         Backend->CreateMaterial = VulkanRendererCreateMaterial;
         Backend->DestroyMaterial = VulkanRendererDestroyMaterial;
+
+        Backend->CreateGeometry = VulkanRendererCreateGeometry;
+        Backend->DestroyGeometry = VulkanRendererDestroyGeometry;
 
         return true;
      }
@@ -35,16 +43,24 @@ void CrystalBackendDestroy(CrystalBackend* Backend)
     Backend->Shutdown = 0;
 
     Backend->BeginFrame = 0;
-    Backend->UpdateGlobalState = 0;
     Backend->EndFrame = 0;
+
+    Backend->UpdateGlobalWorldState = 0;
+    Backend->UpdateGlobalUIState = 0;
+
+    Backend->BeginRenderpass = 0;
+    Backend->EndRenderpass = 0;
 
     Backend->Resized = 0;
 
-    Backend->UpdateObject = 0;
+    Backend->DrawGeometry = 0;
 
     Backend->CreateTexture = 0;
     Backend->DestroyTexture = 0;
 
     Backend->CreateMaterial = 0;
     Backend->DestroyMaterial = 0;
+
+    Backend->CreateGeometry = 0;
+    Backend->DestroyGeometry = 0;
 }

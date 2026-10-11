@@ -14,4 +14,4 @@ void TextureSystemShutdown(void* State);
 Texture* TextureSystemAcquire(const char* Name, Bool8 AutoRelease);
 void TextureSystemRelease(const char* Name);
 
-Texture* TextureSystemGetDefaultTexture();
+Texture* TextureSystemGetDefault();
