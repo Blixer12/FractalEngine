@@ -1,0 +1,49 @@
+html {
+    /* --- LIGHT MODE PALETTE --- */
+    --primary-color: #5a15a9;
+    --primary-dark-color: #32055e;
+    --primary-light-color: #ab6cfe;
+
+    --page-background-color: #fafafa; /* Soft off-white to reduce eye strain */
+    --page-foreground-color: #282030; /* Crisp dark slate for text */
+    --page-secondary-foreground-color: #5c6773;
+    --separator-color: #e2d9ec;
+
+    --border-radius-large: 22px;
+    --border-radius-small: 9px;
+    --border-radius-medium: 14px;
+    --spacing-small: 8px;
+    --spacing-medium: 14px;
+    --spacing-large: 19px;
+    --spacing-xlarge: 21px;
+
+    /* Clean, soft light-purple sidebar for light mode */
+    --side-nav-background: #d5b6fa;
+    --side-nav-foreground: #2b0a49;
+    --header-foreground: var(--side-nav-foreground);
+    --searchbar-background: #ffffff;
+    --searchbar-border-radius: var(--border-radius-medium);
+    --header-background: var(--side-nav-background);
+
+    --toc-background: #f8f5fd;
+    --toc-foreground: var(--page-foreground-color);
+
+    --top-height: 125px;
+}
+
+/* --- DARK MODE PALETTE --- */
+html.dark-mode, html:not(.light-mode) {
+    --primary-color: #9e5bdc;
+    --primary-dark-color: #7341b1;
+    
+    --page-background-color: #1e1c1f;
+    --page-foreground-color: #d2dbde;
+    --page-secondary-foreground-color: #859399;
+    --separator-color: #3a3246;
+    
+    /* Rich dark purple sidebar for dark mode */
+    --side-nav-background: #2a1846;
+    --side-nav-foreground: #F1FDFF;
+    --toc-background: #25143b;
+    --searchbar-background: var(--page-background-color);
+}

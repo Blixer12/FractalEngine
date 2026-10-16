@@ -1,3 +1,14 @@
+/**
+ * @file VulkanUtils.h
+ * @author Blixer12
+ * @brief A collection of Vulkan-specific utility functions.
+ * @version 1.0
+ * @date 2026-10-11
+ * 
+ * @copyright Fractal Engine is Copyright (c) Blixer12 2026
+ * 
+ */
+
 #pragma once
 #include "VulkanDef.inl"
 

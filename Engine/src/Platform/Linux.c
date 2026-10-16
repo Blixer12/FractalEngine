@@ -107,7 +107,7 @@ Bool8 PlatformSystemStartup(UInt64* MemoryRequirement, void* State, const char* 
     UInt32 ValueList[] = {StatePtr->Screen->black_pixel, EventValues};
 
     // Create the window
-    xcb_void_cookie_t Cookie = xcb_create_window(
+    xcb_create_window(
         StatePtr->Connection,
         XCB_COPY_FROM_PARENT,  // depth
         StatePtr->Window,
@@ -210,7 +210,7 @@ Bool8 PlatformPollEvents()
     Bool8 QuitFlagged = false;
 
     // Poll for events until null is returned.
-    while ((Event = xcb_poll_for_event(StatePtr->Connection)) != NULL) {
+    while ((Event = xcb_poll_for_event(StatePtr->Connection))) {
         
         if (Event == 0) 
         {

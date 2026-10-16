@@ -1,25 +1,66 @@
+/**
+ * @file FString.h
+ * @author Blixer12
+ * @brief This file contains a basic C string handling library.
+ * 
+ * @version 1.0
+ * @date 2022-01-10
+ * 
+ * @copyright Fractal Engine is Copyright (c) Blixer12 2026
+ * 
+ */
+
 #pragma once
 
 #include "Defines.h"
 #include "Math/MathDef.h"
 
+
+/**
+ * @brief Duplicates the provided string. Note that this allocates new memory,
+ * which should be freed by the caller.
+ * @param String The string to be duplicated.
+ * @returns A pointer to a newly-created character array (string).
+ */
 FAPI char* StringDuplicate(const char* String);
 
+/** 
+ * @brief Gets the length of the given string.
+ * @param String The string whose length to obtain.
+ * @returns The length of the string.
+ */
 FAPI UInt64 StringLength(const char* String);
 
+/** 
+ * @brief Case-sensitive string comparison. 
+ * @param String0 The first string to be compared.
+ * @param String1 The second string to be compared.
+ * @returns True if the same, otherwise false.
+ */
 FAPI Bool8 StringsEqual(const char* String0, const char* String1);
 
-// Case-insensitive string comparison. True if the same, otherwise false.
+/** 
+ * @brief Case-insensitive string comparison. 
+ * @param String0 The first string to be compared.
+ * @param String1 The second string to be compared.
+ * @returns True if the same, otherwise false.
+ */
 FAPI Bool8 StringsEqualI(const char* String0, const char* String1);
 
-// Performs string formatting to dest given format string and parameters.
+/** 
+ * @brief Performs string formatting to dest given format string and parameters.
+ * @param Dest The destination for the formatted string.
+ * @param Format The format string to use for the operation
+ * @param ... The format arguments.
+ * @returns The length of the newly-formatted string.
+ */
 FAPI Int32 StringFormat(char* Dest, const char* Format, ...);
 
 /**
- * Performs variadic string formatting to dest given format string and va_list.
- * @param dest The destination for the formatted string.
- * @param format The string to be formatted.
- * @param va_list The variadic argument list.
+ * @brief Performs variadic string formatting to dest given format string and va_list.
+ * @param Dest The destination for the formatted string.
+ * @param Format The string to be formatted.
+ * @param VaListp The variadic argument list.
  * @returns The size of the data written.
  */
 FAPI Int32 StringFormatV(char* Dest, const char* Format, void* VaListp);
@@ -30,15 +71,45 @@ FAPI Int32 StringFormatV(char* Dest, const char* Format, void* VaListp);
  * @param String the String to be emptied
  * @return A pointer to String
  */
-
 FAPI char* StringEmpty(char* String);
 
+/**
+ * @brief Copies the string in source to dest. Does not perform any allocations.
+ * @param Dest The destination string.
+ * @param Source The source string.
+ * @returns A pointer to the destination string.
+ */
 FAPI char* StringCopy(char* Dest, const char* Source);
 
+/**
+ * @brief Copies the string in source to dest up to the given length. Does not perform any allocations.
+ * @param Dest The destination string.
+ * @param Source The source string.
+ * @param Length The maximum length to be copied.
+ * @returns A pointer to the destination string.
+ */
 FAPI char* StringNcopy(char* Dest, const char* Source, Int64 Length);
 
+/**
+ * @brief Performs an in-place trim of the provided string.
+ * This removes all whitespace from both ends of the string.
+ * 
+ * Done by placing zeroes in the string at relevant points.
+ * @param String The string to be trimmed.
+ * @returns A pointer to the trimmed string.
+ */
 FAPI char* StringTrim(char* String);
 
+/**
+ * @brief Gets a substring of the source string between start and length or to the end of the string.
+ * If length is negative or 0, goes to the end of the string.
+ * 
+ * Done by placing zeroes in the string at relevant points.
+ * @param Dest The string that gets outputted.
+ * @param Source The string that gets cut
+ * @param Start the placve to start copying
+ * @param Length the amount that is to be copied
+ */
 FAPI void StringMid(char* Dest, const char* Source, Int32 Start, Int32 Length);
 
 /**

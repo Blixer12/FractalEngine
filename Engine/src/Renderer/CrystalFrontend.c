@@ -145,9 +145,9 @@ void CrystalSetView(Mat4 View)
     StatePtr->View = View;
 }
 
-void CrystalCreateTexture(const UInt8* Pixels, struct Texture* Texture)
+void CrystalCreateTexture(const UInt8* Pixels, Texture* Texture)
 {
-    StatePtr->Backend.CreateTexture(Texture, Pixels);
+    StatePtr->Backend.CreateTexture(Pixels, Texture);
 }
         
 void CrystalDestroyTexture(struct Texture* Texture)

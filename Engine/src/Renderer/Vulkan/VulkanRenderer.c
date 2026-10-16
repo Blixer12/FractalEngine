@@ -621,7 +621,7 @@ Bool8 VulkanRendererEndRenderpass(struct CrystalBackend* Backend, UInt8 Renderpa
     return true;
 }
 
-void VulkanRendererCreateTexture(Texture* Texture, const UInt8* Pixels)
+void VulkanRendererCreateTexture(const UInt8* Pixels, Texture* Texture)
 {
     // TODO: Allocator for this bro
     Texture->InternalData = (VulkanTextureData*)FMAllocate(sizeof(VulkanTextureData), MEMORY_TAG_TEXTURE);

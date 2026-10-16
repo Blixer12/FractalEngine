@@ -1,9 +1,30 @@
+/**
+ * @file EntryPoint.h
+ * @author Blixer12
+ * @brief This file contains the main entry point to the application. 
+ * It also contains a reference to an externally defined CreateGame
+ * method, which should create and set a custom game object to the
+ * location pointed to by TargetGame. This would be provided by the
+ * consuming application, which is then hooked into the engine itself
+ * during the bootstrapping phase.
+ * @version 1.0
+ * @date 2026-10-11
+ * 
+ * @copyright Fractal Engine is Copyright (c) Blixer12 2026
+ * 
+ */
+
 #pragma once
 
 #include "Core/App.h"
 #include "Core/Logger.h"
 #include "GameInstance.h"
 
+/** @brief Externally-defined function to create a game, provided by the consumer
+ * of this library.
+ * @param TargetGame A pointer which holds the created game object as provided by the consumer.
+ * @returns True on successful creation; otherwise false.
+ */
 extern Bool8 CreateGame(Game* TargetGame);
 
 int main()

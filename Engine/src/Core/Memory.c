@@ -3,6 +3,7 @@
 #include "Logger.h"
 #include "Platform/Platform.h"
 #include "FString.h"
+#include "Memory/DynamicAllocator.h"
 
 #include <stdio.h>
 
@@ -32,31 +33,56 @@ static const char* MemoryTagStrings[MEMORY_TAG_MAX_TAGS] = {
     "LINEAR_ALLOCATOR"};
 
 typedef struct MemoryState {
+    MemorySystemConfig Config;
     struct MemoryStats Stats;
+    UInt64 AllocatorMemoryRequirements;
+    DynamicAllocator Allocator;
+    void* AllocatorBlock;
     UInt64 AllocationCount;
 } MemoryState;
 
 static MemoryState* StatePtr;
 
-void MemorySystemInitialize(UInt64* MemoryRequirement, void* State)
+Bool8 MemorySystemInitialize(MemorySystemConfig Config)
 {
-    *MemoryRequirement = (UInt64)sizeof(MemoryState);
-    if (State == 0)
+    UInt64 StateMemoryRequirement = sizeof(MemoryState);
+
+    UInt64 AllocationRequirement = 0;
+    DynamicAllocatorCreate(Config.TotalAllocationSize, &AllocationRequirement, 0, 0);
+
+    void* Block = PlatformAllocate(StateMemoryRequirement + AllocationRequirement, false);
+    if (!Block)
     {
-        return;
+        FLFATAL("Memory system alloc failed!");
+        return false;
     }
 
-    StatePtr = State;
+    StatePtr = (MemoryState*)Block;
+    StatePtr->Config = Config;
     StatePtr->AllocationCount = 0;
+    StatePtr->AllocatorMemoryRequirements = AllocationRequirement;
 
     PlatformZeroMemory(&StatePtr->Stats, sizeof(StatePtr->Stats));
 
-    (void)MemoryRequirement;
+    StatePtr->AllocatorBlock = ((void*)Block + StateMemoryRequirement);
+
+    if (!DynamicAllocatorCreate(Config.TotalAllocationSize, &StatePtr->AllocatorMemoryRequirements, StatePtr->AllocatorBlock, &StatePtr->Allocator))
+    {
+        FLFATAL("Memory system is unable to set up internal allocator");
+        return false;
+    }
+
+    FLDEBUG("Memory system sucessfully allocated %llu bytes.", Config.TotalAllocationSize);
+    return true;
 }
 
-void MemorySystemShutdown(void* State)
+void MemorySystemShutdown()
 {
-    (void)State;
+    if (StatePtr)
+    {
+        DynamicAllocatorDestroy(&StatePtr->Allocator);
+        PlatformFree(StatePtr, StatePtr->AllocatorMemoryRequirements + sizeof(MemoryState));
+    }
     StatePtr = 0;
 }
 
@@ -71,17 +97,28 @@ void* FMAllocate(UInt64 Size, MemoryTag Tag)
         #endif
     }
 
+    void * Block = 0;
     if (StatePtr)
     {
         StatePtr->Stats.TotalAllocated += Size;
         StatePtr->Stats.TaggedAllocations[Tag] += Size;
         StatePtr->AllocationCount++;
+
+        Block = DynamicAllocatorAllocate(&StatePtr->Allocator, Size);
+    } else {
+        FLWARN("FMAllocate called befire system init!");
+        Block = PlatformAllocate(Size, false);
     }
     
     //TODO: Memory Allignment
-    void* Block = PlatformAllocate(Size, false);
-    PlatformZeroMemory(Block, Size);
-    return Block;
+
+    if (Block)
+    {
+        PlatformZeroMemory(Block, Size);
+        return Block;
+    }
+    FLFATAL("FMAllocate failed to allocate successfully!");
+    return 0;
 }
 
 void FMFree(void* Block, UInt64 Size, MemoryTag Tag)
@@ -100,9 +137,16 @@ void FMFree(void* Block, UInt64 Size, MemoryTag Tag)
     {
         StatePtr->Stats.TotalAllocated -= Size;
         StatePtr->Stats.TaggedAllocations[Tag] -= Size;
+        Bool8 Result = DynamicAllocatorFree(&StatePtr->Allocator, Block, Size);
+
+        if (!Result)
+        {
+            PlatformFree(Block, false);
+        } 
+    } else {
+        PlatformFree(Block, false);
     }
 
-    PlatformFree(Block, false);
 }
 
 void* FMZeroMemory(void* Block, UInt64 Size) 

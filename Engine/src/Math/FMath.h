@@ -1,32 +1,57 @@
+/**
+ * @file FMath.h
+ * @author Blixer12
+ * @brief This file contains definitions for various important constant values
+ * as well as functions for many common math types.
+ * 
+ * @version 1.0
+ * @date 2026-10-11
+ * 
+ * @copyright Fractal Engine is Copyright (c) Blixer12 2026
+ * 
+ */
+
 #pragma once
 
 #include "Defines.h"
 #include "MathDef.h"
 #include "Core/Memory.h"
 
+/** @brief An approximate representation of PI. */
 static constexpr Float32 F_PI = 3.14159265358979323846f;
+/** @brief An approximate representation of PI multiplied by 2. */
 static constexpr Float32 F_PI_2 = 2.0f * F_PI;
+/** @brief An approximate representation of PI divided by 2. */
 static constexpr Float32 F_HALF_PI = 0.5f * F_PI;
+/** @brief An approximate representation of PI divided by 4. */
 static constexpr Float32 F_QUARTER_PI = 0.25f * F_PI;
+/** @brief One divided by an approximate representation of PI. */
 static constexpr Float32 F_ONE_OVER_PI = 1.0f / F_PI;
+/** @brief One divided by half of an approximate representation of PI. */
 static constexpr Float32 F_ONE_OVER_TWO_PI = 1.0f / F_PI_2;
+/** @brief An approximation of the square root of 2. */
 static constexpr Float32 F_SQRT_TWO = 1.41421356237309504880f;
+/** @brief An approximation of the square root of 3. */
 static constexpr Float32 F_SQRT_THREE = 1.73205080756887729352f;
+/** @brief One divided by an approximation of the square root of 2. */
 static constexpr Float32 F_SQRT_ONE_OVER_TWO = 0.70710678118654752440f;
+/** @brief One divided by an approximation of the square root of 3. */
 static constexpr Float32 F_SQRT_ONE_OVER_THREE = 0.57735026918962576450f;
+/** @brief A multiplier used to convert degrees to radians. */
 static constexpr Float32 F_DEG2RAD_MULTIPLIER = F_PI / 180.0f;
+/** @brief A multiplier used to convert radians to degrees. */
 static constexpr Float32 F_RAD2DEG_MULTIPLIER = 180.0f / F_PI;
 
-// The multiplier to convert seconds to milliseconds.
+/** @brief The multiplier to convert seconds to milliseconds. */
 static constexpr Float32 F_SEC_TO_MS_MULTIPLIER = 1000.0f;
 
-// The multiplier to convert milliseconds to seconds.
+/** @brief The multiplier to convert milliseconds to seconds. */
 static constexpr Float32 F_MS_TO_SEC_MULTIPLIER = 0.001f;
 
-// A huge number that should be larger than any valid number used.
+/** @brief A huge number that should be larger than any valid number used. */
 static constexpr Float32 F_INFINITY = 1e30f;
 
-// Smallest positive number where 1.0 + FLOAT_EPSILON != 0
+/** @brief Smallest positive number where 1.0 + FLOAT_EPSILON != 0 */
 static constexpr Float32 F_FLOAT_EPSILON = 1.192092896e-07f;
 
 // ------------------------------------------
@@ -40,7 +65,7 @@ FAPI Float32 Fsqrt(Float32 x);
 FAPI Float32 Fabs(Float32 x);
 
 /**
- * Indicates if the Value is a power of 2. 0 is considered _not_ a power of 2.
+ * @brief Indicates if the Value is a power of 2. 0 is considered _not_ a power of 2.
  * @param Value The Value to be interpreted.
  * @returns True if a power of 2, otherwise false.
  */
@@ -1099,7 +1124,7 @@ FINLINE Quaternion QuaternionIdentity() {
 }
 
 /**
- * @brief Returns the normal (length) of the provided quaternion[cite: 7].
+ * @brief Returns the normal (length) of the provided quaternion.
  * 
  * @param Q The quaternion.
  * @return The normal/length value.
@@ -1113,7 +1138,7 @@ FINLINE Float32 QuaternionNormal(Quaternion Q) {
 }
 
 /**
- * @brief Returns a normalized copy of the supplied quaternion[cite: 7].
+ * @brief Returns a normalized copy of the supplied quaternion.
  * 
  * @param Q The quaternion to normalize.
  * @return A normalized quaternion.
@@ -1131,7 +1156,7 @@ FINLINE Quaternion QuaternionNormalize(Quaternion Q) {
 }
 
 /**
- * @brief Returns the conjugate of the provided quaternion[cite: 7].
+ * @brief Returns the conjugate of the provided quaternion.
  * 
  * @param Q The quaternion.
  * @return The conjugate quaternion.
@@ -1145,7 +1170,7 @@ FINLINE Quaternion QuaternionConjugate(Quaternion Q) {
 }
 
 /**
- * @brief Returns the inverse of the provided quaternion[cite: 7].
+ * @brief Returns the inverse of the provided quaternion.
  * 
  * @param Q The quaternion.
  * @return The inverse quaternion.
@@ -1155,7 +1180,7 @@ FINLINE Quaternion QuaternionInverse(Quaternion Q) {
 }
 
 /**
- * @brief Multiplies Q0 by Q1 and returns the resulting quaternion[cite: 7].
+ * @brief Multiplies Q0 by Q1 and returns the resulting quaternion.
  * 
  * @param Q0 The first quaternion.
  * @param Q1 The second quaternion.
@@ -1188,7 +1213,7 @@ FINLINE Quaternion QuaternionMul(Quaternion Q0, Quaternion Q1) {
 }
 
 /**
- * @brief Returns the dot product between two quaternions[cite: 7].
+ * @brief Returns the dot product between two quaternions.
  * 
  * @param Q0 The first quaternion.
  * @param Q1 The second quaternion.
@@ -1202,7 +1227,7 @@ FINLINE Float32 QuaternionDot(Quaternion Q0, Quaternion Q1) {
 }
 
 /**
- * @brief Converts a quaternion to a 4x4 rotation matrix ( safely using an out-pointer )[cite: 7].
+ * @brief Converts a quaternion to a 4x4 rotation matrix ( safely using an out-pointer ).
  * 
  * @param Q The quaternion.
  * @param OutMatrix A pointer to the destination matrix.
@@ -1228,7 +1253,7 @@ FINLINE Mat4* QuaternionToMat4(Quaternion Q, Mat4* OutMatrix) {
 }
 
 /**
- * @brief Calculates a rotation matrix based on the quaternion and center point ( out-pointer version )[cite: 7].
+ * @brief Calculates a rotation matrix based on the quaternion and center point ( out-pointer version ).
  * 
  * @param Q The quaternion.
  * @param Center The center point vector.
@@ -1261,7 +1286,7 @@ FINLINE Mat4* QuaternionToRotationMatrix(Quaternion Q, Vec3 Center, Mat4* OutMat
 }
 
 /**
- * @brief Creates a quaternion from an axis and an angle[cite: 7].
+ * @brief Creates a quaternion from an axis and an angle.
  * 
  * @param Axis The axis vector.
  * @param Angle The angle in radians.
@@ -1281,7 +1306,7 @@ FINLINE Quaternion QuaternionFromAxisAngle(Vec3 Axis, Float32 Angle, Bool8 Norma
 }
 
 /**
- * @brief Performs spherical linear interpolation between two quaternions[cite: 7].
+ * @brief Performs spherical linear interpolation between two quaternions.
  * 
  * @param Q0 The starting quaternion.
  * @param Q1 The ending quaternion.

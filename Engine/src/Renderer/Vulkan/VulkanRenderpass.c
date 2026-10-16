@@ -178,8 +178,8 @@ void VulkanRenderpassBegin(
     CommandBuffer->State = VULKAN_COMMAND_BUFFER_STATE_IN_RENDER_PASS;
 }
 
-void VulkanRenderpassEnd(VulkanCommandBuffer* CommandBuffer, VulkanRenderpass* Rendepass) {
-    (void) Rendepass;    
+void VulkanRenderpassEnd(VulkanCommandBuffer* CommandBuffer, VulkanRenderpass* Renderpass) {
+    (void) Renderpass;    
 
     vkCmdEndRenderPass(CommandBuffer->Handle);
     CommandBuffer->State = VULKAN_COMMAND_BUFFER_STATE_RECORDING;

@@ -1,3 +1,15 @@
+/**
+ * @file Hashtable.h
+ * @author Blixer12
+ * @brief This file contains the hashtable implementation.
+ * 
+ * @version 1.0
+ * @date 2026-10-11
+ * 
+ * @copyright Fractal Engine is Copyright (c) Blixer12 2026
+ * 
+ */
+
 #pragma once
 
 #include "Defines.h"

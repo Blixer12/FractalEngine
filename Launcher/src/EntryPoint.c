@@ -2,8 +2,6 @@
 
 #include <EntryPoint.h>
 
-#include <Core/Memory.h>
-
 // Function to Create the Game
 Bool8 CreateGame(Game* TargetGame)
 {
@@ -17,7 +15,8 @@ Bool8 CreateGame(Game* TargetGame)
     TargetGame->Render = GameRender;
     TargetGame->OnResize = GameOnResize;
 
-    TargetGame->State = FMAllocate(sizeof(GameState), MEMORY_TAG_GAME);
+    TargetGame->StateMemoryRequirement = sizeof(GameState);
+    TargetGame->State = 0;
     TargetGame->AppState = 0;
 
     return true;

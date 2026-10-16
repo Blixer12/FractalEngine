@@ -80,7 +80,7 @@ void LogOutput(LogLevel Level, const char* Message, ...)
     AppendToLogFile(MessageBuffer);
 }
 
-void AssertFail(const char* Expression, const char* Message, const char* File, Int32 Line)
+void ReportAssertFail(const char* Expression, const char* Message, const char* File, Int32 Line)
 {
     LogOutput(
         LOG_FATAL, 

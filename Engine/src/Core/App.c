@@ -23,7 +23,7 @@
 
 #include "Math/FMath.h"
 
-// Application configuration.
+/** @brief The Application state while running. */
 typedef struct AppState {
     Game* Instance;
     Bool8 IsRunning;
@@ -37,9 +37,6 @@ typedef struct AppState {
     // Core
     UInt64 EventSystemMemoryRequirement;
     void* EventState;
-
-    UInt64 MemorySystemMemoryRequirement;
-    void* MemoryState;
 
     UInt64 LogSystemMemoryRequirement;
     void* LogState;
@@ -127,6 +124,16 @@ Bool8 AppCreate(Game* Instance)
         return false;
     }
 
+    MemorySystemConfig Config = {};
+    Config.TotalAllocationSize = GIBIBYTES((UInt64)2);
+    if (!MemorySystemInitialize(Config))
+    {
+        FLERROR("Failed to init memory, shutting down");
+        return false;
+    }
+
+    Instance->State = FMAllocate(Instance->StateMemoryRequirement, MEMORY_TAG_GAME);
+
     Instance->AppState = FMAllocate(sizeof(AppState), MEMORY_TAG_APPLICATION);
     State = Instance->AppState;
     State->Instance = Instance;
@@ -144,11 +151,6 @@ Bool8 AppCreate(Game* Instance)
     EventSystemInitialize(&State->EventSystemMemoryRequirement, 0);
     State->EventState = LinearAllocatorAllocate(&State->SystemAllocator, State->EventSystemMemoryRequirement);
     EventSystemInitialize(&State->EventSystemMemoryRequirement, State->EventState);
-
-    // Memory
-    MemorySystemInitialize(&State->MemorySystemMemoryRequirement, 0);
-    State->MemoryState = LinearAllocatorAllocate(&State->SystemAllocator, State->MemorySystemMemoryRequirement);
-    MemorySystemInitialize(&State->MemorySystemMemoryRequirement, State->MemoryState);
 
     // Logging
     LogCreate(&State->LogSystemMemoryRequirement, 0);
@@ -312,7 +314,7 @@ Bool8 AppRun()
     ClockStart(&State->Clock);
     ClockUpdate(&State->Clock);
     State->PreviousTime = State->Clock.Elapsed;
-    Float64 RunningTime = 0;
+    // Float64 RunningTime = 0;
     UInt8 FrameCount = 0;
     Float64 TargetFrameRate = 120.0;
     Float64 TargetFrameSeconds = 1.0 / TargetFrameRate;
@@ -373,7 +375,7 @@ Bool8 AppRun()
 
                 Float64 FrameEndTime = PlatformGetAbsoluteTime();
                 Float64 FrameElapsedTime = FrameEndTime - FrameStartTime;
-                RunningTime += FrameElapsedTime;
+                // RunningTime += FrameElapsedTime;
                 Float64 RemainingSeconds = TargetFrameSeconds - FrameElapsedTime;
 
                 if (RemainingSeconds > 0)
@@ -389,7 +391,6 @@ Bool8 AppRun()
                 FrameCount++;
 
                 (void)FrameCount;
-                (void)RunningTime;
 
             // NOTE: Input update/state copying should always be handled
             // after any input should be recorded; I.E. before this line.
@@ -429,9 +430,9 @@ Bool8 AppRun()
 
     PlatformSystemShutdown(&State->PlatformState);
 
-    MemorySystemShutdown(State->MemoryState);
-
     EventSystemShutdown(State->EventState);
+
+    MemorySystemShutdown();
 
     return true;
 }

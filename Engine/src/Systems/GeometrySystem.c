@@ -129,8 +129,8 @@ void GeometrySystemRelease(Geometry* Geometry)
         GeometryReference* Reference = &StatePtr->RegisteredGeometries[Geometry->ID];
 
         // Take a copy of the ID
-        // UInt32 ID = Geometry->ID;
-        if (Reference->Geometry.ID == Geometry->ID)
+        UInt32 ID = Geometry->ID;
+        if (Reference->Geometry.ID == ID)
         {
             if (Reference->ReferneceCount > 0)
             {

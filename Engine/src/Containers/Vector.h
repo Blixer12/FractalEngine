@@ -1,3 +1,22 @@
+/**
+ * @file Vector.h
+ * @author Blixer12
+ * @brief This files contains an implementation of a Vector (AKA Dynamic Arrays).
+ * 
+ * @details 
+ * Memory layout:
+ * - UInt64 Capacity = number elements that can be held.
+ * - UInt64 Length = number of elements currently contained
+ * - UInt64 Stride = size of each element in bytes
+ * - void* Elements
+ * 
+ * @version 1.0
+ * @date 2026-10-11
+ * 
+ * @copyright Fractal Engine is Copyright (c) Blixer12 2026
+ * 
+ */
+
 #pragma once
 
 #include "Defines.h"
@@ -11,30 +30,35 @@
 #endif
 
 // --- CONFIGURATION CONSTANTS ---
+/** @brief The default Vector capacity. */
 #define VECTOR_DEFAULT_CAPACITY 1 // Default initial element capacity when created empty
+
+/** @brief The default resize factor (doubles on resize) */
 #define VECTOR_RESIZE_FACTOR 2    // Multiplier for growth when reallocation occurs
 
 // --- PUBLIC MACRO API ---
 
 /**
- * @brief Creates a dynamic vector for a given type with default capacity (1).
+ * @brief Creates a dynamic vector for a given type with thedefault capacity.
+ * Performs a dynamic memory allocation.
  * @param Type The data type to store (e.g., int, MyStruct).
- * @return Pointer to the newly allocated typed array memory buffer.
+ * @return Pointer to the newly allocated typed vector memory buffer.
  */
 #define VectorCreate(Type) \
     _VectorCreate(VECTOR_DEFAULT_CAPACITY, sizeof(Type))
 
 /**
- * @brief Creates a dynamic vector with a pre-allocated capacity.
+ * @brief Creates a dynamic vector with a provided capacity.
+ * Performs a dynamic memory allocation.
  * @param Type The data type to store.
  * @param Capacity The initial number of elements to reserve space for.
- * @return Pointer to the allocated typed array memory buffer.
+ * @return Pointer to the allocated typed vector memory buffer.
  */
 #define VectorReserve(Type, Capacity) \
     _VectorCreate(Capacity, sizeof(Type))
 
 /**
- * @brief Frees the vector and its hidden header memory.
+ * @brief Destroys the provided Vector, freeing any memory allocated by it.
  * @param Array The vector pointer to destroy.
  */
 #define VectorDestroy(Array) _VectorDestroy(Array)

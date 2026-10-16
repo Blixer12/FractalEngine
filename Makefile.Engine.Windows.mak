@@ -11,9 +11,9 @@ INCLUDE_FLAGS := /IEngine\src /I"$(VULKAN_SDK)\Include" /I"..\vcpkg_installed\x6
 
 # Added /DLL right after /link
 LINKER_FLAGS := /link /DEBUG /PDB:"$(BUILD_DIR)\$(ASSEMBLY).pdb" /DLL /LIBPATH:"$(VULKAN_SDK)\Lib" /LIBPATH:"..\vcpkg_installed\x64-windows\lib" user32.lib vulkan-1.lib /OUT:"$(BUILD_DIR)\$(ASSEMBLY)$(EXTENSION)" /IMPLIB:"$(BUILD_DIR)\$(ASSEMBLY).lib"
-DEFINES := /DFRELEASE /DFEXPORT /D_CRT_SECURE_NO_WARNINGS
+DEFINES := /D_DEBUG /DFEXPORT /D_CRT_SECURE_NO_WARNINGS
 
-# /D_DEBUG
+# /D_DEBUG /DFRELEASE
 
 Wildcard = $(wildcard $1$2) $(foreach d,$(wildcard $1*),$(call Wildcard,$d/,$2))
 
