@@ -21,13 +21,13 @@ void ReturnNode(Freelist* List, FreelistNode* Node);
 
 void FreelistCreate(UInt64 TotalSize, UInt64* MemoryRequirement, void* Memory, Freelist* OutList) {
     // FIX: Prevent the metadata explosion by capping MaxEntries to a safe maximum limit.
-    // 32,768 entries is more than enough to track fragmentation for large memory pools.
+    // 32,768 entries is more than enough to track fragmentation for large Memory pools.
     UInt64 MaxEntries = TotalSize / 64; 
     if (MaxEntries < 512) {
         MaxEntries = 512;
     }
     if (MaxEntries > 32768) {
-        MaxEntries = 32768; // Hard cap! Never let tracking nodes spiral out of control.
+        MaxEntries = 32768; // Hard cap! Never let tracking Nodes spiral out of control.
     }
 
     *MemoryRequirement = sizeof(InternalState) + (sizeof(FreelistNode) * MaxEntries);
@@ -38,7 +38,7 @@ void FreelistCreate(UInt64 TotalSize, UInt64* MemoryRequirement, void* Memory, F
     UInt64 MemMin = (sizeof(InternalState) + sizeof(FreelistNode)) * 8;
     if (TotalSize < MemMin) {
         FLWARN(
-            "Freelists are very inefficient with amounts of memory less than %iB; it is recommended to not use this structure in this case.",
+            "Freelists are very inefficient with amounts of Memory less than %iB; it is recommended to not use this structure in this case.",
             MemMin);
     }
 
@@ -170,6 +170,94 @@ Bool8 FreelistFreeBlock(Freelist* List, UInt64 Size, UInt64 Offset) {
 
     FLWARN("Unable to find block to be freed. Corruption possible?");
     return false;
+}
+
+Bool8 FreelistResize(Freelist* List, UInt64* MemoryRequirement, void* NewMemory, UInt64 NewSize, void** OldMemory)
+{
+    if (!List || !MemoryRequirement || ((InternalState*)List->Memory)->TotalSize > NewSize) {
+        return false;
+    }
+
+    // Enough space to hold State, plus array for all Nodes.
+    UInt64 MaxEntries = (NewSize / sizeof(void*));  //NOTE: This might have a remainder, but that's ok.
+    *MemoryRequirement = sizeof(InternalState) + (sizeof(FreelistNode) * MaxEntries);
+    if (!NewMemory) {
+        return true;
+    }
+
+    // Assign the old Memory pointer so it can be freed.
+    *OldMemory = List->Memory;
+
+    // Copy over the old State to the new.
+    InternalState* OldState = (InternalState*)List->Memory;
+    UInt64 SizeDifference = NewSize - OldState->TotalSize;
+
+    // Setup the new Memory
+    List->Memory = NewMemory;
+
+    // The block's layout is Head* first, then array of available Nodes.
+    FMZeroMemory(List->Memory, *MemoryRequirement);
+
+    // Setup the new State.
+    InternalState* State = (InternalState*)List->Memory;
+    State->Nodes = (void*)(List->Memory + sizeof(InternalState));
+    State->MaxEntries = MaxEntries;
+    State->TotalSize = NewSize;
+
+    // Invalidate the Offset and Size for all but the first node. The invalid
+    // value will be checked for when seeking a new node from the List.
+    for (UInt64 i = 1; i < State->MaxEntries; ++i) {
+        State->Nodes[i].Offset = InvalidID;
+        State->Nodes[i].Size = InvalidID;
+    }
+
+    State->Head = &State->Nodes[0];
+
+    // Copy over the Nodes.
+    FreelistNode* NewListNode = State->Head;
+    FreelistNode* OldNode = OldState->Head;
+    if (!OldNode) {
+        // If there is no Head, then the entire List is allocated. In this case,
+        // the Head should be set to the difference of the space now available, and
+        // at the end of the List.
+        State->Head->Offset = OldState->TotalSize;
+        State->Head->Size = SizeDifference;
+        State->Head->Next = 0;
+    } else {
+        // Iterate the old Nodes.
+        while (OldNode) {
+            // Get a new node, copy the Offset/Size, and set Next to it.
+            FreelistNode* NewNode = GetNode(List);
+            NewNode->Offset = OldNode->Offset;
+            NewNode->Size = OldNode->Size;
+            NewNode->Next = 0;
+            NewListNode->Next = NewNode;
+            // Move to the Next entry.
+            NewListNode = NewListNode->Next;
+
+            if (OldNode->Next) {
+                // If there is another node, move on.
+                OldNode = OldNode->Next;
+            } else {
+                // Reached the end of the List.
+                // Check if it extends to the end of the block. If so,
+                // just append to the Size. Otherwise, create a new node and
+                // attach to it.
+                if (OldNode->Offset + OldNode->Size == OldState->TotalSize) {
+                    NewNode->Size += SizeDifference;
+                } else {
+                    FreelistNode* NewNodeEnd = GetNode(List);
+                    NewNodeEnd->Offset = OldState->TotalSize;
+                    NewNodeEnd->Size = SizeDifference;
+                    NewNodeEnd->Next = 0;
+                    NewNode->Next = NewNodeEnd;
+                }
+                break;
+            }
+        }
+    }
+
+    return true;
 }
 
 void FreelistClear(Freelist* List) {

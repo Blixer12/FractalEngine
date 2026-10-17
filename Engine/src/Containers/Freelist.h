@@ -19,7 +19,7 @@
  * allocation. Tracks free ranges of memory.
  */
 typedef struct Freelist {
-    /** @brief The internal state of the free list. */
+    /** @brief The internal State of the free list. */
     void* Memory;
 } Freelist;
 
@@ -62,6 +62,23 @@ FAPI Bool8 FreelistAllocateBlock(Freelist* List, UInt64 Size, UInt64* OutOffset)
  * @return Bool8 True if successful; otherwise false. False should be treated as an error.
  */
 FAPI Bool8 FreelistFreeBlock(Freelist* List, UInt64 Size, UInt64 Offset);
+
+
+/**
+ * @brief Attempts to resize the provided freelist to the given size. Internal data is copied to the new
+ * block of memory. The old block must be freed after this call.
+ * NOTE: New size must be _greater_ than the existing size of the given list.
+ * NOTE: Should be called twice; once to query the memory requirement (passing NewMemory=0),
+ * and a second time to actually resize the list.
+ * 
+ * @param List A pointer to the list to be resized.
+ * @param MemoryRequirement A pointer to hold the amount of memory required for the resize.
+ * @param NewMemory The new block of State memory. Set to 0 if only querying MemoryRequirement.
+ * @param NewSize The new size. Must be greater than the size of the provided list.
+ * @param OldMemory A pointer to hold the old block of memory so that it may be freed after this call.
+ * @return True on success; otherwise false.
+ */
+FAPI Bool8 FreelistResize(Freelist* List, UInt64* MemoryRequirement, void* NewMemory, UInt64 NewSize, void** OldMemory);
 
 /**
  * @brief Clears the free list.

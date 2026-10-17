@@ -90,6 +90,27 @@ void* VulkanBufferLockMemory(VulkanContext* Context, VulkanBuffer* Buffer, UInt6
 void VulkanBufferUnlockMemory(VulkanContext* Context, VulkanBuffer* Buffer);
 
 /**
+ * @brief Allocates space from a vulkan buffer. Provides the offset at which the
+ * allocation occurred. This will be required for data copying and freeing.
+ * 
+ * @param Buffer A pointer to the buffer from which to allocate.
+ * @param Size The size in bytes to be allocated.
+ * @param Offset A pointer to hold the offset in bytes from the beginning of the buffer.
+ * @return True on success; otherwise false.
+ */
+Bool8 VulkanBufferAllocate(VulkanBuffer* Buffer, UInt64 Size, UInt64* Offset);
+
+/**
+ * @brief Frees space in the vulkan buffer.
+ * 
+ * @param Buffer A pointer to the buffer to free data from.
+ * @param Size The size in bytes to be freed.
+ * @param Offset The offset in bytes from the beginning of the buffer.
+ * @return True on success; otherwise false.
+ */
+Bool8 VulkanBufferFree(VulkanBuffer* Buffer, UInt64 Size, UInt64 Offset);
+
+/**
  * @brief Loads a data range into the given buffer at a given offset. Internally performs a map,
  * copy and unmap.
  * 

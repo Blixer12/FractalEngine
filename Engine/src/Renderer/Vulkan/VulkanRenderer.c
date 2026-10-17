@@ -44,25 +44,31 @@ void CreateCommandBuffers(CrystalBackend* Backend);
 Bool8 RecreateSwapchain(CrystalBackend* Backend);
 void RegenerateFramebuffers();
 
-void UploadDataRange(VulkanContext* Context, VkCommandPool Pool, VkFence Fence, VkQueue Queue, VulkanBuffer* Buffer, UInt64 Offset, UInt64 Size, const void* Data)
+Bool8 UploadDataRange(VulkanContext* Context, VkCommandPool Pool, VkFence Fence, VkQueue Queue, VulkanBuffer* Buffer, UInt64* Offset, UInt64 Size, const void* Data)
 {
+    if (!VulkanBufferAllocate(Buffer, Size, Offset)) {
+        FLERROR("UploadDataRange failed to allocate from the given buffer!");
+        return false;
+    }
+
     VkBufferUsageFlags Flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
     VulkanBuffer Staging;
     VulkanBufferCreate(Context, Size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Flags, true, &Staging);
 
     VulkanBufferLoadData(Context, &Staging, 0, Size, 0, Data);
 
-    VulkanBufferCopyTo(Context, Pool, Fence, Queue, Staging.Handle, 0, Buffer->Handle, Offset, Size);
+    VulkanBufferCopyTo(Context, Pool, Fence, Queue, Staging.Handle, 0, Buffer->Handle, *Offset, Size);
 
     VulkanBufferDestroy(Context, &Staging);
+
+    return true;
 }
 
 void FreeDataRange(VulkanBuffer* Buffer, UInt64 Offset, UInt64 Size)
 {
-    (void)Buffer;
-    (void)Offset;
-    (void)Size;
-    // Placeholder...
+     if (Buffer) {
+        VulkanBufferFree(Buffer, Size, Offset);
+    }
 }
 
 Bool8 VulkanRendererInitialize(CrystalBackend* Backend, const char* AppName) 
@@ -815,6 +821,12 @@ Bool8 VulkanRendererCreateGeometry(struct Geometry* Geometry, UInt32 VertexSize,
         OldRange.VertexBufferOffset = InternalData->VertexBufferOffset;
         OldRange.VertexCount = InternalData->VertexCount;
         OldRange.VertexElementSize = InternalData->VertexElementSize;
+
+        FreeDataRange(&Context.ObjectVertexBuffer, OldRange.VertexBufferOffset, OldRange.VertexElementSize * OldRange.VertexCount);
+        if (OldRange.IndexElementSize > 0)
+        {
+            FreeDataRange(&Context.ObjectIndexBuffer, OldRange.IndexBufferOffset, OldRange.IndexElementSize * OldRange.IndexCount);
+        }
     } else {
         for (UInt32 i = 0; i < VulkanMaxGeometryCount; ++i)
         {
@@ -837,37 +849,32 @@ Bool8 VulkanRendererCreateGeometry(struct Geometry* Geometry, UInt32 VertexSize,
     VkCommandPool Pool = Context.Device.GraphicsCommandPool;
     VkQueue Queue = Context.Device.GraphicsQueue;
 
-    InternalData->VertexBufferOffset = Context.GeometryVertexOffset;
+
     InternalData->VertexCount = VertexCount;
     InternalData->VertexElementSize = VertexSize;
     UInt32 VertexTotalSize = VertexCount * VertexSize;
-    UploadDataRange(&Context, Pool, 0, Queue, &Context.ObjectVertexBuffer, InternalData->VertexBufferOffset, VertexTotalSize, Vertices);
-    Context.GeometryVertexOffset += VertexTotalSize;
+    if (!UploadDataRange(&Context, Pool, 0, Queue, &Context.ObjectVertexBuffer, &InternalData->VertexBufferOffset, VertexTotalSize, Vertices))
+    {
+        FLERROR("VulkanRendererCreateGeometry failed to upload to the vertex buffer!");
+        return false;
+    }
 
     if (IndexCount && Indices)
     {
-        InternalData->IndexBufferOffset = Context.GeometryIndexOffset;
         InternalData->IndexCount = IndexCount;
         InternalData->IndexElementSize = IndexSize;
         UInt32 IndexTotalSize = IndexCount * IndexSize;
-        UploadDataRange(&Context, Pool, 0, Queue, &Context.ObjectIndexBuffer, InternalData->IndexBufferOffset, IndexTotalSize, Indices);
-        Context.GeometryIndexOffset += IndexTotalSize;
+        if (!UploadDataRange(&Context, Pool, 0, Queue, &Context.ObjectIndexBuffer, &InternalData->IndexBufferOffset, IndexTotalSize, Indices))
+        {
+            FLERROR("VulkanRendererCreateGeometry failed to upload to the index buffer!");
+            return false;
+        }
     }
 
     if (InternalData->Generation == InvalidID) {
         InternalData->Generation = 0;
     } else {
         InternalData->Generation++;
-    }
-
-    if (IsReupload)
-    {
-        FreeDataRange(&Context.ObjectVertexBuffer, OldRange.VertexBufferOffset, OldRange.VertexElementSize * OldRange.VertexCount);
-
-        if (OldRange.IndexElementSize > 0)
-        {
-            FreeDataRange(&Context.ObjectIndexBuffer, OldRange.IndexBufferOffset, OldRange.IndexElementSize * OldRange.IndexCount);
-        }
     }
 
     return true;
@@ -1144,7 +1151,6 @@ Bool8 CreateBuffers(VulkanContext* Context)
         FLERROR("Error creating vertex buffer.");
         return false;
     }
-    Context->GeometryVertexOffset = 0;
 
     // Geometry index buffer
     const UInt64 IndexBufferSize = sizeof(UInt32) * 1024 * 1024;
@@ -1158,7 +1164,6 @@ Bool8 CreateBuffers(VulkanContext* Context)
         FLERROR("Error creating index buffer.");
         return false;
     }
-    Context->GeometryIndexOffset = 0;
 
     return true;
 }

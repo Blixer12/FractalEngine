@@ -12,13 +12,15 @@
 
 #pragma once
 
-#include <vulkan/vulkan.h>
-#include "Renderer/CrystalDef.inl"
-
 #include "Defines.h"
+
+#include "Renderer/CrystalDef.inl"
 
 #include "Core/Logger.h"
 #include "Core/Asserts.h"
+#include "Containers/Freelist.h"
+
+#include <vulkan/vulkan.h>
 
 #define Gigabytes(value) ((value) * 1024ULL * 1024ULL * 1024ULL - 1)
 #define Megabytes(value) ((value) * 1024ULL * 1024ULL)
@@ -105,6 +107,12 @@ typedef struct VulkanBuffer {
     Int32 MemoryIndex;
     /** @brief The property flags for the memory used by the buffer. */
     UInt32 MemoryPropertyFlags;
+    /** @brief The amount of memory required for the freelist. */
+    UInt64 FreelistMemoryRequirement;
+    /** @brief The memory block used by the internal freelist. */
+    void* FreelistBlock;
+    /** @brief A freelist to track allocations. */
+    Freelist BufferFreelist;
 } VulkanBuffer;
 
 /**
@@ -358,13 +366,13 @@ typedef struct VulkanGeometryData {
     /** @brief The size of each vertex. */
     UInt32 VertexElementSize;
     /** @brief The offset in bytes in the vertex buffer. */
-    UInt32 VertexBufferOffset;
+    UInt64 VertexBufferOffset;
     /** @brief The index count. */
     UInt32 IndexCount;
     /** @brief The size of each index. */
     UInt32 IndexElementSize;
     /** @brief The offset in bytes in the index buffer. */
-    UInt32 IndexBufferOffset;
+    UInt64 IndexBufferOffset;
 } VulkanGeometryData;
 
 /**
@@ -608,11 +616,6 @@ typedef struct VulkanContext {
     VulkanMaterialShader MaterialShader;
     /** @brief The UI shader. */
     VulkanUIShader UIShader;
-
-    /** @brief The geometry vertex buffer offset. */
-    UInt64 GeometryVertexOffset;
-    /** @brief The geometry index buffer offset. */
-    UInt64 GeometryIndexOffset;
 
     /** @brief A collection of loaded geometries. */
     VulkanGeometryData Geometries[VulkanMaxGeometryCount];

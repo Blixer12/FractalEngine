@@ -13,7 +13,7 @@
 [INFO]:  Searching for layer: VK_LAYER_KHRONOS_validation...
 [INFO]:  Found.
 [INFO]:  All required validation layers are present.
-[WARN]:  Removing layer VK_LAYER_AMD_switchable_graphics (C:\WINDOWS\System32\DriverStore\FileRepository\amdvlk.inf_amd64_84e67d07ae71bda8\amd-vulkan64.json) because it is a duplicate of VK_LAYER_AMD_switchable_graphics (C:\WINDOWS\System32\DriverStore\FileRepository\u0203303.inf_amd64_e5876a26758f154c\B026363\amd-vulkan64.json)
+[WARN]:  Removing layer VK_LAYER_AMD_switchable_graphics (C:\WINDOWS\System32\DriverStore\FileRepository\u0203303.inf_amd64_e5876a26758f154c\B026363\amd-vulkan64.json) because it is a duplicate of VK_LAYER_AMD_switchable_graphics (C:\WINDOWS\System32\DriverStore\FileRepository\amdvlk.inf_amd64_84e67d07ae71bda8\amd-vulkan64.json)
 [INFO]:  Vulkan Instance created
 [DEBUG]: Vulkan debugger created.
 [DEBUG]: Creating Vulkan surface...
@@ -46,10 +46,10 @@
 [DEBUG]: Present Family Index:  0
 [DEBUG]: Transfer Family Index: 2
 [DEBUG]: Compute Family Index:  1
-[DEBUG]: GPU [AMD Radeon(TM) Graphics] calculated system score evaluation: 3357
+[DEBUG]: GPU [AMD Radeon(TM) Graphics] calculated system score evaluation: 3407
 [INFO]:  --> Successfully elected physical system GPU: AMD Radeon RX 9060 XT (Type: Discrete, Score: 4308)
 [INFO]:  GPU Driver version: 2.0.395
-[INFO]:  Vulkan API version: 1.4.0
+[INFO]:  Vulkan API version: 1.4.349
 [DEBUG]: Shared System memory: 15.46 GB
 [DEBUG]: Local GPU memory: 15.92 GB
 [DEBUG]: Creating logical device...
@@ -65,9 +65,15 @@
 [INFO]:  Vulkan renderer initialized successfully
 [DEBUG]: Creating Default Texture
 [TRACE]: Crystal: Material Created
+[WARN]:  Freelists are very inefficient with amounts of Memory less than 448B; it is recommended to not use this structure in this case.
+[WARN]:  Freelists are very inefficient with amounts of Memory less than 448B; it is recommended to not use this structure in this case.
+[WARN]:  Freelists are very inefficient with amounts of Memory less than 448B; it is recommended to not use this structure in this case.
+[WARN]:  Freelists are very inefficient with amounts of Memory less than 448B; it is recommended to not use this structure in this case.
 [TRACE]: Texture 'WhiteStone' does not yet exist. Created, and ReferenceCount is now 1.
 [TRACE]: Crystal: Material Created
 [TRACE]: Material 'TestMaterial' does not yet exist. Created, and ReferenceCount is now 1.
+[WARN]:  Freelists are very inefficient with amounts of Memory less than 448B; it is recommended to not use this structure in this case.
+[WARN]:  Freelists are very inefficient with amounts of Memory less than 448B; it is recommended to not use this structure in this case.
 [TRACE]: Texture 'OrangeLines512' does not yet exist. Created, and ReferenceCount is now 1.
 [TRACE]: Crystal: Material Created
 [TRACE]: Material 'TestUIMaterial' does not yet exist. Created, and ReferenceCount is now 1.
@@ -84,7 +90,7 @@
   JOB             : 0.00 Bytes
   TEXTURE         : 120.00 Bytes
   MAT_INST        : 0.00 Bytes
-  RENDERER        : 128.00 Bytes
+  RENDERER        : 1.57 MB
   GAME            : 96.00 Bytes
   TRANSFORM       : 0.00 Bytes
   ENTITY          : 0.00 Bytes

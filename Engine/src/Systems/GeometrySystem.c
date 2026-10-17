@@ -219,6 +219,14 @@ void DestroyGeometry(GeometrySystemState* State, Geometry* G)
 
 Bool8 CreateDefaultGeometries(GeometrySystemState* State)
 {
+    State->DefaultGeometry.ID = InvalidID;
+    State->DefaultGeometry.InternalID = InvalidID;
+    State->DefaultGeometry.Generation = InvalidID;
+
+    State->Default2DGeometry.ID = InvalidID;
+    State->Default2DGeometry.InternalID = InvalidID;
+    State->Default2DGeometry.Generation = InvalidID;
+
     Vertex3D Vertices[4];
     FMZeroMemory(Vertices, sizeof(Vertex3D) * 4);
 

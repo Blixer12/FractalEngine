@@ -6,6 +6,14 @@
 
 #include "Core/Logger.h"
 #include "Core/Memory.h"
+#include "Containers/Freelist.h"
+
+void CleanupFreelist(VulkanBuffer* Buffer) {
+    FreelistDestroy(&Buffer->BufferFreelist);
+    FMFree(Buffer->FreelistBlock, Buffer->FreelistMemoryRequirement, MEMORY_TAG_RENDERER);
+    Buffer->FreelistMemoryRequirement = 0;
+    Buffer->FreelistBlock = 0;
+}
 
 Bool8 VulkanBufferCreate(
     VulkanContext* Context,
@@ -19,6 +27,12 @@ Bool8 VulkanBufferCreate(
         Buffer->TotalSize = Size;
         Buffer->Usage = Usage;
         Buffer->MemoryPropertyFlags = MemoryPropertyFlags;
+
+        // Create a new freelist
+        Buffer->FreelistMemoryRequirement = 0;
+        FreelistCreate(Size, &Buffer->FreelistMemoryRequirement, 0, 0);
+        Buffer->FreelistBlock = FMAllocate(Buffer->FreelistMemoryRequirement, MEMORY_TAG_RENDERER);
+        FreelistCreate(Size, &Buffer->FreelistMemoryRequirement, Buffer->FreelistBlock, &Buffer->BufferFreelist);
 
         VkBufferCreateInfo BufferInfo = {0};
         BufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -34,6 +48,8 @@ Bool8 VulkanBufferCreate(
         Buffer->MemoryIndex = Context->FindMemoryIndex(Requirements.memoryTypeBits, Buffer->MemoryPropertyFlags);
         if (Buffer->MemoryIndex == -1) {
             FLERROR("Unable to create vulkan Buffer because the required memory type index was not found.");
+
+            CleanupFreelist(Buffer);
             return false;
         }
 
@@ -52,6 +68,8 @@ Bool8 VulkanBufferCreate(
 
         if (Result != VK_SUCCESS) {
             FLERROR("Unable to create vulkan Buffer because the required memory allocation failed. Error: %i", Result);
+
+            CleanupFreelist(Buffer);
             return false;
         }
 
@@ -64,6 +82,11 @@ Bool8 VulkanBufferCreate(
 
 void VulkanBufferDestroy(VulkanContext* Context, VulkanBuffer* Buffer)
 {
+    if (Buffer->FreelistBlock) {
+        // Make sure to destroy the freelist.
+        CleanupFreelist(Buffer);
+    }
+
     if (Buffer->Memory) {
         vkFreeMemory(Context->Device.LogicalDevice, Buffer->Memory, Context->Allocator);
         Buffer->Memory = 0;
@@ -82,8 +105,30 @@ Bool8 VulkanBufferResize(
     UInt64 NewSize,
     VulkanBuffer* Buffer,
     VkQueue Queue,
-    VkCommandPool Pool)
-    {
+    VkCommandPool Pool) {
+
+        // Sanity check.
+        if (NewSize < Buffer->TotalSize) {
+            FLERROR("VulkanBufferResize requires that new size be larger than the old. Not doing this could lead to data loss.");
+            return false;
+        }
+
+        // Resize the freelist first.
+        UInt64 NewMemoryRequirement = 0;
+        FreelistResize(&Buffer->BufferFreelist, &NewMemoryRequirement, 0, 0, 0);
+        void* NewBlock = FMAllocate(NewMemoryRequirement, MEMORY_TAG_RENDERER);
+        void* OldBlock = 0;
+        if (!FreelistResize(&Buffer->BufferFreelist, &NewMemoryRequirement, NewBlock, NewSize, &OldBlock)) {
+            FLERROR("VulkanBufferResize failed to resize internal free list.");
+            FMFree(NewBlock, NewMemoryRequirement, MEMORY_TAG_RENDERER);
+            return false;
+        }
+        // Clean up the old memory, then assign the new properties over.
+        FMFree(OldBlock, Buffer->FreelistMemoryRequirement, MEMORY_TAG_RENDERER);
+        Buffer->FreelistMemoryRequirement = NewMemoryRequirement;
+        Buffer->FreelistBlock = NewBlock;
+        Buffer->TotalSize = NewSize;
+
         // Create new Buffer.
         VkBufferCreateInfo BufferInfo = {0};
         BufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -153,6 +198,33 @@ void* VulkanBufferLockMemory(VulkanContext* Context, VulkanBuffer* Buffer, UInt6
 void VulkanBufferUnlockMemory(VulkanContext* Context, VulkanBuffer* Buffer)
 {
     vkUnmapMemory(Context->Device.LogicalDevice, Buffer->Memory);
+}
+
+Bool8 VulkanBufferAllocate(VulkanBuffer* Buffer, UInt64 Size, UInt64* Offset) {
+    if (!Buffer || !Size || !Offset) {
+        FLERROR("VulkanBufferAllocate requires valid buffer, a nonzero size and valid pointer to hold offset.");
+        return false;
+    }
+
+    return FreelistAllocateBlock(&Buffer->BufferFreelist, Size, Offset);
+}
+
+Bool8 VulkanBufferFree(VulkanBuffer* Buffer, UInt64 Size, UInt64 Offset) {
+    if (!Buffer || !Size) {
+        FLERROR("VulkanBufferFree requires valid buffer and a nonzero size.");
+        return false;
+    }
+
+    if (Size == 0) {
+        return true; 
+    }
+
+    if (Offset >= Buffer->TotalSize) {
+        FLERROR("VulkanBufferFree offset (%llu) exceeds buffer total size (%llu).", Offset, Buffer->TotalSize);
+        return false;
+    }
+
+    return FreelistFreeBlock(&Buffer->BufferFreelist, Size, Offset);
 }
 
 void VulkanBufferLoadData(VulkanContext* Context, VulkanBuffer* Buffer, UInt64 Offset, UInt64 Size, UInt32 Flags, const void* Data)
