@@ -55,6 +55,14 @@ typedef double Float64;
 /** @brief 32-bit boolean type, used for APIs which require it */
 typedef unsigned int Bool32;
 
+/** @brief A range, typically of memory */
+typedef struct Range {
+    /** @brief The offset in bytes. */
+    UInt64 Offset;
+    /** @brief The size in bytes. */
+    UInt64 Size;
+} Range;
+
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
     /** @brief Static assertion */
     #define STATIC_ASSERT _Static_assert
@@ -63,31 +71,8 @@ typedef unsigned int Bool32;
     #define STATIC_ASSERT static_assert
 #endif
 
-#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
-    // C23 standard attribute
-    #define MaybeUnused [[maybe_unused]]
-#elif defined(__GNUC__) || defined(__clang__)
-    // Fallback for older GCC/Clang compilers
-    #define MaybeUnused __attribute__((unused))
-#elif defined(_MSC_VER)
-    // Fallback for MSVC compiler
-    #define MaybeUnused __pragma(warning(suppress: 4100 4189))
-#else
-    #define MaybeUnused
-#endif
-
-// C23 standard version macro is 202311L (or > 201710L during draft phases)
-#if !defined(__STDC_VERSION__) || __STDC_VERSION__ <= 201710L
-    #if defined(_MSC_VER) && !defined(__clang__)
-        // For MSVC in older C modes, static const works best for internal linkage constants
-        #define constexpr static const
-    #else
-        // For Clang / GCC in standard C pre-C23
-        #define constexpr static const
-    #endif
-#endif
-
 // Ensure all types are of the correct size
+
 /** @brief Assert UInt8 to be 1 byte.*/
 STATIC_ASSERT(sizeof(UInt8)  == 1, "Expected UInt8 to be 1 byte.");
 /** @brief Assert UInt16 to be 2 byte.*/
@@ -111,47 +96,81 @@ STATIC_ASSERT(sizeof(Float32) == 4, "Expected Float32 to be 4 bytes.");
 /** @brief Assert Float64 to be 8 bytes.*/
 STATIC_ASSERT(sizeof(Float64) == 8, "Expected Float64 to be 8 bytes.");
 
+// C23 standard version macro is 202311L (or > 201710L during draft phases)
+#if !defined(__STDC_VERSION__) || __STDC_VERSION__ <= 201710L
+    #if defined(_MSC_VER) && !defined(__clang__)
+        // For MSVC in older C modes, static const works best for internal linkage constants
+        #define constexpr static const
+    #else
+        // For Clang / GCC in standard C pre-C23
+        #define constexpr static const
+    #endif
+#endif
+
 /**
  * @brief Any ID set to this should be considered Invalid
  * and not actually pointing to a real Object (UInt32 limit, (UInt32)-1)
  */
-constexpr UInt32 InvalidID = 0xFFFFFFFFU;
+constexpr UInt32 InvalidID = 0xFFFFFFFF;
+constexpr UInt16 InvalidIDUInt16 = 0xFFFF;
+constexpr UInt8 InvalidIDUInt8 = 0xFF;
 
 // Platform detection
-#if defined(_WIN32)
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
     #define FPLATFORM_WINDOWS 1
     #ifndef _WIN64
         #error "64-bit architecture is strictly required on Windows!"
     #endif
 #elif defined(__APPLE__)
     #define FPLATFORM_APPLE 1
-#elif defined(__linux__)
+    #include <TargetConditionals.h>
+    #if TARGET_IPHONE_SIMULATOR
+        // iOS Simulator
+        #define FPLATFORM_IOS 1
+        #define FPLATFORM_IOS_SIMULATOR 1
+    #elif TARGET_OS_IPHONE
+        #define FPLATFORM_IOS 1
+        // iOS device
+    #elif TARGET_OS_MAC
+        // Other kinds of Mac OS
+    #else
+        #error "Unknown Apple platform"
+    #endif
+#elif defined(__linux__) || defined(__gnu_linux__)
     #define FPLATFORM_LINUX 1
     #if defined(__ANDROID__)
         #define FPLATFORM_ANDROID 1
     #endif
+#elif defined(__unix__)
+    // Catch anything not caught by the above.
+    #define FPLATFORM_UNIX 1
+#elif defined(_POSIX_VERSION)
+    // Posix
+    #define FPLATFORM_POSIX 1
 #else
     #error "Unsupported target platform!"
 #endif
 
-// Dll Exports
+// Exports
 #ifdef FEXPORT
-#ifdef _MSC_VER
-/** @brief Import/export qualifier */
-#define FAPI __declspec(dllexport)
+
+    #ifdef _MSC_VER
+        /** @brief Import/export qualifier */
+        #define FAPI __declspec(dllexport)
+    #else
+        /** @brief Import/export qualifier */
+        #define FAPI __attribute__((visibility("default")))
+    #endif
+
 #else
-/** @brief Import/export qualifier */
-#define FAPI __attribute__((visibility("default")))
-#endif
-#else
-// DLL Imports
-#ifdef _MSC_VER
-/** @brief Import/export qualifier */
-#define FAPI __declspec(dllimport)
-#else
-/** @brief Import/export qualifier */
-#define FAPI
-#endif
+    // DLL Imports
+    #ifdef _MSC_VER
+        /** @brief Import/export qualifier */
+        #define FAPI __declspec(dllimport)
+    #else
+        /** @brief Import/export qualifier */
+        #define FAPI
+    #endif
 #endif
 
 /**
@@ -188,3 +207,12 @@ constexpr UInt32 InvalidID = 0xFFFFFFFFU;
 #define MEGABYTES(amount) amount * 1000 * 1000
 /** @brief Gets the number of bytes from amount of kilobytes (KB) (1000) */
 #define KILOBYTES(amount) amount * 1000
+
+
+FINLINE UInt64 GetAligned(UInt64 Operand, UInt64 Granularity) {
+    return ((Operand + (Granularity - 1)) & ~(Granularity - 1));
+}
+
+FINLINE Range GetAlignedRange(UInt64 Offset, UInt64 Size, UInt64 Granularity) {
+    return (Range){GetAligned(Offset, Granularity), GetAligned(Size, Granularity)};
+}

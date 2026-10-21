@@ -463,6 +463,9 @@ Bool8 VulkanRendererBeginFrame(CrystalBackend* Backend, Float32 DeltaTime)
     Context.MainRenderpass.RenderArea.z = (Float32)Context.FramebufferWidth;
     Context.MainRenderpass.RenderArea.w = (Float32)Context.FramebufferHeight;
 
+    Context.UIRenderpass.RenderArea.z = (Float32)Context.FramebufferWidth;
+    Context.UIRenderpass.RenderArea.w = (Float32)Context.FramebufferHeight;
+
     return true;
 }
 
@@ -476,7 +479,7 @@ Bool8 VulkanRendererEndFrame(CrystalBackend* Backend, Float32 DeltaTime)
     VulkanCommandBufferEnd(CommandBuffer);
 
     if (Context.ImagesInFlight[Context.ImageIndex] != VK_NULL_HANDLE) {  // was frame
-        VkResult Result = vkWaitForFences(Context.Device.LogicalDevice, 1, Context.ImagesInFlight[Context.ImageIndex], true, UINT64_MAX);
+        VkResult Result = vkWaitForFences(Context.Device.LogicalDevice, 1, &Context.ImagesInFlight[Context.ImageIndex], true, UINT64_MAX);
         if (!VulkanResultIsSuccess(Result))
         {
             FLFATAL("VkFenceWait Error: %s", VulkanResultString(Result, true));
@@ -484,7 +487,7 @@ Bool8 VulkanRendererEndFrame(CrystalBackend* Backend, Float32 DeltaTime)
     }
 
     // Mark the image fence as in-use by this frame.
-    Context.ImagesInFlight[Context.ImageIndex] = &Context.InFlightFences[Context.CurrentFrame];
+    Context.ImagesInFlight[Context.ImageIndex] = Context.InFlightFences[Context.CurrentFrame];
 
     // Reset the fence for use on the next frame
     VK_CHECK(vkResetFences(Context.Device.LogicalDevice, 1, &Context.InFlightFences[Context.CurrentFrame]));

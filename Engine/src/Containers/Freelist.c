@@ -179,7 +179,7 @@ Bool8 FreelistResize(Freelist* List, UInt64* MemoryRequirement, void* NewMemory,
     }
 
     // Enough space to hold State, plus array for all Nodes.
-    UInt64 MaxEntries = (NewSize / sizeof(void*));  //NOTE: This might have a remainder, but that's ok.
+    UInt64 MaxEntries = (NewSize / sizeof(void*) * sizeof(FreelistNode));  //NOTE: This might have a remainder, but that's ok.
     *MemoryRequirement = sizeof(InternalState) + (sizeof(FreelistNode) * MaxEntries);
     if (!NewMemory) {
         return true;

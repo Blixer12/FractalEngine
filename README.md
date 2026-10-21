@@ -53,7 +53,7 @@ Hopefully these features will be in place
 * Hot reloading for code
 * Physics (Obviously)
 * Sound (2D and 3D)
-* UI Syatem
+* UI System
 * Events
 * Standard input
 

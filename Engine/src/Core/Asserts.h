@@ -25,7 +25,7 @@
 #define DebugBreak() __debugbreak()
 #else
 /** @brief Causes a debug breakpoint to be hit. */
-#define debugBreak() __builtin_trap()
+#define DebugBreak() __builtin_trap()
 #endif
 
 /**

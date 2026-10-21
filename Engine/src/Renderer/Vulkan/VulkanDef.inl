@@ -595,7 +595,7 @@ typedef struct VulkanContext {
     VkFence InFlightFences[2];
 
     /** @brief Holds pointers to fences which exist and are owned elsewhere, one per frame. */
-    VkFence* ImagesInFlight[3];
+    VkFence ImagesInFlight[3];
 
     /** @brief The current image index. */
     UInt32 ImageIndex;

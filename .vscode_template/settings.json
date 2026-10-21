@@ -1,0 +1,81 @@
+{
+    "workbench.colorCustomizations": {
+        /* --- Normal Windows Console Colors (0;3x codes) --- */
+        "terminal.ansiRed": "#ff0000cb",
+        "terminal.ansiYellow": "#808000",
+        "terminal.ansiGreen": "#008000",
+        "terminal.ansiCyan": "#008080",
+        "terminal.ansiWhite": "#ffffff",
+
+        /* --- Bright Windows Console Colors (1;3x codes) --- */
+        "terminal.ansiBrightRed": "#ff5b5b",
+        "terminal.ansiBrightYellow": "#ffee00",
+        "terminal.ansiBrightGreen": "#00FF00",
+        "terminal.ansiBrightCyan": "#00FFFF",
+        "terminal.ansiBrightWhite": "#FFFFFF"
+    },
+
+    "terminal.integrated.drawBoldTextInBrightColors": true,
+
+    /* --- Debug Console Typography & Layout Tweaks --- */
+    "debug.console.fontFamily": "Consolas",
+    "debug.console.fontSize": 14,
+    "debug.console.lineHeight": 20,
+    "debug.console.wordWrap": true,
+
+    /* --- Debug Pipeline Behaviors --- */
+    "debug.internalConsoleOptions": "neverOpen",
+    "C_Cpp.errorSquiggles": "enabled",
+    "C_Cpp.default.compilerPath": "C:/Program Files (x86)/Microsoft Visual Studio/18/BuildTools/VC/Tools/Llvm/x64/bin/clang-cl.exe",
+
+    "glsllint.glslangValidatorArgs": [
+        "-V",
+        "--target-env", "vulkan1.3"
+    ],
+
+    "todohighlight.isEnable": true,
+    "todohighlight.keywords": [
+        {
+            "text": "TODO:",
+            "color": "#00FFFF",
+            "backgroundColor": "rgba(0,0,0,0)"
+        },
+        {
+            "text": "HACK:",
+            "color": "#ff5b5b",
+            "backgroundColor": "rgba(0,0,0,0)"
+        },
+        {
+            "text": "NOTE:",
+            "color": "#00FF00",
+            "backgroundColor": "rgba(0,0,0,0)"
+        }
+    ],
+    "todohighlight.defaultStyle": {
+        "color": "red",
+        "backgroundColor": "#ffab00",
+        "overviewRulerColor": "rgba(0,0,0,0)",
+        "isWholeLine": false
+    },
+    // File copyright documentation tag.  Array of strings will be converted to one line per element.  Can template {year}.
+    "doxdocgen.file.copyrightTag": [
+        "@copyright Fractal Engine is Copyright (c) Blixer12 2026-{year}"
+    ],
+    "doxdocgen.file.versionTag": "@version 1.0",
+    "doxdocgen.generic.authorEmail": "",
+    "doxdocgen.generic.authorName": "Blixer12",
+    "doxdocgen.generic.authorTag": "@author {author} ({email})",
+    // The order to use for the file comment. Values can be used multiple times. Valid values are shown in default setting.
+    "doxdocgen.file.fileOrder": [
+        "file",
+        "author",
+        "brief",
+        "empty",
+        "version",
+        "date",
+        "empty",
+        "copyright",
+        "empty",
+        "custom"
+    ]
+}

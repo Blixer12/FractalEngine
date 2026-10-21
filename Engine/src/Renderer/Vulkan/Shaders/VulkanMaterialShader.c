@@ -192,7 +192,7 @@ Bool8 VulkanMaterialShaderCreate(VulkanContext* Context, VulkanMaterialShader* S
     VkDescriptorSetAllocateInfo AllocateInfo = {0};
     AllocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     AllocateInfo.descriptorPool = Shader->GlobalDescriptorPool;
-    AllocateInfo.descriptorSetCount = 3;
+    AllocateInfo.descriptorSetCount = Context->Swapchain.ImageCount;
     AllocateInfo.pSetLayouts = GlobalLayouts;
 
     VK_CHECK(vkAllocateDescriptorSets(Context->Device.LogicalDevice, &AllocateInfo, Shader->GlobalDescriptorSets));
@@ -424,7 +424,7 @@ Bool8 VulkanMaterialShaderAcquireResources(VulkanContext* Context, struct Vulkan
     VkDescriptorSetAllocateInfo AllocateInfo = {0};
     AllocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     AllocateInfo.descriptorPool = Shader->ObjectDescriptorPool;
-    AllocateInfo.descriptorSetCount = 3;
+    AllocateInfo.descriptorSetCount = Context->Swapchain.ImageCount;
     AllocateInfo.pSetLayouts = Layouts;
 
     VkResult Result = vkAllocateDescriptorSets(Context->Device.LogicalDevice, &AllocateInfo, ObjectState->DescriptorSets);
@@ -441,7 +441,7 @@ void VulkanMaterialShaderReleaseResources(VulkanContext* Context, struct VulkanM
 {
     VulkanMaterialShaderInstanceState* InstanceState = &Shader->InstanceStates[Material->InternalID];
 
-    const UInt32 DescriptorSetCount = 3;
+    const UInt32 DescriptorSetCount = Context->Swapchain.ImageCount;
 
     vkDeviceWaitIdle(Context->Device.LogicalDevice);
 

@@ -54,45 +54,35 @@ Bool8 VulkanDeviceCreate(VulkanContext* Context)
     }
 
     FLDEBUG("Creating logical device...");
-    Bool8 PresentSharesGraphicsQueue = Context->Device.GraphicsQueueIndex == Context->Device.PresentQueueIndex;
-    Bool8 ComputeSharesGraphicsQueue = Context->Device.GraphicsQueueIndex == Context->Device.ComputeQueueIndex;
-    Bool8 TransferSharesGraphicsQueue = Context->Device.GraphicsQueueIndex == Context->Device.TransferQueueIndex;
-
-    UInt32 IndexCount = 1;
-
-    if (!PresentSharesGraphicsQueue)
-    {
-        IndexCount++;
-    }
-
-    if (!ComputeSharesGraphicsQueue)
-    {
-        IndexCount++;
-    }
-
-    if (!TransferSharesGraphicsQueue)
-    {
-        IndexCount++;
-    }
+    UInt32 CandidateIndices[4] = {
+        Context->Device.GraphicsQueueIndex,
+        Context->Device.PresentQueueIndex,
+        Context->Device.ComputeQueueIndex,
+        Context->Device.TransferQueueIndex
+    };
 
     UInt32 Indices[32];
-    UInt8 Index = 0;
+    UInt32 IndexCount = 0;
 
-    Indices[Index++] = Context->Device.GraphicsQueueIndex;
+    // Dynamically deduplicate so every queue family index is only added once
+    for (UInt32 i = 0; i < 4; ++i) {
+        UInt32 Candidate = CandidateIndices[i];
+        
+        if (Candidate == (UInt32)-1) {
+            continue;
+        }
 
-    if (!PresentSharesGraphicsQueue)
-    {
-        Indices[Index++] = Context->Device.PresentQueueIndex;
-    }
+        Bool8 Found = false;
+        for (UInt32 j = 0; j < IndexCount; ++j) {
+            if (Indices[j] == Candidate) {
+                Found = true;
+                break;
+            }
+        }
 
-    if (!ComputeSharesGraphicsQueue)
-    {
-        Indices[Index++] = Context->Device.ComputeQueueIndex;
-    }
-
-    if (!TransferSharesGraphicsQueue)
-    {
-        Indices[Index++] = Context->Device.TransferQueueIndex;
+        if (!Found) {
+            Indices[IndexCount++] = Candidate;
+        }
     }
 
     VkDeviceQueueCreateInfo QueueCreateInfos[32];
@@ -550,8 +540,7 @@ Bool8 SelectPhysicalDevice(VulkanContext* Context)
     
     // Memory information
         for (UInt32 j = 0; j < BestMemory.memoryHeapCount; ++j) {
-         // Optimized: Cast to Float64 first to prevent 32-bit float precision truncation on large heaps
-         MaybeUnused Float64 MemorySizeGB = ((Float64)BestMemory.memoryHeaps[j].size) / 1024.0 / 1024.0 / 1024.0;
+        Float64 MemorySizeGB = ((Float64)BestMemory.memoryHeaps[j].size) / 1024.0 / 1024.0 / 1024.0;
          
          if (BestMemory.memoryHeaps[j].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) {
             FLDEBUG("Local GPU memory: %.2f GB", MemorySizeGB);
@@ -581,7 +570,7 @@ Bool8 PhysicalDeviceMeetsRequirements(
 
     UInt32 QueueFamilyCount = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(Device, &QueueFamilyCount, 0);
-    VkQueueFamilyProperties* QueueFamilies = alloca(QueueFamilyCount * sizeof(VkQueueFamilyProperties));
+    VkQueueFamilyProperties QueueFamilies[32];
     vkGetPhysicalDeviceQueueFamilyProperties(Device, &QueueFamilyCount, QueueFamilies);
 
     FLDEBUG("Evaluating Queue Families for: %s", Properties->deviceName);

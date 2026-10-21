@@ -122,8 +122,6 @@ Bool8 PlatformSystemStartup(UInt64* MemoryRequirement, void* State, const char* 
         EventMask,
         ValueList);
 
-        (void)Cookie;
-
     // Change the title
     xcb_change_property(
         StatePtr->Connection,
@@ -210,94 +208,88 @@ Bool8 PlatformPollEvents()
     Bool8 QuitFlagged = false;
 
     // Poll for events until null is returned.
-    while ((Event = xcb_poll_for_event(StatePtr->Connection))) {
-        
-        if (Event == 0) 
-        {
-            break;
-        }
+    while (Event = xcb_poll_for_event(StatePtr->Connection)) {
     
-
-    // Input events
-    switch (Event->response_type & ~0x80)
-    {
-            case XCB_KEY_PRESS:
-            case XCB_KEY_RELEASE: 
-            {
-                xcb_key_press_event_t* KbEvent = (xcb_key_press_event_t*)Event;
-                Bool8 Pressed = (Event->response_type & ~0x80) == XCB_KEY_PRESS;
-                xcb_keycode_t Code = KbEvent->detail;
-
-                // Pure XCB modern string translation via libxkbcommon
-                xkb_keysym_t KeySymbol = xkb_state_key_get_one_sym(StatePtr->XkbState, Code);
-
-                Keys Key = TranslateKeyCode(KeySymbol);
-                InputProcessKey(Key, Pressed);
-            } break;
-            case XCB_BUTTON_PRESS:
-            case XCB_BUTTON_RELEASE: 
-            {
-                xcb_button_press_event_t* MouseEvent = (xcb_button_press_event_t*)Event;
-
-                Bool8 Pressed = ((Event->response_type & ~0x80) == XCB_BUTTON_PRESS);
-                MouseButtons MouseButton = ButtonCount;
-
-                switch (MouseEvent->detail) {
-                    case XCB_BUTTON_INDEX_1:
-                        MouseButton = MouseButtonLeft;
-                        break;
-                    case XCB_BUTTON_INDEX_2:
-                        MouseButton = MouseButtonMiddle;
-                        break;
-                    case XCB_BUTTON_INDEX_3:
-                        MouseButton = MouseButtonRight;
-                        break;
-                    case XCB_BUTTON_INDEX_8:
-                        MouseButton = MouseButtonBackwards;
-                        break;
-                    case XCB_BUTTON_INDEX_9:
-                        MouseButton = MouseButtonForward;
-                        break;
-                    default:
-                        break;
-                }
-            
-                if (MouseButton != ButtonCount) {
-                    InputProcessMouseButton(MouseButton, Pressed);
-                }
-            } break;
-            case XCB_MOTION_NOTIFY:
+        // Input events
+        switch (Event->response_type & ~0x80)
+        {
+                case XCB_KEY_PRESS:
+                case XCB_KEY_RELEASE: 
                 {
-                    xcb_motion_notify_event_t* MoveEvent = (xcb_motion_notify_event_t*)Event;
+                    xcb_key_press_event_t* KbEvent = (xcb_key_press_event_t*)Event;
+                    Bool8 Pressed = (Event->response_type & ~0x80) == XCB_KEY_PRESS;
+                    xcb_keycode_t Code = KbEvent->detail;
 
-                    InputProcessMouseMove(MoveEvent->event_x, MoveEvent->event_y);
+                    // Pure XCB modern string translation via libxkbcommon
+                    xkb_keysym_t KeySymbol = xkb_state_key_get_one_sym(StatePtr->XkbState, Code);
+
+                    Keys Key = TranslateKeyCode(KeySymbol);
+                    InputProcessKey(Key, Pressed);
+                } break;
+                case XCB_BUTTON_PRESS:
+                case XCB_BUTTON_RELEASE: 
+                {
+                    xcb_button_press_event_t* MouseEvent = (xcb_button_press_event_t*)Event;
+
+                    Bool8 Pressed = ((Event->response_type & ~0x80) == XCB_BUTTON_PRESS);
+                    MouseButtons MouseButton = ButtonCount;
+
+                    switch (MouseEvent->detail) {
+                        case XCB_BUTTON_INDEX_1:
+                            MouseButton = MouseButtonLeft;
+                            break;
+                        case XCB_BUTTON_INDEX_2:
+                            MouseButton = MouseButtonMiddle;
+                            break;
+                        case XCB_BUTTON_INDEX_3:
+                            MouseButton = MouseButtonRight;
+                            break;
+                        case XCB_BUTTON_INDEX_8:
+                            MouseButton = MouseButtonBackwards;
+                            break;
+                        case XCB_BUTTON_INDEX_9:
+                            MouseButton = MouseButtonForward;
+                            break;
+                        default:
+                            break;
+                    }
+                
+                    if (MouseButton != ButtonCount) {
+                        InputProcessMouseButton(MouseButton, Pressed);
+                    }
+                } break;
+                case XCB_MOTION_NOTIFY:
+                    {
+                        xcb_motion_notify_event_t* MoveEvent = (xcb_motion_notify_event_t*)Event;
+
+                        InputProcessMouseMove(MoveEvent->event_x, MoveEvent->event_y);
+                        break;
+                    }
+
+                case XCB_CONFIGURE_NOTIFY: {
+
+                    xcb_configure_notify_event_t *ConfigureEvent = (xcb_configure_notify_event_t*)Event;
+
+                    EventContext Context;
+                    Context.Data.UInt16[0] = (UInt16)ConfigureEvent->width;
+                    Context.Data.UInt16[1] = (UInt16)ConfigureEvent->height;
+                    EventFire(EVENT_RESIZED, 0, Context);
                     break;
                 }
 
-            case XCB_CONFIGURE_NOTIFY: {
-                
-                xcb_configure_notify_event_t *ConfigureEvent = (xcb_configure_notify_event_t*)Event;
+                case XCB_CLIENT_MESSAGE: {
+                    ClientMessage = (xcb_client_message_event_t*)Event;
 
-                EventContext Context;
-                Context.Data.UInt16[0] = (UInt16)Width;
-                Context.Data.UInt16[1] = (UInt16)Height;
-                EventFire(EVENT_RESIZED, 0, Context);
-                break;
-            }
-
-            case XCB_CLIENT_MESSAGE: {
-                ClientMessage = (xcb_client_message_event_t*)Event;
-
-                // Window close
-                if (ClientMessage->data.data32[0] == StatePtr->WmDeleteWin) {
-                    QuitFlagged = true;
-                }
-            } break;
-            default:
-                // Something else
-                break;
-        } 
-
+                    // Window close
+                    if (ClientMessage->data.data32[0] == StatePtr->WmDeleteWin) {
+                        QuitFlagged = true;
+                    }
+                } break;
+                default:
+                    // Something else
+                    break;
+            } 
+    
         free(Event);
     }
 
@@ -428,12 +420,12 @@ Keys TranslateKeyCode(xkb_keysym_t XKeycode)
         case XKB_KEY_Shift_R:     return RShiftKey;
         case XKB_KEY_Control_L:   return LControlKey;
         case XKB_KEY_Control_R:   return RControlKey;
-        case XKB_KEY_Alt_L:       return LMenuKey;
-        case XKB_KEY_Alt_R:       return RMenuKey;
+        case XKB_KEY_Alt_L:       return LAltKey;
+        case XKB_KEY_Alt_R:       return RAltKey;
         case XKB_KEY_Super_L:     return LWinKey;
         case XKB_KEY_Super_R:     return RWinKey;
         case XKB_KEY_Menu:        return AppsKey;
-        case XKB_KEY_Sleep:       return SleepKey;
+        case XKB_KEY_XF86Sleep:   return SleepKey;
 
         // --- INTERNATIONAL LANGUAGE INPUT MAPS ---
         case XKB_KEY_Henkan:      return ConvertKey;
