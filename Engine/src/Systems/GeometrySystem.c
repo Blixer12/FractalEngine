@@ -89,7 +89,7 @@ Geometry* GeometrySystemAcquireByID(UInt32 ID)
 
     // Return default i guess? well... i need to make a function for it... nrn i guess.
     FLERROR("GeometrySystemAcquireByID cannot load invalid Geometry Id. returning nullptr");
-    return 0;
+    return nullptr;
 }
 
 Geometry* GeometrySystemAcquireFromConfig(GeometryConfig Config, Bool8 AutoRelease)
@@ -110,13 +110,13 @@ Geometry* GeometrySystemAcquireFromConfig(GeometryConfig Config, Bool8 AutoRelea
     if (!G)
     {
         FLERROR("Unable to obtain free slot for geometry. adjust config to allow more space, returning nullptr");
-        return 0;
+        return nullptr;
     }
 
     if (!CreateGeometry(StatePtr, Config, G))
     {
         FLERROR("Failed to create geometry. returning nullptr");
-        return 0;
+        return nullptr;
     }
 
     return G;
@@ -161,7 +161,7 @@ Geometry* GeometrySystemGetDefault()
     }
 
     FLFATAL("GeometrySystemGetDefault called before system init!");
-    return 0;
+    return nullptr;
 }
 
 Geometry* GeometrySystemGetDefault2D()
@@ -172,7 +172,7 @@ Geometry* GeometrySystemGetDefault2D()
     }
 
     FLFATAL("GeometrySystemGetDefault2D called before system init!");
-    return 0;
+    return nullptr;
 }
 
 Bool8 CreateGeometry(GeometrySystemState* State, GeometryConfig Config, Geometry* G)

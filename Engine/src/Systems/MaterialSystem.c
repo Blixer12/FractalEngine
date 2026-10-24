@@ -107,7 +107,7 @@ Material* MaterialSystemAcquire(const char* Name)
     if (!ResourceSystemLoad(Name, RESOURCE_TYPE_MATERIAL, &MaterialResource))
     {
         FLERROR("Failed to load material resource, returning nullptr");
-        return 0;
+        return nullptr;
     }
 
     Material* M = 0;
@@ -121,7 +121,7 @@ Material* MaterialSystemAcquire(const char* Name)
     if (!M)
     {
         FLERROR("Failed to load material resource, returning nullptr");
-        return 0;
+        return nullptr;
     }
 
     return M;
@@ -157,13 +157,13 @@ Material* MaterialSystemAcquireFromConfig(MaterialConfig Config)
             // Make sure an empty slot was actually found.
             if (!M || Reference.Handle == InvalidID) {
                 FLFATAL("MaterialSystemAcquire - Texture system cannot hold anymore textures. Adjust configuration to allow more.");
-                return 0;
+                return nullptr;
             }
 
             // Create new texture.
             if (!LoadMaterial(Config, M)) {
                 FLERROR("Failed to load material '%s'.", Config.Name);
-                return 0;
+                return nullptr;
             }
 
             if (M->Generation == InvalidID) {
@@ -186,7 +186,7 @@ Material* MaterialSystemAcquireFromConfig(MaterialConfig Config)
 
     // NOTE: This would only happen in the event something went wrong with the state.
     FLERROR("MaterialSystemAcquire failed to acquire material '%s'. Null pointer will be returned.", Config.Name);
-    return 0;
+    return nullptr;
 }
 
 void MaterialSystemRelease(const char* Name)
@@ -235,7 +235,7 @@ Material* MaterialSystemGetDefault()
     }
 
     FLFATAL("MaterialSystemGetDefault called before system init!");
-    return 0;
+    return nullptr;
 }
 
 Bool8 LoadMaterial(MaterialConfig Config, Material* M)

@@ -300,7 +300,7 @@ FreelistNode* GetNode(Freelist* List) {
         }
     }
 
-    return 0;
+    return nullptr;
 }
 
 void ReturnNode(Freelist* List, FreelistNode* Node) {

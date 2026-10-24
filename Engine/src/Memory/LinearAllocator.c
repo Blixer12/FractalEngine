@@ -32,7 +32,7 @@ void* LinearAllocatorAllocate(LinearAllocator* Allocator, UInt64 Size) {
         if (Allocator->Allocated + Size > Allocator->TotalSize) {
             UInt64 Remaining = Allocator->TotalSize - Allocator->Allocated;
             FLERROR("LinearAllocatorAllocate - Tried to allocate %lluB, only %lluB remaining.", Size, Remaining);
-            return 0;
+            return nullptr;
         }
 
         void* Block = ((UInt8*)Allocator->Memory) + Allocator->Allocated;
@@ -41,7 +41,7 @@ void* LinearAllocatorAllocate(LinearAllocator* Allocator, UInt64 Size) {
     }
 
     FLERROR("LinearAllocatorAllocate - provided Allocator not initialized.");
-    return 0;
+    return nullptr;
 }
 
 void LinearAllocatorFreeAll(LinearAllocator* Allocator) {

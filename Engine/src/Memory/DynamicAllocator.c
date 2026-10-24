@@ -76,12 +76,12 @@ void* DynamicAllocatorAllocate(DynamicAllocator* Allocator, UInt64 Size) {
             UInt64 Available = FreelistFreeSpace(&State->List);
             FLERROR("Requested size: %llu, total space available: %llu", Size, Available);
             // TODO: Report fragmentation?
-            return 0;
+            return nullptr;
         }
     }
 
     FLERROR("DynamicAllocatorAllocate requires a valid allocator and size.");
-    return 0;
+    return nullptr;
 }
 
 Bool8 DynamicAllocatorFree(DynamicAllocator* Allocator, void* Block, UInt64 Size) {

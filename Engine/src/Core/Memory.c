@@ -118,7 +118,7 @@ void* FMAllocate(UInt64 Size, MemoryTag Tag)
         return Block;
     }
     FLFATAL("FMAllocate failed to allocate successfully!");
-    return 0;
+    return nullptr;
 }
 
 void FMFree(void* Block, UInt64 Size, MemoryTag Tag)

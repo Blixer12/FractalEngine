@@ -135,13 +135,13 @@ Texture* TextureSystemAcquire(const char* Name, Bool8 AutoRelease)
             // Make sure an empty slot was actually found.
             if (!T || Reference.Handle == InvalidID) {
                 FLFATAL("TextureSystemAcquire - Texture system cannot hold anymore textures. Adjust configuration to allow more.");
-                return 0;
+                return nullptr;
             }
 
             // Create new texture.
             if (!LoadTexture(Name, T)) {
                 FLERROR("Failed to load texture '%s'.", Name);
-                return 0;
+                return nullptr;
             }
 
             if (T->Generation == InvalidID) {
@@ -164,7 +164,7 @@ Texture* TextureSystemAcquire(const char* Name, Bool8 AutoRelease)
 
     // NOTE: This would only happen in the event something went wrong with the state.
     FLERROR("TextureSystemAcquire failed to acquire texture '%s'. Null pointer will be returned.", Name);
-    return 0;
+    return nullptr;
 }
 
 void TextureSystemRelease(const char* Name)
@@ -212,7 +212,7 @@ Texture* TextureSystemGetDefault()
     }
 
     FLERROR("TextureSystemGetDefault called before texture system initialization! Null pointer returned.");
-    return 0;
+    return nullptr;
 }
 
 Bool8 CreateDefaultTextures(TextureSystemState* State)

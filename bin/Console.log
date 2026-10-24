@@ -13,7 +13,7 @@
 [INFO]:  Searching for layer: VK_LAYER_KHRONOS_validation...
 [INFO]:  Found.
 [INFO]:  All required validation layers are present.
-[WARN]:  Removing layer VK_LAYER_AMD_switchable_graphics (C:\WINDOWS\System32\DriverStore\FileRepository\u0203303.inf_amd64_e5876a26758f154c\B026363\amd-vulkan64.json) because it is a duplicate of VK_LAYER_AMD_switchable_graphics (C:\WINDOWS\System32\DriverStore\FileRepository\amdvlk.inf_amd64_84e67d07ae71bda8\amd-vulkan64.json)
+[WARN]:  Removing layer VK_LAYER_AMD_switchable_graphics (C:\WINDOWS\System32\DriverStore\FileRepository\u0205305.inf_amd64_0a0a37c758a0b24b\B026653\amd-vulkan64.json) because it is a duplicate of VK_LAYER_AMD_switchable_graphics (C:\WINDOWS\System32\DriverStore\FileRepository\amdvlk.inf_amd64_865a9c4fff871fca\amd-vulkan64.json)
 [INFO]:  Vulkan Instance created
 [DEBUG]: Vulkan debugger created.
 [DEBUG]: Creating Vulkan surface...
@@ -48,8 +48,8 @@
 [DEBUG]: Compute Family Index:  1
 [DEBUG]: GPU [AMD Radeon(TM) Graphics] calculated system score evaluation: 3407
 [INFO]:  --> Successfully elected physical system GPU: AMD Radeon RX 9060 XT (Type: Discrete, Score: 4308)
-[INFO]:  GPU Driver version: 2.0.395
-[INFO]:  Vulkan API version: 1.4.349
+[INFO]:  GPU Driver version: 2.0.416
+[INFO]:  Vulkan API version: 1.4.359
 [DEBUG]: Shared System memory: 15.46 GB
 [DEBUG]: Local GPU memory: 15.92 GB
 [DEBUG]: Creating logical device...
@@ -98,22 +98,6 @@
   SCENE           : 0.00 Bytes
   LINEAR_ALLOCATOR: 64.00 MB
 
-[DEBUG]: Elected depth attachment format: 126
-[DEBUG]: Swapchain created successfuly.
-[DEBUG]: Vulkan command buffers created successfully.
-[DEBUG]: Resized, booting...
-[DEBUG]: Swapping texture!
-[TRACE]: Texture 'Cobblestone' does not yet exist. Created, and ReferenceCount is now 1.
-[TRACE]: Released texture 'WhiteStone'., Texture unloaded because reference count=0 and AutoRelease=true.
-[DEBUG]: Swapping texture!
-[TRACE]: Texture 'Paving' does not yet exist. Created, and ReferenceCount is now 1.
-[TRACE]: Released texture 'Cobblestone'., Texture unloaded because reference count=0 and AutoRelease=true.
-[DEBUG]: Swapping texture!
-[TRACE]: Texture 'Paving2' does not yet exist. Created, and ReferenceCount is now 1.
-[TRACE]: Released texture 'Paving'., Texture unloaded because reference count=0 and AutoRelease=true.
-[DEBUG]: Swapping texture!
-[TRACE]: Texture 'WhiteStone' does not yet exist. Created, and ReferenceCount is now 1.
-[TRACE]: Released texture 'Paving2'., Texture unloaded because reference count=0 and AutoRelease=true.
 [DEBUG]: Event Code APP_QUIT Recieved, Shutting Down.
 [TRACE]: Destroying material 'Default'...
 [DEBUG]: Destroying Vulkan device

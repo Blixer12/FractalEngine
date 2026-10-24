@@ -77,7 +77,7 @@ UInt8 LinearAllocatorMultiAllocationOverAllocate() {
     // Ask for one more allocation. Should error and return 0.
     Block = LinearAllocatorAllocate(&Allocator, sizeof(UInt64));
     // Validate it - allocated should be unchanged.
-    ExpectShouldBe(0, Block);
+    ExpectShouldBe(nullptr, Block);
     ExpectShouldBe(sizeof(UInt64) * (MaxAllocations), Allocator.Allocated);
 
     LinearAllocatorDestroy(&Allocator);
